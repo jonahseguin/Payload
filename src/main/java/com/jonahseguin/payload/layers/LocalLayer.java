@@ -11,6 +11,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.Validate;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -21,7 +23,7 @@ public class LocalLayer<T extends Profile> extends CacheLayer<T, T, CachingProfi
     private final ConcurrentMap<String, CachedProfile<T>> localCache = new ConcurrentHashMap<>();
     private int cacheExpiryMinutes = 30;
 
-    public LocalLayer(ProfileCache cache, CacheDatabase database) {
+    public LocalLayer(ProfileCache<T> cache, CacheDatabase database) {
         super(cache, database);
     }
 
@@ -40,7 +42,7 @@ public class LocalLayer<T extends Profile> extends CacheLayer<T, T, CachingProfi
     public boolean save(T profile) {
         try {
             Validate.notNull(profile);
-            CachedProfile<T> cachedProfile = new CachedProfile<>(profile, System.currentTimeMillis(), getNewCacheExpiry());
+            CachedProfile<T> cachedProfile = new CachedProfile<>(profile, System.currentTimeMillis(), getNewCacheExpiry(), 0);
             this.localCache.put(profile.getUniqueId(), cachedProfile);
             return true;
         } catch (NullPointerException ex) {
@@ -87,7 +89,23 @@ public class LocalLayer<T extends Profile> extends CacheLayer<T, T, CachingProfi
 
     @Override
     public int cleanup() {
-        return 0; // TODO
+        Set<String> toRemove = new HashSet<>();
+        for (String key : localCache.keySet()) {
+            CachedProfile<T> cachedProfile = localCache.get(key);
+            if (cachedProfile != null) {
+                if (!cachedProfile.isOnline()) {
+                    if (cachedProfile.isExpired()) {
+                        toRemove.add(key);
+                    }
+                } else {
+                    cachedProfile.setExpiry(getNewCacheExpiry()); // Update expiry if they're still online
+                }
+            } else {
+                toRemove.add(key);
+            }
+        }
+        toRemove.forEach(localCache::remove);
+        return toRemove.size();
     }
 
     @Override
