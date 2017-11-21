@@ -15,13 +15,14 @@ import redis.clients.jedis.exceptions.JedisException;
 
 public class RedisLayer<T extends Profile> extends CacheLayer<T, T, CachingProfile<T>> {
 
-    private final String REDIS_KEY_PREFIX = "purified.profile."; // purified.profile.<UUID>
+    private final String REDIS_KEY_PREFIX; // <key>.profile.<UUID>
     private Jedis jedis = null;
     private final Class<T> clazz;
 
     public RedisLayer(ProfileCache<T> cache, CacheDatabase database, Class<T> clazz) {
         super(cache, database);
         this.clazz = clazz;
+        this.REDIS_KEY_PREFIX = cache.getSettings().getRedisKeyPrefix() + ".profile.";
     }
 
     @Override
@@ -116,7 +117,6 @@ public class RedisLayer<T extends Profile> extends CacheLayer<T, T, CachingProfi
 
     @Override
     public int cleanup() {
-        // TODO
         return 0;
     }
 

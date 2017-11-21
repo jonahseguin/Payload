@@ -4,9 +4,7 @@ import com.jonahseguin.payload.Payload;
 import com.jonahseguin.payload.cache.ProfileCache;
 import com.jonahseguin.payload.caching.CachingController;
 import com.jonahseguin.payload.profile.Profile;
-import com.jonahseguin.payload.type.CacheStage;
-
-import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
@@ -31,7 +29,7 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (profileCache.hasController(event.getPlayer().getUniqueId().toString())) {
             CachingController<T> controller = profileCache.getController(event.getPlayer());
-            controller.join(event.getPlayer());
+            controller.join(event.getPlayer()); // Handle the continuation of caching after join
         }
     }
 
@@ -39,7 +37,17 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
     public void onProfileCached(PayloadPlayerLoadedEvent<T> event) {
         if (event.getCache().getCacheId().equals(profileCache.getCacheId())) {
             if (event.getProfile() != null) {
-                profileCache.destroyController(event.getProfile().getUniqueId());
+                Player player = event.tryToGetPlayer();
+                if (player != null) {
+                    event.getCache().initProfile(player, event.getProfile());
+                } else {
+                    profileCache.addAfterJoinTask(event.getCachingProfile(), (cachingProfile, player1) -> {
+                        if (player1 != null) {
+                            event.getCache().initProfile(player1, event.getProfile());
+                        }
+                    });
+                }
+                event.getCache().destroyController(event.getProfile().getUniqueId()); // Get rid of their controller after they are loaded
             }
         }
     }
@@ -54,6 +62,8 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
                 if (profileCache.getSettings().isCacheLogoutSaveDatabase()) {
                     profileCache.getLayerController().getMongoLayer().save(profile); // Save to MongoDB if enabled
                 }
+                profileCache.getLayerController().getUsernameUUIDLayer().remove(event.getPlayer().getUniqueId().toString()); // In case of username changes
+                profileCache.getLayerController().getPreCachingLayer().remove(event.getPlayer().getUniqueId().toString()); // Always Remove from pre-caching (CachingProfile)
                 if (profileCache.getSettings().isCacheRemoveOnLogout()) {
                     profileCache.getLayerController().getLocalLayer().remove(event.getPlayer().getUniqueId().toString()); // Remove them from the local cache
                 }

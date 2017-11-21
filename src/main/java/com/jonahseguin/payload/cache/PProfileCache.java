@@ -3,7 +3,6 @@ package com.jonahseguin.payload.cache;
 import com.jonahseguin.payload.profile.Profile;
 import com.jonahseguin.payload.type.ProfileCriteria;
 import org.apache.commons.lang.Validate;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -76,8 +75,8 @@ public class PProfileCache<T extends Profile> implements Cache<T> {
     @Override
     public T getProfileByUsername(String username) {
         Validate.notNull(username, "Username cannot be null");
-        if (cache.getUsernameUUIDLayer().hasUniqueId(username)) {
-            return getProfile(cache.getUsernameUUIDLayer().getUniqueId(username));
+        if (cache.getLayerController().getUsernameUUIDLayer().hasUniqueId(username)) {
+            return getProfile(cache.getLayerController().getUsernameUUIDLayer().getUniqueId(username));
         } else {
             Player exact = Bukkit.getPlayerExact(username);
             if (exact != null) {
@@ -85,7 +84,7 @@ public class PProfileCache<T extends Profile> implements Cache<T> {
             }
             else {
                 // Manual via MongoDB
-                return cache.getMongoLayer().getByUsername(username);
+                return cache.getLayerController().getMongoLayer().getByUsername(username);
             }
         }
     }

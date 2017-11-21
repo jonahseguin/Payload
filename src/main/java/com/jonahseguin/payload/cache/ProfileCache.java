@@ -4,6 +4,7 @@ import com.jonahseguin.payload.Payload;
 import com.jonahseguin.payload.caching.CachingController;
 import com.jonahseguin.payload.caching.LayerExecutorHandler;
 import com.jonahseguin.payload.event.ProfileCacheListener;
+import com.jonahseguin.payload.event.ProfileHaltedListener;
 import com.jonahseguin.payload.fail.CacheFailureHandler;
 import com.jonahseguin.payload.layers.LayerController;
 import com.jonahseguin.payload.profile.*;
@@ -44,12 +45,13 @@ public class ProfileCache<T extends Profile> {
     private final CacheDatabase database;
     private final LayerController<T> layerController;
     private final CacheFailureHandler<T> failureHandler;
-    private final CacheCleanupTask cleanupTask;
+    private final CacheCleanupTask<T> cleanupTask;
     private final AfterJoinTask afterJoinTask;
     private final LayerExecutorHandler<T> executorHandler;
     private CacheAutoSaveTask cacheAutoSaveTask;
     private boolean allowJoinsMode = false; // Internal join prevention; prevent joins when setting up/shutting down, etc.
     private ProfileCacheListener<T> profileCacheListener = null;
+    private ProfileHaltedListener<T> profileHaltedListener = null;
 
     public ProfileCache(CacheSettings<T> settings, Class<T> clazz) {
         this.settings = settings;
@@ -61,7 +63,7 @@ public class ProfileCache<T extends Profile> {
         this.failureHandler = new CacheFailureHandler<>(this, settings.getPlugin());
         this.executorHandler = new LayerExecutorHandler<>(this);
         this.layerController = new LayerController<>(this);
-        this.cleanupTask = new CacheCleanupTask();
+        this.cleanupTask = new CacheCleanupTask<>(this);
         this.afterJoinTask = new AfterJoinTask(this);
     }
 
@@ -77,6 +79,10 @@ public class ProfileCache<T extends Profile> {
             this.profileCacheListener = new ProfileCacheListener<>(this);
             this.plugin.getServer().getPluginManager().registerEvents(profileCacheListener, plugin);
             this.cacheAutoSaveTask = new CacheAutoSaveTask(this);
+            if (settings.isEnableHaltListener()) {
+                profileHaltedListener = new ProfileHaltedListener<>(this);
+                this.plugin.getServer().getPluginManager().registerEvents(profileHaltedListener, plugin);
+            }
         } else {
             handleStartupFail();
         }
