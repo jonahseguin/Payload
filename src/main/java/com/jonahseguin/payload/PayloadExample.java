@@ -44,6 +44,11 @@ public class PayloadExample extends JavaPlugin {
     public void onEnable() {
         this.cache = setupCache();
 
+        if (!this.cache.init()) { // Startup the cache
+            this.getPluginLoader().disablePlugin(this);
+            return;
+        }
+
         PProfile profile = this.cache.getSimpleCache().getProfileByUsername("Shawckz");
         if (profile.getPlayer() != null && profile.getPlayer().isOnline()) {
             profile.getPlayer().sendMessage(ChatColor.GREEN + "You have " + profile.getBalance() + "dollars!");
@@ -61,6 +66,15 @@ public class PayloadExample extends JavaPlugin {
             cache.getLayerController().getRedisLayer().save(loaded); // Save to just redis
             player.sendMessage("Your balance is now 500.");
         });
+    }
+
+    @Override
+    public void onDisable() {
+        if (this.cache != null) {
+            if (!this.cache.shutdown()) {
+                getLogger().severe("The cache failed to shutdown properly!");
+            }
+        }
     }
 
     private ProfileCache<PProfile> setupCache() {
