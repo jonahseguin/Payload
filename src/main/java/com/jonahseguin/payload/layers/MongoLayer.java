@@ -2,20 +2,21 @@ package com.jonahseguin.payload.layers;
 
 import com.jonahseguin.payload.cache.CacheDatabase;
 import com.jonahseguin.payload.cache.ProfileCache;
+import com.jonahseguin.payload.caching.LayerResult;
 import com.jonahseguin.payload.profile.CachingProfile;
 import com.jonahseguin.payload.profile.Profile;
+import com.jonahseguin.payload.profile.SimpleProfilePassable;
 import com.jonahseguin.payload.type.CacheSource;
 import com.jonahseguin.payload.type.CacheStage;
 import com.mongodb.MongoException;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
 import org.mongodb.morphia.query.Query;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 
 public class MongoLayer<T extends Profile> extends CacheLayer<T, T, CachingProfile<T>> {
 
@@ -163,9 +164,46 @@ public class MongoLayer<T extends Profile> extends CacheLayer<T, T, CachingProfi
 
     @Override
     public int cleanup() {
-        // TODO: Check for players that are online but DO NOT have a loaded Profile
-        // TODO: Check for null players, etc.
-        return 0;
+        int cleaned = 0;
+        for (Player pl : getCache().getPlugin().getServer().getOnlinePlayers()) {
+            Profile profile = getCache().getLocalProfile(pl);
+            if (profile == null) {
+                cleaned++;
+                pl.sendMessage(ChatColor.RED + "You appear to have no profile loaded.  We will now attempt to load a profile for you.");
+                CachingProfile<T> cachingProfile;
+                if (getCache().getLayerController().getPreCachingLayer().has(pl.getUniqueId().toString())) {
+                    cachingProfile = getCache().getLayerController().getPreCachingLayer().get(pl.getUniqueId().toString());
+                } else {
+                    LayerResult<CachingProfile<T>> result = getCache().getExecutorHandler().preCachingExecutor(SimpleProfilePassable.fromPlayer(pl)).execute();
+                    if (result.isSuccess()) {
+                        cachingProfile = result.getResult();
+                    } else {
+                        // Cannot load if they cannot get a caching profile... have to kick them
+                        pl.kickPlayer(ChatColor.RED + "You did not have a profile loaded and a fatal error occurred while attempting to get one for you.\n"
+                                + ChatColor.RED + "This should not happen.  Please contact an administrator and attempt to re-log.");
+                        continue;
+                    }
+                }
+                getCache().getFailureHandler().startFailureHandling(cachingProfile);
+            }
+        }
+
+        // Check for null usernames
+        {
+            Query<T> q = database.getDatastore().createQuery(clazz);
+            q.criteria("name").equal(null);
+            cleaned += getDatabase().getDatastore().delete(q).getN();
+        }
+
+        // Check for null UUIDs
+        {
+            Query<T> q = database.getDatastore().createQuery(clazz);
+            q.criteria("uniqueId").equal(null);
+            cleaned += getDatabase().getDatastore().delete(q).getN();
+        }
+
+
+        return cleaned;
     }
 
     @Override

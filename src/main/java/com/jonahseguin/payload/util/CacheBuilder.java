@@ -6,7 +6,6 @@ import com.jonahseguin.payload.cache.ProfileCache;
 import com.jonahseguin.payload.profile.Profile;
 import com.jonahseguin.payload.profile.ProfileInstantiator;
 import com.jonahseguin.payload.type.CacheSettings;
-
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -51,8 +50,23 @@ public class CacheBuilder<T extends Profile> {
         return this;
     }
 
+    public CacheBuilder<T> withCacheRemoveOnLogout(boolean removeLogout) {
+        this.settings.setCacheRemoveOnLogout(removeLogout);
+        return this;
+    }
+
+    public CacheBuilder<T> withHaltListenerEnabled(boolean enabled) {
+        this.settings.setEnableHaltListener(enabled);
+        return this;
+    }
+
     public CacheBuilder<T> withCacheLogoutSaveDatabase(boolean saveLogout) {
         this.settings.setCacheLogoutSaveDatabase(saveLogout);
+        return this;
+    }
+
+    public CacheBuilder<T> withCacheFailRetryIntervalSeconds(int seconds) {
+        this.settings.setCacheFailRetryIntervalSeconds(seconds);
         return this;
     }
 

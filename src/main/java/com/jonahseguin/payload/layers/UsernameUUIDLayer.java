@@ -7,6 +7,11 @@ import com.jonahseguin.payload.cache.ProfileCache;
 import com.jonahseguin.payload.profile.Profile;
 import com.jonahseguin.payload.profile.ProfilePassable;
 import com.jonahseguin.payload.type.CacheSource;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class UsernameUUIDLayer<X extends Profile> extends CacheLayer<X, ProfilePassable, ProfilePassable> {
 
@@ -79,12 +84,20 @@ public class UsernameUUIDLayer<X extends Profile> extends CacheLayer<X, ProfileP
 
     @Override
     public int cleanup() {
-        // Strings aren't going to be too memory intensive, but we'll attempt to find players who have been logged out
-        // for a while, and remove them from the provide
-        // TODO
-        // TODO: Remove any caches for players that are not online AND remove players when they logout.
-        // To prevent issues caused with UUIDs when name changes happen.
-        return 0;
+        Set<String> toRemove = new HashSet<>();
+        for (String uuid : usernameCache.keySet()) {
+            String username = usernameCache.get(uuid);
+            if (username != null) {
+                Player player = Bukkit.getPlayerExact(username); // Case insensitive
+                if (player == null || !player.isOnline()) {
+                    toRemove.add(uuid);
+                }
+            } else {
+                toRemove.add(uuid);
+            }
+        }
+        toRemove.forEach(usernameCache::remove);
+        return toRemove.size();
     }
 
     @Override

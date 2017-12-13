@@ -16,7 +16,8 @@ public class CachedProfile<T extends Profile> implements ProfilePassable {
 
     private final T profile;
     private final long initialCacheTime;
-    private long expiry;
+    private long expiry = 0;
+    private long loggedOutTime = 0;
 
     @Override
     public String getName() {
@@ -27,4 +28,13 @@ public class CachedProfile<T extends Profile> implements ProfilePassable {
     public String getUniqueId() {
         return profile.getUniqueId();
     }
+
+    public boolean isOnline() {
+        return profile != null && profile.getPlayer() != null && profile.getPlayer().isOnline();
+    }
+
+    public boolean isExpired() {
+        return expiry != 0 && System.currentTimeMillis() >= expiry;
+    }
+
 }

@@ -2,13 +2,12 @@ package com.jonahseguin.payload.type;
 
 import com.jonahseguin.payload.cache.CacheDatabase;
 import com.jonahseguin.payload.cache.CacheDebugger;
-import com.jonahseguin.payload.profile.ProfileInstantiator;
 import com.jonahseguin.payload.profile.Profile;
+import com.jonahseguin.payload.profile.ProfileInstantiator;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -32,5 +31,8 @@ public class CacheSettings<T extends Profile> {
     private int cacheLocalExpiryMinutes = 60; // Time after logout a profile is removed from local cache
     private boolean cacheLogoutSaveDatabase = false; // Whether to save a profile to the database (mongo) when logging out
     private boolean cacheRemoveOnLogout = false; // Whether to remove a profile from the local cache when logging out
+    private boolean enableHaltListener = true; // Whether to register the halt listener that prevents player actions while halted
+    private int cacheFailRetryIntervalSeconds = 30; // How frequently (seconds) to attempt to load failed profiles
+    private String redisKeyPrefix = "payload"; // Ensure this is changed if using Payload on the same database with multiple plugins!
 
 }

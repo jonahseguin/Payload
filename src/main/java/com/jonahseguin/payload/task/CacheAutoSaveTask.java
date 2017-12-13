@@ -3,8 +3,8 @@ package com.jonahseguin.payload.task;
 import com.jonahseguin.payload.cache.ProfileCache;
 import com.jonahseguin.payload.profile.Profile;
 import lombok.Getter;
-
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -31,7 +31,7 @@ public class CacheAutoSaveTask<T extends Profile> implements Runnable {
     public void run() {
         int success = 0;
         int error = 0;
-        String failed = "";
+        StringBuilder failed = new StringBuilder();
         for (Player pl : Bukkit.getOnlinePlayers()) {
             T profile = cache.getLocalProfile(pl);
             if (profile != null) {
@@ -41,12 +41,16 @@ public class CacheAutoSaveTask<T extends Profile> implements Runnable {
                     success++;
                 } else {
                     error++;
-                    failed += pl.getName() + " ";
+                    failed.append(pl.getName()).append(" ");
                 }
             } else {
                 error++;
-                failed += pl.getName() + " ";
+                failed.append(pl.getName()).append(" ");
             }
+        }
+        cache.getDebugger().debug(ChatColor.GRAY + "Auto-save complete.  " + success + " player saved successfully, " + error + " players failed to save.");
+        if (error > 0) {
+            cache.getDebugger().debug(ChatColor.RED + "The following players failed to save: " + failed.toString());
         }
     }
 }

@@ -10,7 +10,6 @@ import com.jonahseguin.payload.type.CacheSource;
 import com.jonahseguin.payload.type.CacheStage;
 import lombok.Getter;
 import lombok.Setter;
-
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
@@ -66,7 +65,7 @@ public class CachingController<X extends Profile> {
             if (profile != null) {
                 if (saveProfileAfterLoadCache(profile, loadedFrom)) {
                     cachingProfile.setStage(CacheStage.LOADED);
-                    getCache().getPlugin().getServer().getPluginManager().callEvent(new PayloadPlayerLoadedEvent<>(cache, profile));
+                    getCache().getPlugin().getServer().getPluginManager().callEvent(new PayloadPlayerLoadedEvent<>(cachingProfile, cache, profile));
                 } else {
                     cache.getFailureHandler().startFailureHandling(cachingProfile);
                     return null;

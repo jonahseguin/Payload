@@ -31,6 +31,7 @@ public class CacheLayerExecutor<P extends Profile, T extends ProfilePassable, Pa
                 success = true;
             }
             else {
+                success = false;
                 cacheLayer.debug("The provided object from cache layer " + cacheLayer.source().toString() + " was null for player " + passable.getName());
             }
         }

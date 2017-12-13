@@ -3,7 +3,6 @@ package com.jonahseguin.payload.cache;
 import com.jonahseguin.payload.profile.Profile;
 import com.jonahseguin.payload.type.ProfileCriteria;
 import org.apache.commons.lang.Validate;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 

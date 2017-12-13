@@ -7,9 +7,12 @@ import com.jonahseguin.payload.profile.Profile;
 import com.jonahseguin.payload.profile.ProfilePassable;
 import com.jonahseguin.payload.type.CacheSource;
 import com.jonahseguin.payload.type.CacheStage;
+import org.bukkit.entity.Player;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class PreCachingLayer<X extends Profile> extends CacheLayer<X, CachingProfile<X>, ProfilePassable> {
 
@@ -69,8 +72,23 @@ public class PreCachingLayer<X extends Profile> extends CacheLayer<X, CachingPro
 
     @Override
     public int cleanup() {
-        // TODO: Remove profiles that are already cached.
-        return 0;
+        Set<String> toRemove = new HashSet<>();
+        for (String key : cachingProfiles.keySet()) {
+            CachingProfile<X> cachingProfile = cachingProfiles.get(key);
+            if (cachingProfile != null) {
+                if (cachingProfile.getStage() == CacheStage.DONE || cachingProfile.getStage() == CacheStage.LOADED) {
+                    // Is done
+                    Player player = cachingProfile.tryToGetPlayer();
+                    if (player == null || !player.isOnline()) {
+                        toRemove.add(key);
+                    }
+                }
+            } else {
+                toRemove.add(key);
+            }
+        }
+        toRemove.forEach(cachingProfiles::remove);
+        return toRemove.size();
     }
 
     @Override

@@ -3,32 +3,28 @@ package com.jonahseguin.payload.cache;
 import com.jonahseguin.payload.Payload;
 import com.jonahseguin.payload.caching.CachingController;
 import com.jonahseguin.payload.caching.LayerExecutorHandler;
-import com.jonahseguin.payload.event.AsyncCacheLoadFinishEvent;
-import com.jonahseguin.payload.event.AsyncCacheLoadStartEvent;
 import com.jonahseguin.payload.event.ProfileCacheListener;
+import com.jonahseguin.payload.event.ProfileHaltedListener;
 import com.jonahseguin.payload.fail.CacheFailureHandler;
-import com.jonahseguin.payload.layers.*;
+import com.jonahseguin.payload.layers.LayerController;
 import com.jonahseguin.payload.profile.*;
 import com.jonahseguin.payload.task.AfterJoinTask;
 import com.jonahseguin.payload.task.CacheAutoSaveTask;
 import com.jonahseguin.payload.task.CacheCleanupTask;
-import com.jonahseguin.payload.type.CacheResult;
+import com.jonahseguin.payload.task.JoinTaskRunnable;
 import com.jonahseguin.payload.type.CacheSettings;
-import com.jonahseguin.payload.type.CacheSource;
-import com.jonahseguin.payload.type.CacheStage;
 import com.jonahseguin.payload.util.PayloadCallback;
 import lombok.Getter;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 @Getter
 public class ProfileCache<T extends Profile> {
@@ -49,12 +45,13 @@ public class ProfileCache<T extends Profile> {
     private final CacheDatabase database;
     private final LayerController<T> layerController;
     private final CacheFailureHandler<T> failureHandler;
-    private final CacheCleanupTask cleanupTask;
+    private final CacheCleanupTask<T> cleanupTask;
     private final AfterJoinTask afterJoinTask;
     private final LayerExecutorHandler<T> executorHandler;
     private CacheAutoSaveTask cacheAutoSaveTask;
     private boolean allowJoinsMode = false; // Internal join prevention; prevent joins when setting up/shutting down, etc.
     private ProfileCacheListener<T> profileCacheListener = null;
+    private ProfileHaltedListener<T> profileHaltedListener = null;
 
     public ProfileCache(CacheSettings<T> settings, Class<T> clazz) {
         this.settings = settings;
@@ -66,7 +63,7 @@ public class ProfileCache<T extends Profile> {
         this.failureHandler = new CacheFailureHandler<>(this, settings.getPlugin());
         this.executorHandler = new LayerExecutorHandler<>(this);
         this.layerController = new LayerController<>(this);
-        this.cleanupTask = new CacheCleanupTask();
+        this.cleanupTask = new CacheCleanupTask<>(this);
         this.afterJoinTask = new AfterJoinTask(this);
     }
 
@@ -82,6 +79,10 @@ public class ProfileCache<T extends Profile> {
             this.profileCacheListener = new ProfileCacheListener<>(this);
             this.plugin.getServer().getPluginManager().registerEvents(profileCacheListener, plugin);
             this.cacheAutoSaveTask = new CacheAutoSaveTask(this);
+            if (settings.isEnableHaltListener()) {
+                profileHaltedListener = new ProfileHaltedListener<>(this);
+                this.plugin.getServer().getPluginManager().registerEvents(profileHaltedListener, plugin);
+            }
         } else {
             handleStartupFail();
         }
@@ -134,6 +135,10 @@ public class ProfileCache<T extends Profile> {
 
     public void destroyController(String uniqueId) {
         this.controllers.remove(uniqueId);
+    }
+
+    public void addAfterJoinTask(CachingProfile<T> cachingProfile, JoinTaskRunnable runnable) {
+        getAfterJoinTask().addTask(cachingProfile, runnable);
     }
 
     public T getProfile(Player player) {
