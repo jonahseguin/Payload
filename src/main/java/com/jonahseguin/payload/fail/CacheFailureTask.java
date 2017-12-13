@@ -1,5 +1,7 @@
 package com.jonahseguin.payload.fail;
 
+import com.jonahseguin.payload.Payload;
+import com.jonahseguin.payload.caching.CachingController;
 import com.jonahseguin.payload.profile.Profile;
 import com.jonahseguin.payload.type.CacheResult;
 import com.jonahseguin.payload.cache.ProfileCache;
@@ -45,14 +47,20 @@ public class CacheFailureTask<X extends Profile> implements Runnable {
             Player player = profile.tryToGetPlayer();
             if (player != null && player.isOnline()) {
                 player.sendMessage(ChatColor.GRAY + "Attempting to load your profile...");
-                CacheResult<X> cacheResult = this.profileCache.cache(profile.getCachingProfile(), true);
-                if (cacheResult.isSuccess() && cacheResult.getProfile() != null && !cacheResult.getProfile().isTemporary()) {
+                CachingController<X> controller = this.profileCache.getController(player.getName(), player.getUniqueId().toString());
+
+                X result = controller.cache();
+                if(!controller.isJoinable()) {
+                    player.kickPlayer(ProfileCache.FAILED_CACHE_KICK_MESSAGE);
+                    toRemove.add(profile);
+                    continue;
+                }
+                if (result != null) {
                     player.sendMessage(ChatColor.GREEN + "Success.  Profile loaded.");
                     toRemove.add(profile);
-                    profileCache.initProfile(player, cacheResult.getProfile());
-                    // Init their profile!
-                    // Remove them from the failure handler
-                } else {
+                    controller.join(player);
+                }
+                else {
                     player.sendMessage(ChatColor.RED + "Attempt failed.  We will continue to attempt to load your profile every 60 seconds...");
                 }
             } else {

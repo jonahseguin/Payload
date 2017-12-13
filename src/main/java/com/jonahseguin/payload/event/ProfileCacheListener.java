@@ -8,6 +8,7 @@ import com.jonahseguin.payload.type.CacheStage;
 
 import org.bukkit.ChatColor;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -21,13 +22,13 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
         this.profileCache = profileCache;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOW)
     public void onAsyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
         Payload.runASync(profileCache.getPlugin(), () -> profileCache.getController(event.getName(), event.getUniqueId().toString())
                 .cache());
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOW) // To load first -- but also have a possible event that happens before (LOWEST) in case another plugin wanted that
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (profileCache.hasController(event.getPlayer().getUniqueId().toString())) {
             CachingController<T> controller = profileCache.getController(event.getPlayer());
@@ -35,7 +36,7 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOW)
     public void onProfileCached(PayloadPlayerLoadedEvent<T> event) {
         if (event.getCache().getCacheId().equals(profileCache.getCacheId())) {
             if (event.getProfile() != null) {
@@ -44,7 +45,7 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST) // Have it occur second last to allow flexibility of other plugins
     public void onQuitSaveProfile(final PlayerQuitEvent event) {
         profileCache.destroyController(event.getPlayer().getUniqueId().toString());
         Payload.runASync(profileCache.getPlugin(), () -> {

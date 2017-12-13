@@ -15,7 +15,17 @@ import org.bukkit.plugin.java.JavaPlugin;
  *
  * @ 6:44 PM
  */
-public class Payload {
+public class Payload extends JavaPlugin {
+
+    @Override
+    public void onEnable() {
+
+    }
+
+    @Override
+    public void onDisable() {
+
+    }
 
     public static String format(String s, String... args) {
         if (args != null) {

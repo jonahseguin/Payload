@@ -142,8 +142,8 @@ public class ProfileCache<T extends Profile> {
     }
 
     public T getLocalProfile(Player player) {
-        if (this.localLayer.has(player.getUniqueId().toString())) {
-            return this.localLayer.get(player.getUniqueId().toString());
+        if (getLayerController().getLocalLayer().has(player.getUniqueId().toString())) {
+            return this.getLayerController().getLocalLayer().get(player.getUniqueId().toString());
         }
         return null;
     }
@@ -154,15 +154,15 @@ public class ProfileCache<T extends Profile> {
         // --> could mean they are BEING cached, and not yet cached
         // --> so we have to return a TEMPORARY profile
         // --> and indicate somehow to the requesting method that the Profile we return is temporary
-        if (localLayer.has(uniqueId)) {
-            return localLayer.get(uniqueId);
-        } else if (preCachingLayer.has(uniqueId)) {
+        if (getLayerController().getLocalLayer().has(uniqueId)) {
+            return getLayerController().getLocalLayer().get(uniqueId);
+        } else if (getLayerController().getPreCachingLayer().has(uniqueId)) {
             // Being cached currently; return their temporary profile.
-            return preCachingLayer.get(uniqueId).getTemporaryProfile();
-        } else if (redisLayer.has(uniqueId)) {
-            return redisLayer.get(uniqueId);
-        } else if (mongoLayer.has(uniqueId)) {
-            return mongoLayer.get(uniqueId);
+            return getLayerController().getPreCachingLayer().get(uniqueId).getTemporaryProfile();
+        } else if (getLayerController().getRedisLayer().has(uniqueId)) {
+            return getLayerController().getRedisLayer().get(uniqueId);
+        } else if (getLayerController().getMongoLayer().has(uniqueId)) {
+            return getLayerController().getMongoLayer().get(uniqueId);
         } else if (failureHandler.hasFailedProfile(uniqueId)) {
             FailedCachedProfile<T> failedCachedProfile = failureHandler.getFailedProfile(uniqueId);
             if (failedCachedProfile != null) {
@@ -183,147 +183,10 @@ public class ProfileCache<T extends Profile> {
         }
     }
 
-    public void cacheAsyncStart(String username, String uniqueId, PayloadCallback<CacheResult<T>> resultCallback) {
-        // Called in AsyncPlayerPreLoginEvent when Async caching is enabled
-        Payload.runASync(plugin, () -> cache(username, uniqueId,
-                cachingProfile -> plugin.getServer().getPluginManager().callEvent(new AsyncCacheLoadStartEvent(cachingProfile)),
-                cacheResult -> {
-                    if (cacheResult.isSuccess()) {
-                        if (!cacheResult.isAllowedJoin()) {
-                            afterJoinTask.addTask(cacheResult.getCachingProfile(), (profile, player) -> player.kickPlayer(ProfileCache.FAILED_CACHE_KICK_MESSAGE));
-                        }
-                        plugin.getServer().getPluginManager().callEvent(new AsyncCacheLoadFinishEvent(this, cacheResult));
-                        if (preCachingLayer.has(cacheResult.getUniqueId())) {
-                            preCachingLayer.remove(cacheResult.getUniqueId());
-                        }
-                        this.cacheAsyncFinish(cacheResult, resultCallback);
-                    } else {
-                        cacheResult = failCacheResult(cacheResult.getCachingProfile(), cacheResult.getProfile(),
-                                cacheResult.getUniqueId(), cacheResult.getName(), cacheResult.getCacheSource(),
-                                cacheResult.isAllowedJoin());
-                        resultCallback.call(cacheResult);
-                    }
-                }));
-    }
-
-    public CacheResult<T> cacheAsyncFinish(CacheResult<T> cacheResult, PayloadCallback<CacheResult<T>> callback) {
-        // Called from AsyncCacheLoadFinishEvent after caching is finished
-        final T profile = cacheResult.getProfile();
-        if (profile != null) {
-            if (cacheResult.getCachingProfile() != null) {
-                this.afterJoinTask.addTask(cacheResult.getCachingProfile(), ((cachingProfile, player) -> {
-                    if (player != null && player.isOnline()) {
-                        if (!cacheResult.isAllowedJoin()) {
-                            player.kickPlayer(ChatColor.RED + "Your profile failed to load.");
-                        } else if (cacheResult.getProfile() != null) {
-                            initProfile(player, profile);
-                        }
-                        callback.call(cacheResult);
-                    }
-                }));
-            }
-        }
-        return cacheResult;
-    }
-
-    public CacheResult<T> cache(String username, String uniqueId, PayloadCallback<CachingProfile<T>> preCaching, PayloadCallback<CacheResult<T>> cached) {
-        CachingProfile<T> cachingProfile = this.preCachingLayer.provide(new SimpleProfilePassable(uniqueId, username));
-        if (cachingProfile != null) {
-            if (this.usernameUUIDLayer.save(cachingProfile)) { // Save the Username <--> UUID conversion for this player
-                preCaching.call(cachingProfile);
-                CacheResult<T> cacheResult = this.cache(cachingProfile, false);
-                cached.call(cacheResult);
-                return cacheResult;
-            } else {
-                // Fail; don't allow join
-                return this.failCacheResult(cachingProfile, null, uniqueId, username, CacheSource.USERNAME_UUID, false);
-            }
-        } else {
-            // Failed to pre-cache their profile.  Without this, we can't perform async caching or error/failure handling.
-            // Since we won't be able to re-attempt to cache them while they are online, we deny the join.
-            return new CacheResult<>(null, null, null, uniqueId, username, false,
-                    CacheStage.FAILED, CacheSource.PRE_CACHING, false);
-        }
-    }
-
-    public CacheResult<T> cache(CachingProfile<T> cachingProfile, boolean fromError) {
-        cachingProfile.setStage(CacheStage.LOADING);
-        if (!fromError && this.localLayer.has(cachingProfile.getUniqueId())) {
-            T profile = this.localLayer.provide(cachingProfile);
-            debugger.debug("Loaded profile for " + cachingProfile.getName() + " from " + cachingProfile.getLoadingSource().toString() + " layer");
-            // Cached locally!  Return their local profile.
-            return new CacheResult<>(cachingProfile, profile, null, cachingProfile.getUniqueId(),
-                    cachingProfile.getName(), true, CacheStage.LOADED, cachingProfile.getLoadingSource(), true);
-        } else {
-            // Redis --> Mongo --> !mongo? --> create profile; save everywhere
-            T redisProfile = this.redisLayer.provide(cachingProfile);
-            if (redisProfile != null) {
-                if (this.saveProfileAfterLoadCache(redisProfile, CacheSource.REDIS)) {
-                    debugger.debug("Loaded profile for " + cachingProfile.getName() + " from " + cachingProfile.getLoadingSource().toString() + " layer");
-                    // Success!  --> Saved to Local Cache and loaded from Redis
-                    return new CacheResult<>(cachingProfile, redisProfile, null, cachingProfile.getUniqueId(),
-                            cachingProfile.getName(), true, CacheStage.LOADED, cachingProfile.getLoadingSource(), true);
-                }
-                else{
-                    debugger.debug("Could not save " + cachingProfile.getName() + "'s profile while trying to save after provision from Redis");
-                    // Was loaded but could not be saved to the cache... ERROR; should not happen
-                    return this.failCacheResult(cachingProfile, redisProfile, cachingProfile.getUniqueId(),
-                            cachingProfile.getName(), cachingProfile.getLoadingSource(), true); // Still allow join to allow for error handling
-                }
-            } else {
-                T mongoProfile = this.mongoLayer.provide(cachingProfile);
-                if (mongoProfile != null) {
-                    if (this.saveProfileAfterLoadCache(mongoProfile, CacheSource.MONGO)) {
-                        debugger.debug("Loaded profile for " + cachingProfile.getName() + " from " + cachingProfile.getLoadingSource().toString() + " layer");
-                        // Success!  --> Saved to Local Cache and loaded from MongoDB
-                        return new CacheResult<>(cachingProfile, mongoProfile, null, cachingProfile.getUniqueId(),
-                                cachingProfile.getName(), true, CacheStage.LOADED, cachingProfile.getLoadingSource(), true);
-                    }
-                    else {
-                        debugger.debug("Could not save " + cachingProfile.getName() + "'s profile while trying to save after provision from MongoDB");
-                        // Was loaded but could not be saved to the cache... ERROR; should not happen
-                        return this.failCacheResult(cachingProfile, mongoProfile, cachingProfile.getUniqueId(),
-                                cachingProfile.getName(), cachingProfile.getLoadingSource(), true); // Still allow join to allow for error handling
-                    }
-                } else {
-                    if (!mongoLayer.getDatabase().isMongoConnected()) {
-                        // Mongo is not connected.  Don't create a new profile; loading failure is likely a result of
-                        // the database being down, and so we don't want to create a new profile and overwrite the data
-                        debugger.debug("Not creating new profile for " + cachingProfile.getName() + " because MongoDB is offline");
-                        return this.failCacheResult(cachingProfile, null, cachingProfile.getUniqueId(),
-                                cachingProfile.getName(), cachingProfile.getLoadingSource(), true); // Still allow join to allow for error handling
-                    }
-                    if (fromError) {
-                        debugger.debug("Not creating new profile for " + cachingProfile.getName() + " because calling from error handler");
-                        // We don't want to create a profile for them during database outage // error handling
-                        return this.failCacheResult(cachingProfile, null, cachingProfile.getUniqueId(),
-                                cachingProfile.getName(), cachingProfile.getLoadingSource(), true); // Still allow join to allow for error handling
-                    }
-                    debugger.debug("Trying to load profile for " + cachingProfile.getName() + " from [new profile creation]");
-                    // Player has no profile stored anywhere.  New user -->
-                    T newProfile = creationLayer.provide(cachingProfile);
-                    // Save
-                    if (this.saveEverywhere(newProfile)) {
-                        debugger.debug("Created & saved new profile for " + cachingProfile.getName());
-                        // Success!  Saved new profile everywhere
-                        return new CacheResult<>(cachingProfile, newProfile, null, cachingProfile.getUniqueId(),
-                                cachingProfile.getName(), true, CacheStage.LOADED, CacheSource.NEW_PROFILE, true);
-                    }
-                    else {
-                        // Failed to create the new profile; allow join and add to error handler
-                        // Error handler should continue to try and create the profile
-                        return this.failCacheResult(cachingProfile, newProfile, cachingProfile.getUniqueId(),
-                                cachingProfile.getName(), cachingProfile.getLoadingSource(), true); // Still allow join to allow for error handling
-                    }
-                }
-            }
-        }
-    }
-
     public boolean saveEverywhere(T profile) {
-        boolean local = this.localLayer.save(profile);
-        boolean redis = this.redisLayer.save(profile);
-        boolean mongo = this.mongoLayer.save(profile);
+        boolean local = this.getLayerController().getLocalLayer().save(profile);
+        boolean redis = this.getLayerController().getRedisLayer().save(profile);
+        boolean mongo = this.getLayerController().getMongoLayer().save(profile);
         // Error handling is within the cache layers
         return local && redis && mongo;
     }
@@ -338,22 +201,6 @@ public class ProfileCache<T extends Profile> {
         profile.setHalted(false);
         profile.initialize(player);
         debugger.debug("Initialized profile for player " + player.getName());
-    }
-
-    private CacheResult<T> failCacheResult(CachingProfile<T> cachingProfile, T profile, String uniqueId, String username,
-                                        CacheSource cacheSource, boolean allowJoin) {
-        FailedCachedProfile<T> failedCachedProfile = null;
-        if (allowJoin) {
-            // Create them a failedCachedProfile and start the failure handling process
-            if (failureHandler.hasFailedProfile(uniqueId)) {
-                failedCachedProfile = failureHandler.getFailedProfile(uniqueId);
-            } else {
-                failedCachedProfile = failureHandler.startFailureHandling(cachingProfile);
-            }
-        }
-        debugger.debug("Caching failed for player " + cachingProfile.getName() + " during " + cacheSource.toString());
-        return new CacheResult<>(cachingProfile, profile, failedCachedProfile, uniqueId, username,
-                false, CacheStage.FAILED, cacheSource, allowJoin);
     }
 
     public void saveAll(PayloadCallback<Map.Entry<Integer, Integer>> callback) {

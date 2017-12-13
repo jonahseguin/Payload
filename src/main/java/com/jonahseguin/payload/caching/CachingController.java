@@ -91,6 +91,9 @@ public class CachingController<X extends Profile> {
             player.kickPlayer(ProfileCache.FAILED_CACHE_KICK_MESSAGE);
             return;
         }
+        if (profile != null) {
+            profile.initialize(player);
+        }
         if (cachingProfile != null) {
             cachingProfile.setPlayer(player);
             if (cachingProfile.getStage() != CacheStage.DONE && cachingProfile.getStage() != CacheStage.LOADED) {

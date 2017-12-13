@@ -15,12 +15,12 @@ import org.bukkit.scheduler.BukkitTask;
  * @ 1:53 PM
  */
 @Getter
-public class CacheAutoSaveTask implements Runnable {
+public class CacheAutoSaveTask<T extends Profile> implements Runnable {
 
-    private final ProfileCache cache;
+    private final ProfileCache<T> cache;
     private BukkitTask task;
 
-    public CacheAutoSaveTask(ProfileCache cache) {
+    public CacheAutoSaveTask(ProfileCache<T> cache) {
         this.cache = cache;
         // Will auto-save all online profiles every 15 minutes
         this.task = cache.getPlugin().getServer().getScheduler().runTaskTimerAsynchronously(cache.getPlugin(), this,
@@ -33,10 +33,10 @@ public class CacheAutoSaveTask implements Runnable {
         int error = 0;
         String failed = "";
         for (Player pl : Bukkit.getOnlinePlayers()) {
-            Profile profile = cache.getLocalProfile(pl);
+            T profile = cache.getLocalProfile(pl);
             if (profile != null) {
-                boolean redis = cache.getRedisLayer().save(profile);
-                boolean mongo = cache.getMongoLayer().save(profile);
+                boolean redis = cache.getLayerController().getRedisLayer().save(profile);
+                boolean mongo = cache.getLayerController().getMongoLayer().save(profile);
                 if (redis && mongo) {
                     success++;
                 } else {
