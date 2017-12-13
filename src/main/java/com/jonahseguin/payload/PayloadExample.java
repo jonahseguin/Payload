@@ -1,10 +1,14 @@
 package com.jonahseguin.payload;
 
+import com.jonahseguin.payload.cache.Cache;
 import com.jonahseguin.payload.cache.CacheDatabase;
 import com.jonahseguin.payload.cache.CacheDebugger;
 import com.jonahseguin.payload.cache.ProfileCache;
 import com.jonahseguin.payload.caching.CachingController;
+import com.jonahseguin.payload.event.PayloadPlayerInitializedEvent;
+import com.jonahseguin.payload.event.PayloadPlayerLoadedEvent;
 import com.jonahseguin.payload.profile.Profile;
+import com.jonahseguin.payload.type.CacheSource;
 import com.jonahseguin.payload.util.CacheBuilder;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
@@ -13,6 +17,9 @@ import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.mongodb.morphia.Datastore;
 import org.mongodb.morphia.Morphia;
@@ -25,7 +32,7 @@ import redis.clients.jedis.Jedis;
  *
  * @ 7:44 PM
  */
-public class PayloadExample extends JavaPlugin {
+public class PayloadExample extends JavaPlugin implements Listener {
 
     private boolean debug = true; // example variable
     private boolean maintenanceMode = false; // example variable
@@ -158,6 +165,47 @@ public class PayloadExample extends JavaPlugin {
         public PProfile(String name, String uniqueId, int balance) {
             super(name, uniqueId);
             this.balance = balance;
+        }
+    }
+
+    @EventHandler
+    public void onProfileInit(PayloadPlayerInitializedEvent<PProfile> event) {
+        Player player = event.getPlayer();
+        PProfile profile = event.getProfile();
+        player.sendMessage(ChatColor.GREEN + "Your profile was initialized via Payload!");
+        player.sendMessage(ChatColor.GREEN + "Your balance is " + profile.getBalance() + ".");
+    }
+
+    @EventHandler
+    public void onProfileLoaded(PayloadPlayerLoadedEvent<PProfile> event) {
+        PProfile profile = event.getProfile();
+        Player player = event.tryToGetPlayer();
+        if (player != null) {
+            player.sendMessage(ChatColor.GREEN + "Hey, your profile was loaded!  Yay");
+        }
+        else {
+            // Their profile was loaded /before/ they completed the login; thus their Profile has not been initialized yet
+            // If you /need/ their player/them to be online: use the PayloadPlayerInitializedEvent (above)
+            CacheSource source = event.getCache().getController(profile.getName(), profile.getUniqueId()).getLoadedFrom();
+            event.getCache().getDebugger().debug(profile.getName() + "'s profile was loaded from " + source.toString());
+        }
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent e) {
+        // Important note when using the 'enableAsyncCaching' option (it's true):
+        // There is no guarantee that a player's profile will be loaded before PlayerJoinEvent is called,
+        // And there is no guarantee their profile will be initialized by this time either.
+        // When using Async caching, I recommend using the PayloadPlayerInitializedEvent rather than onJoin.
+        // This will allow you to have faster logins, and async content loading.  No login wait times.
+        // You will have to have ANY/ALL plugins that use your Profile objects use the PayloadPlayerInitializedEvent
+        // Rather than PlayerJoinEvent to ensure prevention of NPEs.
+        Profile profile = cache.getLocalProfile(e.getPlayer());
+        if (profile != null) {
+            // They either loaded before login completed or we have Async caching disabled
+        }
+        else {
+            // Logged in before caching finished, with Async caching enabled
         }
     }
 
