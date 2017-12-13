@@ -48,7 +48,7 @@ public class ProfileCache<T extends Profile> {
     private final CacheCleanupTask<T> cleanupTask;
     private final AfterJoinTask afterJoinTask;
     private final LayerExecutorHandler<T> executorHandler;
-    private CacheAutoSaveTask cacheAutoSaveTask;
+    private CacheAutoSaveTask<T> cacheAutoSaveTask;
     private boolean allowJoinsMode = false; // Internal join prevention; prevent joins when setting up/shutting down, etc.
     private ProfileCacheListener<T> profileCacheListener = null;
     private ProfileHaltedListener<T> profileHaltedListener = null;
@@ -78,7 +78,7 @@ public class ProfileCache<T extends Profile> {
             this.allowJoinsMode = true;
             this.profileCacheListener = new ProfileCacheListener<>(this);
             this.plugin.getServer().getPluginManager().registerEvents(profileCacheListener, plugin);
-            this.cacheAutoSaveTask = new CacheAutoSaveTask(this);
+            this.cacheAutoSaveTask = new CacheAutoSaveTask<>(this);
             if (settings.isEnableHaltListener()) {
                 profileHaltedListener = new ProfileHaltedListener<>(this);
                 this.plugin.getServer().getPluginManager().registerEvents(profileHaltedListener, plugin);

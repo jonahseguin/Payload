@@ -22,8 +22,34 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     public void onAsyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
-        Payload.runASync(profileCache.getPlugin(), () -> profileCache.getController(event.getName(), event.getUniqueId().toString())
-                .cache());
+        if (profileCache.getSettings().isEnableAsyncCaching()) {
+            Payload.runASync(profileCache.getPlugin(), () -> profileCache.getController(event.getName(), event.getUniqueId().toString())
+                    .cache());
+        }
+        else {
+            CachingController<T> controller = profileCache.getController(event.getName(), event.getUniqueId().toString());
+            T profile = controller.cache();
+            if (!controller.isJoinable()) {
+                event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, ProfileCache.FAILED_CACHE_KICK_MESSAGE);
+            }
+            else {
+                if (profile == null) {
+                    if (controller.getCachingProfile() != null) {
+                        controller.getCache().getFailureHandler().startFailureHandling(controller.getCachingProfile());
+                    }
+                    else {
+                        event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, ProfileCache.FAILED_CACHE_KICK_MESSAGE);
+                    }
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onProfileInitialized(PayloadPlayerInitializedEvent<T> event) {
+        if (event.getCache().getCacheId().equals(profileCache.getCacheId())) {
+            profileCache.getDebugger().debug("Initialized profile: " + event.getProfile().getName());
+        }
     }
 
     @EventHandler(priority = EventPriority.LOW) // To load first -- but also have a possible event that happens before (LOWEST) in case another plugin wanted that
@@ -41,10 +67,12 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
                 Player player = event.tryToGetPlayer();
                 if (player != null) {
                     event.getCache().initProfile(player, event.getProfile());
+                    profileCache.getPlugin().getServer().getPluginManager().callEvent(new PayloadPlayerInitializedEvent<>(event.getProfile(), profileCache, player));
                 } else {
                     profileCache.addAfterJoinTask(event.getCachingProfile(), (cachingProfile, player1) -> {
                         if (player1 != null) {
                             event.getCache().initProfile(player1, event.getProfile());
+                            profileCache.getPlugin().getServer().getPluginManager().callEvent(new PayloadPlayerInitializedEvent<>(event.getProfile(), profileCache, player1));
                         }
                     });
                 }

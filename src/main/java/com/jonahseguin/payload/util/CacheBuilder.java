@@ -35,6 +35,11 @@ public class CacheBuilder<T extends Profile> {
         return this;
     }
 
+    public CacheBuilder<T> withEnableAsyncCaching(boolean asyncCaching) {
+        this.settings.setEnableAsyncCaching(asyncCaching);
+        return this;
+    }
+
     public CacheBuilder<T> withDebugger(CacheDebugger debugger) {
         this.settings.setDebugger(debugger);
         return this;

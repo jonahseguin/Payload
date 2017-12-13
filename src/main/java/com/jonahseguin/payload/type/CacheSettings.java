@@ -34,5 +34,6 @@ public class CacheSettings<T extends Profile> {
     private boolean enableHaltListener = true; // Whether to register the halt listener that prevents player actions while halted
     private int cacheFailRetryIntervalSeconds = 30; // How frequently (seconds) to attempt to load failed profiles
     private String redisKeyPrefix = "payload"; // Ensure this is changed if using Payload on the same database with multiple plugins!
+    private boolean enableAsyncCaching = true; // Whether to Async. caching in a new thread from the AsyncPlayerPreLoginEvent... i.e allow them to login before being fully cached
 
 }
