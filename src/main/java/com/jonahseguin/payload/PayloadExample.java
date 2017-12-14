@@ -1,15 +1,14 @@
 package com.jonahseguin.payload;
 
-import com.jonahseguin.payload.cache.Cache;
-import com.jonahseguin.payload.cache.CacheDatabase;
-import com.jonahseguin.payload.cache.CacheDebugger;
-import com.jonahseguin.payload.cache.ProfileCache;
-import com.jonahseguin.payload.caching.CachingController;
-import com.jonahseguin.payload.event.PayloadPlayerInitializedEvent;
-import com.jonahseguin.payload.event.PayloadPlayerLoadedEvent;
-import com.jonahseguin.payload.profile.Profile;
-import com.jonahseguin.payload.type.CacheSource;
-import com.jonahseguin.payload.util.CacheBuilder;
+import com.jonahseguin.payload.common.cache.CacheDatabase;
+import com.jonahseguin.payload.common.cache.CacheDebugger;
+import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
+import com.jonahseguin.payload.profile.caching.ProfileCachingController;
+import com.jonahseguin.payload.profile.event.PayloadPlayerInitializedEvent;
+import com.jonahseguin.payload.profile.event.PayloadPlayerLoadedEvent;
+import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.type.PCacheSource;
+import com.jonahseguin.payload.profile.util.ProfileCacheBuilder;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import lombok.Getter;
@@ -45,7 +44,7 @@ public class PayloadExample extends JavaPlugin implements Listener {
     private Datastore datastore; // example variable
 
     @Getter
-    private ProfileCache<PProfile> cache = null; // Our profile cache.  Will be loaded in onEnable
+    private PayloadProfileCache<PProfile> cache = null; // Our profile cache.  Will be loaded in onEnable
 
     @Override
     public void onEnable() {
@@ -64,7 +63,7 @@ public class PayloadExample extends JavaPlugin implements Listener {
         // Manual caching -- This is a basic example of how the internal caching is handled
         getServer().getScheduler().runTaskAsynchronously(this, () -> {
             final Player player = Bukkit.getPlayerExact("Shawckz");
-            CachingController<PProfile> controller = this.cache.getController(player);
+            ProfileCachingController<PProfile> controller = this.cache.getController(player);
             PProfile loaded = controller.cache(); // Manual
             controller.join(player); // Finish initializing their profile
             loaded.setBalance(500);
@@ -84,11 +83,11 @@ public class PayloadExample extends JavaPlugin implements Listener {
         }
     }
 
-    private ProfileCache<PProfile> setupCache() {
-        // Use the Cache Builder to setup our cache
-        return new CacheBuilder<PProfile>(this)
+    private PayloadProfileCache<PProfile> setupCache() {
+        // Use the ProfileCache Builder to setup our cache
+        return new ProfileCacheBuilder<PProfile>(this)
                 .withProfileClass(PProfile.class) // Our Profile
-                .withCacheLocalExpiryMinutes(30) // Local profiles expire after 30 mins of being inactive (i.e logging out)
+                .withCacheLocalExpiryMinutes(30) // Local profile expire after 30 mins of being inactive (i.e logging out)
                 .withCacheLogoutSaveDatabase(true) // Save their profile to *Mongo* (and always redis) when they logout
                 .withCacheRemoveOnLogout(false) // Don't remove them from the local cache when they logout
                 .withHaltListenerEnabled(true) // Allow Payload to handle the halt listener
@@ -99,13 +98,13 @@ public class PayloadExample extends JavaPlugin implements Listener {
                     @Override
                     public void debug(String message) {
                         if (debug) {
-                            getLogger().info("[Debug][Cache] " + message);
+                            getLogger().info("[Debug][ProfileCache] " + message);
                         }
                     }
 
                     @Override
                     public void error(Exception ex) {
-                        getLogger().info("[Error][Cache] An exception occurred: " + ex.getMessage());
+                        getLogger().info("[Error][ProfileCache] An exception occurred: " + ex.getMessage());
                         if (debug) {
                             ex.printStackTrace();
                         }
@@ -113,7 +112,7 @@ public class PayloadExample extends JavaPlugin implements Listener {
 
                     @Override
                     public void error(Exception ex, String message) {
-                        getLogger().info("[Error][Cache] An exception occurred: " + message);
+                        getLogger().info("[Error][ProfileCache] An exception occurred: " + message);
                         if (debug) {
                             ex.printStackTrace();
                         }
@@ -185,8 +184,8 @@ public class PayloadExample extends JavaPlugin implements Listener {
         }
         else {
             // Their profile was loaded /before/ they completed the login; thus their Profile has not been initialized yet
-            // If you /need/ their player/them to be online: use the PayloadPlayerInitializedEvent (above)
-            CacheSource source = event.getCache().getController(profile.getName(), profile.getUniqueId()).getLoadedFrom();
+            // If you /need/ their obj/them to be online: use the PayloadPlayerInitializedEvent (above)
+            PCacheSource source = event.getCache().getController(profile.getName(), profile.getUniqueId()).getLoadedFrom();
             event.getCache().getDebugger().debug(profile.getName() + "'s profile was loaded from " + source.toString());
         }
     }
@@ -194,7 +193,7 @@ public class PayloadExample extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
         // Important note when using the 'enableAsyncCaching' option (it's true):
-        // There is no guarantee that a player's profile will be loaded before PlayerJoinEvent is called,
+        // There is no guarantee that a obj's profile will be loaded before PlayerJoinEvent is called,
         // And there is no guarantee their profile will be initialized by this time either.
         // When using Async caching, I recommend using the PayloadPlayerInitializedEvent rather than onJoin.
         // This will allow you to have faster logins, and async content loading.  No login wait times.
