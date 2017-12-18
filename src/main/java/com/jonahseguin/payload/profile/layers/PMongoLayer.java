@@ -129,7 +129,7 @@ public class PMongoLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
 
     @Override
     public boolean init() {
-        // No init necessary as it is done for us by the DatabaseService
+        // No init necessary as it is done for us by the provided database
         return true;
     }
 

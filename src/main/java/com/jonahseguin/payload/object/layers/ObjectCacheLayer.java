@@ -1,22 +1,22 @@
-package com.jonahseguin.payload.simple.layers;
+package com.jonahseguin.payload.object.layers;
 
 import com.jonahseguin.payload.common.cache.CacheDatabase;
-import com.jonahseguin.payload.profile.type.PCacheSource;
-import com.jonahseguin.payload.simple.cache.PayloadSimpleCache;
-import com.jonahseguin.payload.simple.fail.SimpleCacheFailureHandler;
-import com.jonahseguin.payload.simple.obj.SimpleCacheable;
+import com.jonahseguin.payload.object.cache.PayloadObjectCache;
+import com.jonahseguin.payload.object.fail.ObjectCacheFailureHandler;
+import com.jonahseguin.payload.object.obj.ObjectCacheable;
+import com.jonahseguin.payload.object.type.OLayerType;
 import lombok.Getter;
 import org.bukkit.ChatColor;
 import org.bukkit.plugin.Plugin;
 
 @Getter
-public abstract class SimpleCacheLayer<X extends SimpleCacheable> {
+public abstract class ObjectCacheLayer<X extends ObjectCacheable> {
 
     protected final CacheDatabase database;
-    protected final PayloadSimpleCache<X> cache;
+    protected final PayloadObjectCache<X> cache;
     protected final Plugin plugin;
 
-    public SimpleCacheLayer(PayloadSimpleCache<X> cache, CacheDatabase database) {
+    public ObjectCacheLayer(PayloadObjectCache<X> cache, CacheDatabase database) {
         this.cache = cache;
         this.plugin = cache.getPlugin();
         this.database = database;
@@ -50,7 +50,7 @@ public abstract class SimpleCacheLayer<X extends SimpleCacheable> {
 
     public abstract X provide(String id);
 
-    public abstract boolean save(String id);
+    public abstract boolean save(String id, X x);
 
     public abstract boolean has(String id);
 
@@ -60,13 +60,13 @@ public abstract class SimpleCacheLayer<X extends SimpleCacheable> {
 
     public abstract boolean shutdown();
 
-    public abstract PCacheSource source();
+    public abstract OLayerType source();
 
     public abstract int cleanup();
 
     public abstract int clear();
 
-    public SimpleCacheFailureHandler getFailureHandler() {
+    public ObjectCacheFailureHandler getFailureHandler() {
         return cache.getFailureHandler(); // TODO
     }
 

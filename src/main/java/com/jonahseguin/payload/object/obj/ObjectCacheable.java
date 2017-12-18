@@ -1,6 +1,6 @@
-package com.jonahseguin.payload.simple.obj;
+package com.jonahseguin.payload.object.obj;
 
-public interface SimpleCacheable {
+public interface ObjectCacheable {
 
     String getIdentifier();
 
