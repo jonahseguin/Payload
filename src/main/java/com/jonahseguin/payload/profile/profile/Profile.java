@@ -2,10 +2,9 @@ package com.jonahseguin.payload.profile.profile;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.entity.Player;
 import org.mongodb.morphia.annotations.Entity;
 import org.mongodb.morphia.annotations.Transient;
-
-import org.bukkit.entity.Player;
 
 /**
  * Created by Jonah on 11/14/2017.
@@ -20,6 +19,7 @@ public class Profile implements ProfilePassable {
 
     private String name;
     private String uniqueId;
+    private boolean initialized = false;
 
     @Transient private transient Player player = null;
     @Transient private transient boolean temporary = false;
@@ -45,6 +45,7 @@ public class Profile implements ProfilePassable {
 
     public void initialize(Player player) {
         this.player = player;
+        this.initialized = true;
     }
 
 }

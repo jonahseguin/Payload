@@ -3,8 +3,10 @@ package com.jonahseguin.payload.profile.cache;
 import com.jonahseguin.payload.Payload;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.common.cache.CacheDebugger;
-import com.jonahseguin.payload.profile.caching.ProfileCachingController;
+import com.jonahseguin.payload.common.util.PayloadCallback;
 import com.jonahseguin.payload.profile.caching.PLayerExecutorHandler;
+import com.jonahseguin.payload.profile.caching.ProfileCachingController;
+import com.jonahseguin.payload.profile.event.PayloadPlayerInitializedEvent;
 import com.jonahseguin.payload.profile.event.ProfileCacheListener;
 import com.jonahseguin.payload.profile.event.ProfileHaltedListener;
 import com.jonahseguin.payload.profile.fail.PCacheFailureHandler;
@@ -15,7 +17,6 @@ import com.jonahseguin.payload.profile.task.PCacheAutoSaveTask;
 import com.jonahseguin.payload.profile.task.PCacheCleanupTask;
 import com.jonahseguin.payload.profile.task.PJoinTask;
 import com.jonahseguin.payload.profile.type.ProfileCacheSettings;
-import com.jonahseguin.payload.common.util.PayloadCallback;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -28,6 +29,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * The internal base of the Payload Profile Cache system.
+ * The goal of the "Profile Cache" is to provide persistent Profile management (saving, loading, caching) for
+ * per-player profiles in [Local Cache --> Redis --> MongoDB]
+ *
+ * @param <T> Your Profile class type to cache for
+ */
 @Getter
 public class PayloadProfileCache<T extends Profile> {
 
@@ -69,6 +77,11 @@ public class PayloadProfileCache<T extends Profile> {
         this.afterJoinTask = new PAfterJoinTask(this);
     }
 
+    /**
+     * Call when starting up your plugin that is using Payload.
+     *
+     * @return boolean success
+     */
     public final boolean init() {
         this.allowJoinsMode = false;
         boolean success = true;
@@ -91,6 +104,10 @@ public class PayloadProfileCache<T extends Profile> {
         return success;
     }
 
+    /**
+     * Call when shutting down your plugin that is using Payload.
+     * @return boolean success
+     */
     public final boolean shutdown() {
         this.allowJoinsMode = false;
         boolean success = true;
@@ -200,14 +217,19 @@ public class PayloadProfileCache<T extends Profile> {
 
     /**
      * Initialize a profile after the obj has joined
+     * --> This is called by Payload internally
      * @param player Player
      * @param profile Profile
      */
     public void initProfile(Player player, T profile) {
-        profile.setTemporary(false);
-        profile.setHalted(false);
-        profile.initialize(player);
-        debugger.debug("Initialized profile for obj " + player.getName());
+        if (!profile.isInitialized()) {
+            profile.setTemporary(false);
+            profile.setHalted(false);
+            profile.initialize(player);
+            debugger.debug("Initialized profile for obj " + player.getName());
+            getPlugin().getServer().getPluginManager().callEvent(new PayloadPlayerInitializedEvent<>(profile, this, player));
+
+        }
     }
 
     public void saveAll(PayloadCallback<Map.Entry<Integer, Integer>> callback) {

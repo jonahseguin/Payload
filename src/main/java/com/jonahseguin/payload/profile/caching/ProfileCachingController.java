@@ -1,8 +1,8 @@
 package com.jonahseguin.payload.profile.caching;
 
+import com.jonahseguin.payload.common.exception.CachingException;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.event.PayloadPlayerLoadedEvent;
-import com.jonahseguin.payload.common.exception.CachingException;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
 import com.jonahseguin.payload.profile.profile.Profile;
 import com.jonahseguin.payload.profile.profile.ProfilePassable;
@@ -90,12 +90,15 @@ public class ProfileCachingController<X extends Profile> {
             player.kickPlayer(PayloadProfileCache.FAILED_CACHE_KICK_MESSAGE);
             return;
         }
-        if (profile != null) {
-            profile.initialize(player);
+        if (profile != null && !profile.isInitialized()) {
+            cache.initProfile(player, profile);
         }
         if (cachingProfile != null) {
+            if (profile != null && profile.isInitialized()) {
+                cachingProfile.setStage(PCacheStage.DONE);
+            }
             cachingProfile.setPlayer(player);
-            if (cachingProfile.getStage() != PCacheStage.DONE && cachingProfile.getStage() != PCacheStage.LOADED) {
+            if (cachingProfile.getStage() != PCacheStage.DONE) {
                 // Is not DONE or LOADED; set up a temporary profile and continue to attempt to load their profile
                 X profile = cachingProfile.getTemporaryProfile();
                 if (profile != null) {

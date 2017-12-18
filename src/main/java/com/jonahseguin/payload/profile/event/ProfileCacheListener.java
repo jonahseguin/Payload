@@ -4,6 +4,7 @@ import com.jonahseguin.payload.Payload;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.caching.ProfileCachingController;
 import com.jonahseguin.payload.profile.profile.Profile;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -22,6 +23,11 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     public void onAsyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
+        if (!profileCache.isAllowJoinsMode()) {
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST,
+                    ChatColor.GREEN + "The server's cache system is still starting up, please try logging in again.");
+            return;
+        }
         if (profileCache.getSettings().isEnableAsyncCaching()) {
             Payload.runASync(profileCache.getPlugin(), () -> profileCache.getController(event.getName(), event.getUniqueId().toString())
                     .cache());
@@ -64,17 +70,17 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
     public void onProfileCached(PayloadPlayerLoadedEvent<T> event) {
         if (event.getCache().getCacheId().equals(profileCache.getCacheId())) {
             if (event.getProfile() != null) {
-                Player player = event.tryToGetPlayer();
-                if (player != null) {
-                    event.getCache().initProfile(player, event.getProfile());
-                    profileCache.getPlugin().getServer().getPluginManager().callEvent(new PayloadPlayerInitializedEvent<>(event.getProfile(), profileCache, player));
-                } else {
-                    profileCache.addAfterJoinTask(event.getCachingProfile(), (cachingProfile, player1) -> {
-                        if (player1 != null) {
-                            event.getCache().initProfile(player1, event.getProfile());
-                            profileCache.getPlugin().getServer().getPluginManager().callEvent(new PayloadPlayerInitializedEvent<>(event.getProfile(), profileCache, player1));
-                        }
-                    });
+                if (!event.getProfile().isInitialized()) {
+                    Player player = event.tryToGetPlayer();
+                    if (player != null) {
+                        event.getCache().initProfile(player, event.getProfile());
+                    } else {
+                        profileCache.addAfterJoinTask(event.getCachingProfile(), (cachingProfile, player1) -> {
+                            if (player1 != null) {
+                                event.getCache().initProfile(player1, event.getProfile());
+                            }
+                        });
+                    }
                 }
                 event.getCache().destroyController(event.getProfile().getUniqueId()); // Get rid of their controller after they are loaded
             }

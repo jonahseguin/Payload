@@ -1,9 +1,5 @@
 package com.jonahseguin.payload;
 
-import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
-import com.jonahseguin.payload.profile.profile.Profile;
-import com.jonahseguin.payload.profile.type.ProfileCacheSettings;
-
 import org.bukkit.ChatColor;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -42,10 +38,6 @@ public class Payload extends JavaPlugin {
 
     public static void runASync(Plugin plugin, Runnable runnable) {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, runnable);
-    }
-
-    public static <T extends Profile> PayloadProfileCache<T> createProfileCache(ProfileCacheSettings<T> settings, Class<T> clazz) {
-        return new PayloadProfileCache<>(settings, clazz);
     }
 
 }
