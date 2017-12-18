@@ -12,6 +12,4 @@ public interface PlayerCacheable {
 
     Player getPlayer();
 
-    void initialize(Player player);
-
 }
