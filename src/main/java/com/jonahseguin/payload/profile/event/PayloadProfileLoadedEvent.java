@@ -16,7 +16,7 @@ import org.bukkit.event.HandlerList;
  * @ 8:07 PM
  */
 @Getter
-public class PayloadPlayerLoadedEvent<X extends Profile> extends Event {
+public class PayloadProfileLoadedEvent<X extends Profile> extends Event {
 
     private static final HandlerList handlers = new HandlerList();
 
@@ -24,7 +24,7 @@ public class PayloadPlayerLoadedEvent<X extends Profile> extends Event {
     private final PayloadProfileCache<X> cache;
     private final X profile;
 
-    public PayloadPlayerLoadedEvent(CachingProfile<X> cachingProfile, PayloadProfileCache<X> cache, X profile) {
+    public PayloadProfileLoadedEvent(CachingProfile<X> cachingProfile, PayloadProfileCache<X> cache, X profile) {
         super(true);
         this.cachingProfile = cachingProfile;
         this.cache = cache;

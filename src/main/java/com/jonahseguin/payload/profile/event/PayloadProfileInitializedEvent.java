@@ -15,7 +15,7 @@ import org.bukkit.event.HandlerList;
  * @ 10:27 PM
  */
 @Getter
-public class PayloadPlayerInitializedEvent<X extends Profile> extends Event {
+public class PayloadProfileInitializedEvent<X extends Profile> extends Event {
 
     private static final HandlerList handlers = new HandlerList();
 
@@ -23,7 +23,7 @@ public class PayloadPlayerInitializedEvent<X extends Profile> extends Event {
     private final PayloadProfileCache<X> cache;
     private final Player player;
 
-    public PayloadPlayerInitializedEvent(X profile, PayloadProfileCache<X> cache, Player player) {
+    public PayloadProfileInitializedEvent(X profile, PayloadProfileCache<X> cache, Player player) {
         this.profile = profile;
         this.cache = cache;
         this.player = player;

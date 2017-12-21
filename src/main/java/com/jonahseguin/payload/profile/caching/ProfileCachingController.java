@@ -2,7 +2,7 @@ package com.jonahseguin.payload.profile.caching;
 
 import com.jonahseguin.payload.common.exception.CachingException;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
-import com.jonahseguin.payload.profile.event.PayloadPlayerLoadedEvent;
+import com.jonahseguin.payload.profile.event.PayloadProfileLoadedEvent;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
 import com.jonahseguin.payload.profile.profile.Profile;
 import com.jonahseguin.payload.profile.profile.ProfilePassable;
@@ -65,7 +65,7 @@ public class ProfileCachingController<X extends Profile> {
             if (profile != null) {
                 if (saveProfileAfterLoadCache(profile, loadedFrom)) {
                     cachingProfile.setStage(PCacheStage.LOADED);
-                    getCache().getPlugin().getServer().getPluginManager().callEvent(new PayloadPlayerLoadedEvent<>(cachingProfile, cache, profile));
+                    getCache().getPlugin().getServer().getPluginManager().callEvent(new PayloadProfileLoadedEvent<>(cachingProfile, cache, profile));
                 } else {
                     cache.getFailureHandler().startFailureHandling(cachingProfile);
                     return null;

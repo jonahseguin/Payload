@@ -2,7 +2,6 @@ package com.jonahseguin.payload.object.layers;
 
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.object.cache.PayloadObjectCache;
-import com.jonahseguin.payload.object.fail.ObjectCacheFailureHandler;
 import com.jonahseguin.payload.object.obj.ObjectCacheable;
 import com.jonahseguin.payload.object.type.OLayerType;
 import lombok.Getter;
@@ -65,10 +64,5 @@ public abstract class ObjectCacheLayer<X extends ObjectCacheable> {
     public abstract int cleanup();
 
     public abstract int clear();
-
-    public ObjectCacheFailureHandler getFailureHandler() {
-        return cache.getFailureHandler(); // TODO
-    }
-
 
 }

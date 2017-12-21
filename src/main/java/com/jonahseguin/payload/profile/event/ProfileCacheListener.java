@@ -52,7 +52,7 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
     }
 
     @EventHandler
-    public void onProfileInitialized(PayloadPlayerInitializedEvent<T> event) {
+    public void onProfileInitialized(PayloadProfileInitializedEvent<T> event) {
         if (event.getCache().getCacheId().equals(profileCache.getCacheId())) {
             profileCache.getDebugger().debug("Initialized profile: " + event.getProfile().getName());
         }
@@ -67,7 +67,7 @@ public class ProfileCacheListener<T extends Profile> implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOW)
-    public void onProfileCached(PayloadPlayerLoadedEvent<T> event) {
+    public void onProfileCached(PayloadProfileLoadedEvent<T> event) {
         if (event.getCache().getCacheId().equals(profileCache.getCacheId())) {
             if (event.getProfile() != null) {
                 if (!event.getProfile().isInitialized()) {

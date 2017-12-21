@@ -37,10 +37,7 @@ public class ObjectLayerController<X extends ObjectCacheable> {
     }
 
     public final boolean init() {
-        boolean success = true;
-        if (cache.getSettings().isUseLocal()) {
-            success = localLayer.init();
-        }
+        boolean success = localLayer.init();
         if (cache.getSettings().isUseRedis()) {
             if (success && !redisLayer.init()) {
                 success = false;

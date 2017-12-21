@@ -6,7 +6,7 @@ import com.jonahseguin.payload.common.cache.CacheDebugger;
 import com.jonahseguin.payload.common.util.PayloadCallback;
 import com.jonahseguin.payload.profile.caching.PLayerExecutorHandler;
 import com.jonahseguin.payload.profile.caching.ProfileCachingController;
-import com.jonahseguin.payload.profile.event.PayloadPlayerInitializedEvent;
+import com.jonahseguin.payload.profile.event.PayloadProfileInitializedEvent;
 import com.jonahseguin.payload.profile.event.ProfileCacheListener;
 import com.jonahseguin.payload.profile.event.ProfileHaltedListener;
 import com.jonahseguin.payload.profile.fail.PCacheFailureHandler;
@@ -227,7 +227,7 @@ public class PayloadProfileCache<T extends Profile> {
             profile.setHalted(false);
             profile.initialize(player);
             debugger.debug("Initialized profile for obj " + player.getName());
-            getPlugin().getServer().getPluginManager().callEvent(new PayloadPlayerInitializedEvent<>(profile, this, player));
+            getPlugin().getServer().getPluginManager().callEvent(new PayloadProfileInitializedEvent<>(profile, this, player));
 
         }
     }
