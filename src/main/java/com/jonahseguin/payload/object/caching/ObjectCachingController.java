@@ -80,11 +80,9 @@ public class ObjectCachingController<X extends ObjectCacheable> {
     }
 
     private X tryLocal() {
-        if (cache.getSettings().isUseLocal()) {
-            ObjectLayerResult<X> result = cache.getExecutorHandler().localExecutor(id).execute();
-            if (result.isSuccess()) {
-                return result.getResult();
-            }
+        ObjectLayerResult<X> result = cache.getExecutorHandler().localExecutor(id).execute();
+        if (result.isSuccess()) {
+            return result.getResult();
         }
         return null;
     }

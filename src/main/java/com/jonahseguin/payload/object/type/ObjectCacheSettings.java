@@ -22,7 +22,7 @@ public class ObjectCacheSettings<X extends ObjectCacheable> {
     private boolean createOnNull = false; // if not found by ID in any layer: create (when true) == uses the ObjectInstantiator
     private ObjectInstantiator<X> objectInstantiator = null;
     private boolean saveAfterLoad = false; // whether to re-save the object to all layers except the one it was loaded from
-    private String redisKey = "payload.object." + type.getSimpleName() + ".";
+    private String redisKey = "payload.object.";
     private String mongoIdentifierField = "id"; // field name to query against identifier for object
 
 }
