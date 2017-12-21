@@ -1,4 +1,36 @@
 package com.jonahseguin.payload.object.event;
 
-public class ObjectCachedEvent {
+import com.jonahseguin.payload.object.obj.ObjectCacheable;
+import lombok.Getter;
+
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
+
+public class ObjectCachedEvent<X extends ObjectCacheable> extends Event {
+
+    private static final HandlerList handlerList = new HandlerList();
+
+    private final X object;
+
+    public ObjectCachedEvent(X object) {
+        this.object = object;
+    }
+
+    public ObjectCachedEvent(boolean isAsync, X object) {
+        super(isAsync);
+        this.object = object;
+    }
+
+    @Override
+    public HandlerList getHandlers() {
+        return handlerList;
+    }
+
+    public static HandlerList getHandlerList() {
+        return handlerList;
+    }
+
+    public X getObject() {
+        return object;
+    }
 }

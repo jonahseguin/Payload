@@ -8,6 +8,12 @@ package com.jonahseguin.payload.profile.profile;
  */
 public interface ProfileInstantiator<T extends Profile> {
 
+    /**
+     * Used to instantiate a profile
+     * @param username Username
+     * @param uniqueId UUID
+     * @return The instantiated profile
+     */
     T instantiate(String username, String uniqueId);
 
 }

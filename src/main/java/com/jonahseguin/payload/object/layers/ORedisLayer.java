@@ -3,6 +3,8 @@ package com.jonahseguin.payload.object.layers;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.common.exception.CachingException;
 import com.jonahseguin.payload.object.cache.PayloadObjectCache;
+import com.jonahseguin.payload.object.event.ObjectPreSaveEvent;
+import com.jonahseguin.payload.object.event.ObjectSavedEvent;
 import com.jonahseguin.payload.object.obj.ObjectCacheable;
 import com.jonahseguin.payload.object.type.OLayerType;
 import com.mongodb.BasicDBObject;
@@ -40,8 +42,19 @@ public class ORedisLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
             throw new CachingException("Cannot use Redis layer when useRedis is disabled!");
         }
         if (!x.persist()) return false;
+
+        // Pre-Save Event
+        ObjectPreSaveEvent<X> preSaveEvent = new ObjectPreSaveEvent<>(x, source(), cache);
+        getPlugin().getServer().getPluginManager().callEvent(preSaveEvent);
+        x = preSaveEvent.getObject();
+
         String json = jsonifyObject(x);
         jedis.set(cache.getSettings().getRedisKey() + id, json);
+
+        // Saved Event
+        ObjectSavedEvent<X> savedEvent = new ObjectSavedEvent<>(x, source(), cache);
+        getPlugin().getServer().getPluginManager().callEvent(savedEvent);
+
         return true;
     }
 

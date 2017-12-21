@@ -32,6 +32,9 @@ public class PlayerCacheListener<X extends PlayerCacheable> implements Listener 
         if (cache.getSettings().isRemoveOnLogout()) {
             cache.removeFromCache(event.getPlayer());
         }
+        else {
+            cache.initExpiry(event.getPlayer());
+        }
     }
 
 }

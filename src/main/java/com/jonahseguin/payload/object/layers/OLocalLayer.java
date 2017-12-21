@@ -2,6 +2,8 @@ package com.jonahseguin.payload.object.layers;
 
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.object.cache.PayloadObjectCache;
+import com.jonahseguin.payload.object.event.ObjectPreSaveEvent;
+import com.jonahseguin.payload.object.event.ObjectSavedEvent;
 import com.jonahseguin.payload.object.obj.ObjectCacheable;
 import com.jonahseguin.payload.object.type.OLayerType;
 import lombok.Getter;
@@ -25,7 +27,17 @@ public class OLocalLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
 
     @Override
     public boolean save(String id, X x) {
+
+        // Pre-Save Event
+        ObjectPreSaveEvent<X> preSaveEvent = new ObjectPreSaveEvent<>(x, source(), cache);
+        getPlugin().getServer().getPluginManager().callEvent(preSaveEvent);
+        x = preSaveEvent.getObject();
+
         localCache.put(id.toLowerCase(), x);
+
+        // Saved Event
+        ObjectSavedEvent<X> savedEvent = new ObjectSavedEvent<>(x, source(), cache);
+        getPlugin().getServer().getPluginManager().callEvent(savedEvent);
         return true;
     }
 

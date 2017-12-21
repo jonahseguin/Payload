@@ -2,6 +2,8 @@ package com.jonahseguin.payload.profile.layers;
 
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
+import com.jonahseguin.payload.profile.event.PayloadProfilePreSaveEvent;
+import com.jonahseguin.payload.profile.event.PayloadProfileSavedEvent;
 import com.jonahseguin.payload.profile.profile.CachedProfile;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
 import com.jonahseguin.payload.profile.profile.Profile;
@@ -42,8 +44,19 @@ public class PLocalLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
     public boolean save(T profile) {
         try {
             Validate.notNull(profile);
+
+            // Call Pre-Save Event
+            PayloadProfilePreSaveEvent<T> preSaveEvent = new PayloadProfilePreSaveEvent<>(profile, getCache(), source());
+            getPlugin().getServer().getPluginManager().callEvent(preSaveEvent);
+            profile = preSaveEvent.getProfile();
+
             CachedProfile<T> cachedProfile = new CachedProfile<>(profile, System.currentTimeMillis(), getNewCacheExpiry(), 0);
             this.localCache.put(profile.getUniqueId(), cachedProfile);
+
+            // Call Saved Event
+            PayloadProfileSavedEvent<T> savedEvent = new PayloadProfileSavedEvent<>(profile, getCache(), source());
+            getPlugin().getServer().getPluginManager().callEvent(savedEvent);
+
             return true;
         } catch (NullPointerException ex) {
             getCache().getDebugger().error(ex, "Profile was null while saving to Local ProfileCache: " + profile.getName());
@@ -56,7 +69,10 @@ public class PLocalLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
 
     @Override
     public T get(String uniqueId) {
-        return localCache.get(uniqueId).getProfile();
+        if (localCache.containsKey(uniqueId)) {
+            return localCache.get(uniqueId).getProfile();
+        }
+        return null;
     }
 
     @Override

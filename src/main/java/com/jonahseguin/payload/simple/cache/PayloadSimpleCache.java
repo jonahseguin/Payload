@@ -3,6 +3,8 @@ package com.jonahseguin.payload.simple.cache;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.jonahseguin.payload.simple.event.PlayerCacheListener;
+import com.jonahseguin.payload.simple.event.PlayerCachedEvent;
+import com.jonahseguin.payload.simple.event.PlayerUncachedEvent;
 import com.jonahseguin.payload.simple.simple.PlayerCacheable;
 import com.jonahseguin.payload.simple.task.SimpleCacheCleanupTask;
 import com.jonahseguin.payload.simple.type.SimpleCacheSettings;
@@ -52,19 +54,24 @@ public class PayloadSimpleCache<X extends PlayerCacheable> {
         } else {
             X x = settings.getInstantiator().instantiate(player);
             cache.put(player.getUniqueId().toString(), x);
+            PlayerCachedEvent<X> event = new PlayerCachedEvent<>(x);
+            getPlugin().getServer().getPluginManager().callEvent(event);
             return x;
         }
     }
 
     public void removeFromCache(Player player) {
         if (has(player)) {
-            cache.remove(player.getUniqueId().toString());
+            removeFromCache(player.getUniqueId().toString());
         }
     }
 
     public void removeFromCache(String uuid) {
         if (cache.containsKey(uuid)) {
+            X x = cache.get(uuid);
             cache.remove(uuid);
+            PlayerUncachedEvent<X> event = new PlayerUncachedEvent<>(x);
+            getPlugin().getServer().getPluginManager().callEvent(event);
         }
     }
 

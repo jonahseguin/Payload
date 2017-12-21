@@ -3,6 +3,8 @@ package com.jonahseguin.payload.profile.layers;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.common.exception.CachingException;
+import com.jonahseguin.payload.profile.event.PayloadProfilePreSaveEvent;
+import com.jonahseguin.payload.profile.event.PayloadProfileSavedEvent;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
 import com.jonahseguin.payload.profile.profile.Profile;
 import com.jonahseguin.payload.profile.type.PCacheSource;
@@ -51,7 +53,18 @@ public class PRedisLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
         String json = jsonifyProfile(profilePassable);
         if (json != null) {
             try {
+
+                // Call Pre-Save Event
+                PayloadProfilePreSaveEvent<T> preSaveEvent = new PayloadProfilePreSaveEvent<>(profilePassable, getCache(), source());
+                getPlugin().getServer().getPluginManager().callEvent(preSaveEvent);
+                profilePassable = preSaveEvent.getProfile();
+
                 jedis.set(REDIS_KEY_PREFIX + profilePassable.getUniqueId(), json);
+
+                // Call Saved Event
+                PayloadProfileSavedEvent<T> savedEvent = new PayloadProfileSavedEvent<>(profilePassable, getCache(), source());
+                getPlugin().getServer().getPluginManager().callEvent(savedEvent);
+
                 return true;
             } catch (Exception ex) {
                 super.getCache().getDebugger().error(ex, "An exception occurred while attempting to save profile to Redis");

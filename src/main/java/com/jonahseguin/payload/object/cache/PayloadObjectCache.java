@@ -81,6 +81,16 @@ public class PayloadObjectCache<X extends ObjectCacheable> {
         return controller.cache();
     }
 
+    public X getOrDefault(String id, X orElse) {
+        X x = get(id);
+        if (x != null) {
+            return x;
+        }
+        else {
+            return orElse;
+        }
+    }
+
     public X getFrom(OLayerType layerType, String id) {
         return getLayerController().getLayer(layerType).provide(id);
     }

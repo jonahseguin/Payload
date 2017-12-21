@@ -3,6 +3,8 @@ package com.jonahseguin.payload.profile.layers;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.caching.ProfileLayerResult;
+import com.jonahseguin.payload.profile.event.PayloadProfilePreSaveEvent;
+import com.jonahseguin.payload.profile.event.PayloadProfileSavedEvent;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
 import com.jonahseguin.payload.profile.profile.Profile;
 import com.jonahseguin.payload.profile.profile.SimpleProfilePassable;
@@ -74,7 +76,18 @@ public class PMongoLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
     public boolean save(T profilePassable) {
         try {
             if (profilePassable.isTemporary()) return false;
+
+            // Call Pre-Save Event
+            PayloadProfilePreSaveEvent<T> preSaveEvent = new PayloadProfilePreSaveEvent<>(profilePassable, getCache(), source());
+            getPlugin().getServer().getPluginManager().callEvent(preSaveEvent);
+            profilePassable = preSaveEvent.getProfile();
+
             database.getDatastore().save(profilePassable);
+
+            // Call Saved Event
+            PayloadProfileSavedEvent<T> savedEvent = new PayloadProfileSavedEvent<>(profilePassable, getCache(), source());
+            getPlugin().getServer().getPluginManager().callEvent(savedEvent);
+
             return true;
         } catch (MongoException ex) {
             error(ex, "A MongoDB exception occurred while trying to save profile: " + profilePassable.getName());

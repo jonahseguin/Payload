@@ -32,13 +32,13 @@ public class PCacheLayerExecutor<P extends Profile, T extends ProfilePassable, P
             }
             else {
                 success = false;
-                cacheLayer.debug("The provided object from cache layer " + cacheLayer.source().toString() + " was null for obj " + passable.getName());
+                cacheLayer.debug("The provided profile from cache layer " + cacheLayer.source().toString() + " was null for player " + passable.getName());
             }
         }
         catch (Exception ex) {
             success = false;
             errors = true;
-            cacheLayer.error(ex, "An error occurred while executing the cache layer " + cacheLayer.source().toString() + " for obj " + passable.getName());
+            cacheLayer.error(ex, "An error occurred while executing the cache layer " + cacheLayer.source().toString() + " for player " + passable.getName());
         }
         return new ProfileLayerResult<>(success, errors, provided);
     }

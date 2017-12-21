@@ -1,0 +1,58 @@
+package com.jonahseguin.payload.profile.event;
+
+import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
+import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.type.PCacheSource;
+import lombok.Getter;
+
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
+
+/**
+ * Created by Jonah on 12/20/2017.
+ * Project: Payload
+ *
+ * @ 6:10 PM
+ */
+public class PayloadProfileSavedEvent<X extends Profile> extends Event {
+
+    private static final HandlerList handlerList = new HandlerList();
+
+    private final X profile;
+    private final PayloadProfileCache<X> profileCache;
+    private final PCacheSource layer;
+
+    public PayloadProfileSavedEvent(X profile, PayloadProfileCache<X> profileCache, PCacheSource layer) {
+        this.profile = profile;
+        this.profileCache = profileCache;
+        this.layer = layer;
+    }
+
+    public PayloadProfileSavedEvent(boolean isAsync, X profile, PayloadProfileCache<X> profileCache, PCacheSource layer) {
+        super(isAsync);
+        this.profile = profile;
+        this.profileCache = profileCache;
+        this.layer = layer;
+    }
+
+    @Override
+    public HandlerList getHandlers() {
+        return handlerList;
+    }
+
+    public static HandlerList getHandlerList() {
+        return handlerList;
+    }
+
+    public X getProfile() {
+        return profile;
+    }
+
+    public PayloadProfileCache<X> getProfileCache() {
+        return profileCache;
+    }
+
+    public PCacheSource getLayer() {
+        return layer;
+    }
+}
