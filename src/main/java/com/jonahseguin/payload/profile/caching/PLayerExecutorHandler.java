@@ -2,7 +2,7 @@ package com.jonahseguin.payload.profile.caching;
 
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.ProfilePassable;
 
 /**
@@ -11,7 +11,7 @@ import com.jonahseguin.payload.profile.profile.ProfilePassable;
  *
  * @ 8:19 PM
  */
-public class PLayerExecutorHandler<X extends Profile> {
+public class PLayerExecutorHandler<X extends PayloadProfile> {
 
     private final PayloadProfileCache<X> profileCache;
 

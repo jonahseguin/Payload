@@ -6,7 +6,7 @@ package com.jonahseguin.payload.profile.profile;
  *
  * @ 8:54 PM
  */
-public interface ProfileInstantiator<T extends Profile> {
+public interface ProfileInstantiator<T extends PayloadProfile> {
 
     /**
      * Used to instantiate a profile

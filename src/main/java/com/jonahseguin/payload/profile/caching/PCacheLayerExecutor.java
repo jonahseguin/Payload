@@ -1,7 +1,7 @@
 package com.jonahseguin.payload.profile.caching;
 
 import com.jonahseguin.payload.profile.layers.ProfileCacheLayer;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.ProfilePassable;
 
 /**
@@ -10,7 +10,7 @@ import com.jonahseguin.payload.profile.profile.ProfilePassable;
  *
  * @ 8:10 PM
  */
-public class PCacheLayerExecutor<P extends Profile, T extends ProfilePassable, Passable extends ProfilePassable> {
+public class PCacheLayerExecutor<P extends PayloadProfile, T extends ProfilePassable, Passable extends ProfilePassable> {
 
     private final ProfileCacheLayer<P, T, Passable> cacheLayer;
     private final Passable passable;

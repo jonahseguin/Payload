@@ -3,7 +3,7 @@ package com.jonahseguin.payload.profile.profile;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-public class FailedCachedProfile<T extends Profile> implements ProfilePassable {
+public class FailedCachedProfile<T extends PayloadProfile> implements ProfilePassable {
 
     private final CachingProfile<T> cachingProfile;
     private final String username;

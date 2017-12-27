@@ -1,13 +1,14 @@
 package com.jonahseguin.payload.profile.task;
 
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import lombok.Getter;
+
 import org.bukkit.ChatColor;
 import org.bukkit.scheduler.BukkitTask;
 
 @Getter
-public class PCacheCleanupTask<T extends Profile> implements Runnable {
+public class PCacheCleanupTask<T extends PayloadProfile> implements Runnable {
 
     private final PayloadProfileCache<T> cache;
     private BukkitTask task;

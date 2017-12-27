@@ -14,7 +14,7 @@ import org.bukkit.entity.Player;
 @RequiredArgsConstructor
 @Getter
 @Setter
-public class CachingProfile<T extends Profile> implements ProfilePassable {
+public class CachingProfile<T extends PayloadProfile> implements ProfilePassable {
 
     private final PayloadProfileCache<T> cache;
     private final String name;

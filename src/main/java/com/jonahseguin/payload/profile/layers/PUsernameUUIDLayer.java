@@ -4,16 +4,17 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.ProfilePassable;
 import com.jonahseguin.payload.profile.type.PCacheSource;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 
 import java.util.HashSet;
 import java.util.Set;
 
-public class PUsernameUUIDLayer<X extends Profile> extends ProfileCacheLayer<X, ProfilePassable, ProfilePassable> {
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
+public class PUsernameUUIDLayer<X extends PayloadProfile> extends ProfileCacheLayer<X, ProfilePassable, ProfilePassable> {
 
     private final BiMap<String, String> usernameCache = HashBiMap.create(); // <UniqueID, Username>
 

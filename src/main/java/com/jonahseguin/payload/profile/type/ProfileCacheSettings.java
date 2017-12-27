@@ -3,12 +3,13 @@ package com.jonahseguin.payload.profile.type;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.common.cache.CacheDebugger;
 import com.jonahseguin.payload.common.util.DefaultPayloadSettings;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.ProfileInstantiator;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -21,7 +22,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 @Getter
 @Setter
 @RequiredArgsConstructor
-public class ProfileCacheSettings<T extends Profile> {
+public class ProfileCacheSettings<T extends PayloadProfile> {
 
     private final JavaPlugin plugin;
     private CacheDatabase database = new DefaultPayloadSettings.EmptyCacheDatabase();

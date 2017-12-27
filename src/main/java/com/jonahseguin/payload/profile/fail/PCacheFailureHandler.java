@@ -5,7 +5,7 @@ import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.layers.ProfileCacheLayer;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
 import com.jonahseguin.payload.profile.profile.FailedCachedProfile;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.ProfilePassable;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 import com.jonahseguin.payload.profile.type.PCacheStage;
@@ -17,7 +17,7 @@ import java.util.Set;
 import org.bukkit.plugin.Plugin;
 
 @Getter
-public class PCacheFailureHandler<X extends Profile> {
+public class PCacheFailureHandler<X extends PayloadProfile> {
 
     private final Plugin plugin;
     private final PayloadProfileCache<X> cache;

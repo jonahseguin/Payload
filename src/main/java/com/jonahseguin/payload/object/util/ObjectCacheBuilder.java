@@ -6,13 +6,8 @@ import com.jonahseguin.payload.object.cache.PayloadObjectCache;
 import com.jonahseguin.payload.object.obj.ObjectCacheable;
 import com.jonahseguin.payload.object.obj.ObjectInstantiator;
 import com.jonahseguin.payload.object.type.ObjectCacheSettings;
-import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
-import com.jonahseguin.payload.profile.profile.Profile;
-import com.jonahseguin.payload.profile.profile.ProfileInstantiator;
-import com.jonahseguin.payload.profile.type.ProfileCacheSettings;
 
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.java.JavaPlugin;
 
 /**
  * Created by Jonah on 11/16/2017.

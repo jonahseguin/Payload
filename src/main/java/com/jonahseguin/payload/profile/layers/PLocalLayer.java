@@ -6,7 +6,7 @@ import com.jonahseguin.payload.profile.event.PayloadProfilePreSaveEvent;
 import com.jonahseguin.payload.profile.event.PayloadProfileSavedEvent;
 import com.jonahseguin.payload.profile.profile.CachedProfile;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 import com.jonahseguin.payload.profile.type.PCacheStage;
 import lombok.Getter;
@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentMap;
 
 @Getter
 @Setter
-public class PLocalLayer<T extends Profile> extends ProfileCacheLayer<T, T, CachingProfile<T>> {
+public class PLocalLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, T, CachingProfile<T>> {
 
     private final ConcurrentMap<String, CachedProfile<T>> localCache = new ConcurrentHashMap<>();
     private int cacheExpiryMinutes = 30;
@@ -59,7 +59,7 @@ public class PLocalLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
 
             return true;
         } catch (NullPointerException ex) {
-            getCache().getDebugger().error(ex, "Profile was null while saving to Local ProfileCache: " + profile.getName());
+            getCache().getDebugger().error(ex, "PayloadProfile was null while saving to Local ProfileCache: " + profile.getName());
             return false;
         } catch (Exception ex) {
             getCache().getDebugger().error(ex, "An exception occurred while saving profile to the Local ProfileCache: " + profile.getName());

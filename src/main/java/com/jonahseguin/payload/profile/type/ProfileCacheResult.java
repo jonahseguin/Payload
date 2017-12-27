@@ -2,13 +2,13 @@ package com.jonahseguin.payload.profile.type;
 
 import com.jonahseguin.payload.profile.profile.CachingProfile;
 import com.jonahseguin.payload.profile.profile.FailedCachedProfile;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class ProfileCacheResult<T extends Profile> {
+public class ProfileCacheResult<T extends PayloadProfile> {
 
     private CachingProfile<T> cachingProfile; // Nullable
     private T profile; // Nullable

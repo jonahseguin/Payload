@@ -1,8 +1,8 @@
 package com.jonahseguin.payload.profile.layers;
 
-import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.common.exception.CachingException;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 import lombok.Getter;
 
@@ -13,7 +13,7 @@ import lombok.Getter;
  * @ 8:23 PM
  */
 @Getter
-public class ProfileLayerController<T extends Profile> {
+public class ProfileLayerController<T extends PayloadProfile> {
 
     private final PayloadProfileCache<T> cache;
 

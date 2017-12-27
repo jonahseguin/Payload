@@ -2,8 +2,8 @@ package com.jonahseguin.payload.profile.event;
 
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
-import com.jonahseguin.payload.profile.profile.Profile;
-import lombok.Getter;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -15,7 +15,7 @@ import org.bukkit.event.HandlerList;
  *
  * @ 8:07 PM
  */
-public class PayloadProfileLoadedEvent<X extends Profile> extends Event {
+public class PayloadProfileLoadedEvent<X extends PayloadProfile> extends Event {
 
     private static final HandlerList handlerList = new HandlerList();
 
@@ -30,16 +30,16 @@ public class PayloadProfileLoadedEvent<X extends Profile> extends Event {
         this.profile = profile;
     }
 
+    public static HandlerList getHandlerList() {
+        return handlerList;
+    }
+
     public Player tryToGetPlayer() {
         return Bukkit.getPlayerExact(profile.getName());
     }
 
     @Override
     public HandlerList getHandlers() {
-        return handlerList;
-    }
-
-    public static HandlerList getHandlerList() {
         return handlerList;
     }
 

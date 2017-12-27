@@ -3,7 +3,7 @@ package com.jonahseguin.payload.profile.layers;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.fail.PCacheFailureHandler;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.ProfilePassable;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 import lombok.Getter;
@@ -12,7 +12,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.plugin.Plugin;
 
 @Getter
-public abstract class ProfileCacheLayer<P extends Profile, T extends ProfilePassable, Passable extends ProfilePassable> {
+public abstract class ProfileCacheLayer<P extends PayloadProfile, T extends ProfilePassable, Passable extends ProfilePassable> {
 
     protected final CacheDatabase database;
     protected final PayloadProfileCache<P> cache;

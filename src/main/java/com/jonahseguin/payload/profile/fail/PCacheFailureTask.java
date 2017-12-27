@@ -1,19 +1,20 @@
 package com.jonahseguin.payload.profile.fail;
 
-import com.jonahseguin.payload.profile.caching.ProfileCachingController;
-import com.jonahseguin.payload.profile.profile.Profile;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
+import com.jonahseguin.payload.profile.caching.ProfileCachingController;
 import com.jonahseguin.payload.profile.profile.FailedCachedProfile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import lombok.Getter;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.util.HashSet;
 import java.util.Set;
 
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
+
 @Getter
-public class PCacheFailureTask<X extends Profile> implements Runnable {
+public class PCacheFailureTask<X extends PayloadProfile> implements Runnable {
 
     private final PCacheFailureHandler<X> failureHandler;
     private final PayloadProfileCache<X> profileCache;
@@ -55,7 +56,7 @@ public class PCacheFailureTask<X extends Profile> implements Runnable {
                     continue;
                 }
                 if (result != null) {
-                    player.sendMessage(ChatColor.GREEN + "Success.  Profile loaded.");
+                    player.sendMessage(ChatColor.GREEN + "Success.  PayloadProfile loaded.");
                     toRemove.add(profile);
                     controller.join(player);
                 }

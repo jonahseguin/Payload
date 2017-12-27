@@ -1,12 +1,12 @@
 package com.jonahseguin.payload.profile.layers;
 
 import com.jonahseguin.payload.common.cache.CacheDatabase;
-import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.common.exception.CachingException;
+import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.event.PayloadProfilePreSaveEvent;
 import com.jonahseguin.payload.profile.event.PayloadProfileSavedEvent;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 import com.jonahseguin.payload.profile.type.PCacheStage;
 import com.mongodb.BasicDBObject;
@@ -15,11 +15,11 @@ import com.mongodb.util.JSONParseException;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisException;
 
-public class PRedisLayer<T extends Profile> extends ProfileCacheLayer<T, T, CachingProfile<T>> {
+public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, T, CachingProfile<T>> {
 
     private final String REDIS_KEY_PREFIX; // <key>.profile.<UUID>
-    private Jedis jedis = null;
     private final Class<T> clazz;
+    private Jedis jedis = null;
 
     public PRedisLayer(PayloadProfileCache<T> cache, CacheDatabase database, Class<T> clazz) {
         super(cache, database);
@@ -71,7 +71,7 @@ public class PRedisLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
                 return false;
             }
         } else {
-            // Failed to convert Profile to JSON; cannot save
+            // Failed to convert PayloadProfile to JSON; cannot save
             return false;
         }
     }
@@ -92,7 +92,7 @@ public class PRedisLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
             jedis.del(REDIS_KEY_PREFIX + uniqueId); // returns long --> code reply?  not sure if it's the amount deleted
             return true;
         } catch (JedisException ex) {
-            super.getCache().getDebugger().error(ex, "An exception occurred with Jedis while attempting to remove a Profile from Redis cache");
+            super.getCache().getDebugger().error(ex, "An exception occurred with Jedis while attempting to remove a PayloadProfile from Redis cache");
             return false;
         }
 
@@ -144,9 +144,9 @@ public class PRedisLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
             BasicDBObject dbObject = (BasicDBObject) database.getMorphia().toDBObject(profile);
             return dbObject.toJson();
         } catch (JSONParseException ex) {
-            super.getCache().getDebugger().error(ex, "Could not parse JSON while trying to convert Profile to JSON for Redis");
+            super.getCache().getDebugger().error(ex, "Could not parse JSON while trying to convert PayloadProfile to JSON for Redis");
         } catch (Exception ex) {
-            super.getCache().getDebugger().error(ex, "Could not convert Profile to JSON for Redis");
+            super.getCache().getDebugger().error(ex, "Could not convert PayloadProfile to JSON for Redis");
         }
         return null;
     }
@@ -158,7 +158,7 @@ public class PRedisLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
             if (profile != null) {
                 return profile;
             } else {
-                throw new CachingException("Profile to map cannot be null");
+                throw new CachingException("PayloadProfile to map cannot be null");
             }
         } catch (JSONParseException ex) {
             super.getCache().getDebugger().error(ex, "Could not parse JSON to map profile from Redis");

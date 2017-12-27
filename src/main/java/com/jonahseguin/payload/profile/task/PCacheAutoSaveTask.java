@@ -1,8 +1,9 @@
 package com.jonahseguin.payload.profile.task;
 
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import lombok.Getter;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -15,7 +16,7 @@ import org.bukkit.scheduler.BukkitTask;
  * @ 1:53 PM
  */
 @Getter
-public class PCacheAutoSaveTask<T extends Profile> implements Runnable {
+public class PCacheAutoSaveTask<T extends PayloadProfile> implements Runnable {
 
     private final PayloadProfileCache<T> cache;
     private BukkitTask task;

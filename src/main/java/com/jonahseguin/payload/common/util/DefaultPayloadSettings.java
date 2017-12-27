@@ -2,7 +2,7 @@ package com.jonahseguin.payload.common.util;
 
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.common.cache.CacheDebugger;
-import com.jonahseguin.payload.profile.profile.Profile;
+
 /**
  * Created by Jonah on 11/16/2017.
  * Project: Payload

@@ -1,10 +1,11 @@
 package com.jonahseguin.payload.profile.event;
 
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
+
 import org.bukkit.event.Listener;
 
-public class ProfileHaltedListener<T extends Profile> implements Listener {
+public class ProfileHaltedListener<T extends PayloadProfile> implements Listener {
 
     private final PayloadProfileCache<T> cache;
 

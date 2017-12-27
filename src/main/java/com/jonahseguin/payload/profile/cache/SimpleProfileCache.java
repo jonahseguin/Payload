@@ -1,22 +1,23 @@
 package com.jonahseguin.payload.profile.cache;
 
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.type.ProfileCriteria;
 import org.apache.commons.lang.Validate;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 /**
- * This will be the API-accessible implementation of our Profile ProfileCache.
+ * This will be the API-accessible implementation of our PayloadProfile ProfileCache.
  * It will act as a user-friendly wrapper for the cache, with the optional easy access to the internals of the cache.
  * Methods here should be well documented
  */
-public class SimpleProfileCache<T extends Profile> implements ProfileCache<T> {
+public class SimpleProfileCache<T extends PayloadProfile> implements ProfileCache<T> {
 
     private final PayloadProfileCache<T> cache; // The internal cache
 
     /**
-     * Creates the simplistic front-end cache using an internal Profile ProfileCache
+     * Creates the simplistic front-end cache using an internal PayloadProfile ProfileCache
      * @param cache {@link PayloadProfileCache}
      */
     public SimpleProfileCache(PayloadProfileCache<T> cache) {
@@ -26,7 +27,7 @@ public class SimpleProfileCache<T extends Profile> implements ProfileCache<T> {
     /**
      * Gets a profile using a not null Player
      * @param player Player
-     * @return Profile or null if profile does not exist
+     * @return PayloadProfile or null if profile does not exist
      */
     @Override
     public T getProfile(Player player) {
@@ -36,18 +37,18 @@ public class SimpleProfileCache<T extends Profile> implements ProfileCache<T> {
 
     /**
      * Saves a profile everywhere (locally, redis, + mongo)
-     * @param profile The Profile to save
+     * @param profile The PayloadProfile to save
      */
     @Override
     public void save(T profile) {
-        Validate.notNull(profile, "Profile cannot be null");
+        Validate.notNull(profile, "PayloadProfile cannot be null");
         cache.saveEverywhere(profile);
     }
 
     /**
      * Gets a profile from only the local cache using a not null Player
      * @param player Player
-     * @return Profile or null if not locally cached
+     * @return PayloadProfile or null if not locally cached
      */
     @Override
     public T getLocalProfile(Player player) {
@@ -58,7 +59,7 @@ public class SimpleProfileCache<T extends Profile> implements ProfileCache<T> {
     /**
      * Gets a profile from a uniqueId (UUID); can be online or offline: will use first available cache layer
      * @param uniqueId The obj's {@link java.util.UUID#toString()}
-     * @return Profile or null if the profile does not exist
+     * @return PayloadProfile or null if the profile does not exist
      */
     @Override
     public T getProfile(String uniqueId) {
@@ -91,7 +92,7 @@ public class SimpleProfileCache<T extends Profile> implements ProfileCache<T> {
 
     /**
      * Checks if a profile exists in any layer with given criteria
-     * @param criteria The Profile Criteria
+     * @param criteria The PayloadProfile Criteria
      * @return boolean: True if exists
      */
     @Override

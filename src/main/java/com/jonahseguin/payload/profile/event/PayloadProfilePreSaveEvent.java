@@ -1,9 +1,8 @@
 package com.jonahseguin.payload.profile.event;
 
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.type.PCacheSource;
-import lombok.Getter;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -14,7 +13,7 @@ import org.bukkit.event.HandlerList;
  *
  * @ 6:10 PM
  */
-public class PayloadProfilePreSaveEvent<X extends Profile> extends Event {
+public class PayloadProfilePreSaveEvent<X extends PayloadProfile> extends Event {
 
     private static final HandlerList handlerList = new HandlerList();
 
@@ -35,12 +34,12 @@ public class PayloadProfilePreSaveEvent<X extends Profile> extends Event {
         this.layer = layer;
     }
 
-    @Override
-    public HandlerList getHandlers() {
+    public static HandlerList getHandlerList() {
         return handlerList;
     }
 
-    public static HandlerList getHandlerList() {
+    @Override
+    public HandlerList getHandlers() {
         return handlerList;
     }
 

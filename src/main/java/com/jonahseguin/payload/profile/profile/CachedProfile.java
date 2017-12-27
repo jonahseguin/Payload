@@ -12,7 +12,7 @@ import lombok.Setter;
 @Setter
 @RequiredArgsConstructor
 @AllArgsConstructor
-public class CachedProfile<T extends Profile> implements ProfilePassable {
+public class CachedProfile<T extends PayloadProfile> implements ProfilePassable {
 
     private final T profile;
     private final long initialCacheTime;

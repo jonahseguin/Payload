@@ -4,12 +4,13 @@ import com.jonahseguin.payload.common.exception.CachingException;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.event.PayloadProfileLoadedEvent;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.ProfilePassable;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 import com.jonahseguin.payload.profile.type.PCacheStage;
 import lombok.Getter;
 import lombok.Setter;
+
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
@@ -21,7 +22,7 @@ import org.bukkit.entity.Player;
  */
 @Getter
 @Setter
-public class ProfileCachingController<X extends Profile> {
+public class ProfileCachingController<X extends PayloadProfile> {
 
     private final PayloadProfileCache<X> cache;
     private final ProfilePassable passable;
@@ -42,7 +43,7 @@ public class ProfileCachingController<X extends Profile> {
     }
 
     public X cache() {
-        cachingProfile = tryPreCaching(); // Init Caching Profile
+        cachingProfile = tryPreCaching(); // Init Caching PayloadProfile
         if (cachingProfile != null) {
             cachingProfile.setController(this);
             cachingProfile.setStage(PCacheStage.INIT);
@@ -74,7 +75,7 @@ public class ProfileCachingController<X extends Profile> {
             } else {
                 cache.getFailureHandler().startFailureHandling(cachingProfile);
                 cachingProfile.setStage(PCacheStage.FAILED);
-                cache.getDebugger().error(new CachingException("Could not provide a Profile for " + passable.getName()));
+                cache.getDebugger().error(new CachingException("Could not provide a PayloadProfile for " + passable.getName()));
                 return null;
             }
         } else {
@@ -121,7 +122,7 @@ public class ProfileCachingController<X extends Profile> {
             boolean local = cache.getLayerController().getLocalLayer().save(profile);
             success = local;
             if (!local) {
-                cache.getDebugger().debug("Local layer failed to save when saving Profile after load for obj " + profile.getName());
+                cache.getDebugger().debug("Local layer failed to save when saving PayloadProfile after load for obj " + profile.getName());
             }
         }
         if (!except.equals(PCacheSource.REDIS)) {
@@ -130,7 +131,7 @@ public class ProfileCachingController<X extends Profile> {
                 success = redis;
             }
             if (!redis) {
-                cache.getDebugger().debug("Redis layer failed to save when saving Profile after load for obj " + profile.getName());
+                cache.getDebugger().debug("Redis layer failed to save when saving PayloadProfile after load for obj " + profile.getName());
             }
         }
         if (!except.equals(PCacheSource.MONGO)) {
@@ -139,7 +140,7 @@ public class ProfileCachingController<X extends Profile> {
                 success = mongo;
             }
             if (!mongo) {
-                cache.getDebugger().debug("Mongo layer failed to save when saving Profile after load for obj " + profile.getName());
+                cache.getDebugger().debug("Mongo layer failed to save when saving PayloadProfile after load for obj " + profile.getName());
             }
         }
         return success;

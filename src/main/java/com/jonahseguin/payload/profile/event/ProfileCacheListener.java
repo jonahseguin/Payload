@@ -3,7 +3,8 @@ package com.jonahseguin.payload.profile.event;
 import com.jonahseguin.payload.Payload;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.caching.ProfileCachingController;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
+
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -13,7 +14,7 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-public class ProfileCacheListener<T extends Profile> implements Listener {
+public class ProfileCacheListener<T extends PayloadProfile> implements Listener {
 
     private final PayloadProfileCache<T> profileCache;
 

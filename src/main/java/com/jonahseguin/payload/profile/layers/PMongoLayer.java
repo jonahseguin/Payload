@@ -6,21 +6,22 @@ import com.jonahseguin.payload.profile.caching.ProfileLayerResult;
 import com.jonahseguin.payload.profile.event.PayloadProfilePreSaveEvent;
 import com.jonahseguin.payload.profile.event.PayloadProfileSavedEvent;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.SimpleProfilePassable;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 import com.jonahseguin.payload.profile.type.PCacheStage;
 import com.mongodb.MongoException;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 import org.mongodb.morphia.query.Query;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-public class PMongoLayer<T extends Profile> extends ProfileCacheLayer<T, T, CachingProfile<T>> {
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
+
+public class PMongoLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, T, CachingProfile<T>> {
 
     private final Class<T> clazz;
     
@@ -159,7 +160,7 @@ public class PMongoLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
                     errors++;
                 }
             } else {
-                // Player is online without a loaded Profile... this should not happen
+                // Player is online without a loaded PayloadProfile... this should not happen
                 player.sendMessage(ChatColor.RED + "You do not appear to have a loaded profile.  Please notify an administrator of this error.");
                 debug(format("&c{0} is online without a loaded profile.  This should not happen. (shutdown)", player.getName()));
                 errors++;
@@ -179,7 +180,7 @@ public class PMongoLayer<T extends Profile> extends ProfileCacheLayer<T, T, Cach
     public int cleanup() {
         int cleaned = 0;
         for (Player pl : getCache().getPlugin().getServer().getOnlinePlayers()) {
-            Profile profile = getCache().getLocalProfile(pl);
+            PayloadProfile profile = getCache().getLocalProfile(pl);
             if (profile == null) {
                 cleaned++;
                 pl.sendMessage(ChatColor.RED + "You appear to have no profile loaded.  We will now attempt to load a profile for you.");

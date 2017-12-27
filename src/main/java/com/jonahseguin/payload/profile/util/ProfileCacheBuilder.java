@@ -3,9 +3,10 @@ package com.jonahseguin.payload.profile.util;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.common.cache.CacheDebugger;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.ProfileInstantiator;
 import com.jonahseguin.payload.profile.type.ProfileCacheSettings;
+
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -14,7 +15,7 @@ import org.bukkit.plugin.java.JavaPlugin;
  *
  * @ 7:24 PM
  */
-public class ProfileCacheBuilder<T extends Profile> {
+public class ProfileCacheBuilder<T extends PayloadProfile> {
 
     private final JavaPlugin javaPlugin;
     private final ProfileCacheSettings<T> settings;

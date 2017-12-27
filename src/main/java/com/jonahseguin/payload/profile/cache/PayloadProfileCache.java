@@ -18,10 +18,6 @@ import com.jonahseguin.payload.profile.task.PCacheCleanupTask;
 import com.jonahseguin.payload.profile.task.PJoinTask;
 import com.jonahseguin.payload.profile.type.ProfileCacheSettings;
 import lombok.Getter;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 import java.util.AbstractMap;
 import java.util.Map;
@@ -29,22 +25,25 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
+
 /**
- * The internal base of the Payload Profile Cache system.
- * The goal of the "Profile Cache" is to provide persistent Profile management (saving, loading, caching) for
+ * The internal base of the Payload PayloadProfile Cache system.
+ * The goal of the "PayloadProfile Cache" is to provide persistent PayloadProfile management (saving, loading, caching) for
  * per-player profiles in [Local Cache --> Redis --> MongoDB]
  *
- * @param <T> Your Profile class type to cache for
+ * @param <T> Your PayloadProfile class type to cache for
  */
 @Getter
-public class PayloadProfileCache<T extends Profile> {
-
-    private final String cacheId = UUID.randomUUID().toString();
+public class PayloadProfileCache<T extends PayloadProfile> {
 
     public static final String FAILED_CACHE_KICK_MESSAGE = ChatColor.RED + "An error occurred while loading your profile.\n" +
             ChatColor.RED + "This is should not happen.  Try re-logging and contact an administrator.\n" +
             ChatColor.GRAY + "We apologize for the inconvenience.";
-
+    private final String cacheId = UUID.randomUUID().toString();
     private final SimpleProfileCache<T> simpleCache = new SimpleProfileCache<>(this);
     private final ConcurrentMap<String, ProfileCachingController<T>> controllers = new ConcurrentHashMap<>();
     private final Plugin plugin;
@@ -177,7 +176,7 @@ public class PayloadProfileCache<T extends Profile> {
         // If not cached, check for PreCached [CachingProfile] or FailedCachedProfile
         // --> could mean they are BEING cached, and not yet cached
         // --> so we have to return a TEMPORARY profile
-        // --> and indicate somehow to the requesting method that the Profile we return is temporary
+        // --> and indicate somehow to the requesting method that the PayloadProfile we return is temporary
         if (getLayerController().getLocalLayer().has(uniqueId)) {
             return getLayerController().getLocalLayer().get(uniqueId);
         } else if (getLayerController().getPreCachingLayer().has(uniqueId)) {
@@ -219,7 +218,7 @@ public class PayloadProfileCache<T extends Profile> {
      * Initialize a profile after the obj has joined
      * --> This is called by Payload internally
      * @param player Player
-     * @param profile Profile
+     * @param profile PayloadProfile
      */
     public void initProfile(Player player, T profile) {
         if (!profile.isInitialized()) {

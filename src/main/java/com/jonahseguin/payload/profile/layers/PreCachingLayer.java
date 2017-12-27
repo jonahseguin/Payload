@@ -3,18 +3,19 @@ package com.jonahseguin.payload.profile.layers;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.ProfilePassable;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 import com.jonahseguin.payload.profile.type.PCacheStage;
-import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class PreCachingLayer<X extends Profile> extends ProfileCacheLayer<X, CachingProfile<X>, ProfilePassable> {
+import org.bukkit.entity.Player;
+
+public class PreCachingLayer<X extends PayloadProfile> extends ProfileCacheLayer<X, CachingProfile<X>, ProfilePassable> {
 
     private final Map<String, CachingProfile<X>> cachingProfiles = new HashMap<>(); // <UUID, CachingProfile>
 

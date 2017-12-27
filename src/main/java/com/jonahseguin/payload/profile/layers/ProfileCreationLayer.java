@@ -1,13 +1,13 @@
 package com.jonahseguin.payload.profile.layers;
 
 import com.jonahseguin.payload.common.cache.CacheDatabase;
-import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.common.exception.CachingException;
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.profile.ProfilePassable;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 
-public class ProfileCreationLayer<T extends Profile> extends ProfileCacheLayer<T, T, ProfilePassable> {
+public class ProfileCreationLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, T, ProfilePassable> {
 
     private final PayloadProfileCache<T> profileCache;
 
@@ -29,12 +29,12 @@ public class ProfileCreationLayer<T extends Profile> extends ProfileCacheLayer<T
 
     @Override
     public T get(String uniqueId) {
-        throw new UnsupportedOperationException("Cannot get Profile from creation layer");
+        throw new UnsupportedOperationException("Cannot get PayloadProfile from creation layer");
     }
 
     @Override
     public boolean save(T profilePassable) {
-        throw new UnsupportedOperationException("Cannot save Profile to creation layer");
+        throw new UnsupportedOperationException("Cannot save PayloadProfile to creation layer");
     }
 
     @Override
@@ -44,7 +44,7 @@ public class ProfileCreationLayer<T extends Profile> extends ProfileCacheLayer<T
 
     @Override
     public boolean remove(String uniqueId) {
-        throw new UnsupportedOperationException("Cannot remove Profile from creation layer");
+        throw new UnsupportedOperationException("Cannot remove PayloadProfile from creation layer");
     }
 
     @Override

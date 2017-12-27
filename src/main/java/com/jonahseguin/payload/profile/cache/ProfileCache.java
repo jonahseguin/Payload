@@ -1,6 +1,6 @@
 package com.jonahseguin.payload.profile.cache;
 
-import com.jonahseguin.payload.profile.profile.Profile;
+import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.type.ProfileCriteria;
 
 import java.util.UUID;
@@ -18,18 +18,18 @@ import org.bukkit.entity.Player;
  *
  * @ 5:50 PM
  */
-public interface ProfileCache<T extends Profile> {
+public interface ProfileCache<T extends PayloadProfile> {
 
     /**
      * Get a profile by a obj object
-     * It is important to note that it is possible for this to return a *Temporary Profile*, denoted when the Profile
+     * It is important to note that it is possible for this to return a *Temporary PayloadProfile*, denoted when the PayloadProfile
      * has the 'temporary' field set to true.  This means the profile was still being loaded when it was requested
      * by this method, and it created a blank profile for the obj based on their username and uuid.
      * This is a synchronous method that has the possibility to make a database call.  Async wrapping is suggested
      * to prevent slowing of the server.
-     * If you only want the Local Profile (no possibility of database activity), call {@link #getLocalProfile(Player)}
+     * If you only want the Local PayloadProfile (no possibility of database activity), call {@link #getLocalProfile(Player)}
      * Note that this method effectively calls {@code return this.getProfile(obj.getUniqueId()); }
-     * Thus it just uses the Player's UUID to get the Profile using {@link #getProfile(String)}
+     * Thus it just uses the Player's UUID to get the PayloadProfile using {@link #getProfile(String)}
      *
      * @param player Player
      * @return The profile, or none if it does not exist anywhere (temporary joining cache -> local -> redis -> mongo)
@@ -37,10 +37,10 @@ public interface ProfileCache<T extends Profile> {
     T getProfile(Player player);
 
     /**
-     * Returns a Profile for the given obj; only attempting to get from the local cache (no database calls)
+     * Returns a PayloadProfile for the given obj; only attempting to get from the local cache (no database calls)
      *
      * @param player Player
-     * @return The respective Profile if cached, or null if not in the cache
+     * @return The respective PayloadProfile if cached, or null if not in the cache
      */
     T getLocalProfile(Player player);
 
@@ -61,7 +61,7 @@ public interface ProfileCache<T extends Profile> {
      * username rather than UUID or Player.
      * Async wrapping suggested.
      * Not recommended for important data storage as usernames can be changed.
-     * Note: the Profile's username is updated whenever they login (all internal caching systems are based on UUIDs)
+     * Note: the PayloadProfile's username is updated whenever they login (all internal caching systems are based on UUIDs)
      *
      * @param username The obj's username
      * @return The profile, or none if it does not exist anywhere (temporary joining cache -> local -> redis -> mongo)
@@ -71,17 +71,17 @@ public interface ProfileCache<T extends Profile> {
     /**
      * Checks if the profile is available anywhere
      *
-     * @param criteria The Profile Criteria
+     * @param criteria The PayloadProfile Criteria
      * @return True if available, False if null in all caches.
      */
     boolean hasProfileAvailable(ProfileCriteria criteria);
 
     /**
-     * Saves the give Profile *EVERYWHERE* (Locally, Redis, & MongoDB)
+     * Saves the give PayloadProfile *EVERYWHERE* (Locally, Redis, & MongoDB)
      * Sync call.  Async wrapping is suggested.
      * Could possibly produce errors; checking is suggested (for null, etc.)
      *
-     * @param profile The Profile to save
+     * @param profile The PayloadProfile to save
      */
     void save(T profile);
 
