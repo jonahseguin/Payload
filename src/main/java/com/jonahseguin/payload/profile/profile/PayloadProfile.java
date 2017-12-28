@@ -18,13 +18,13 @@ import org.bukkit.entity.Player;
 @Setter
 public class PayloadProfile implements ProfilePassable {
 
-    private String name;
-    private String uniqueId;
-    private boolean initialized = false;
+    protected String name;
+    protected String uniqueId;
+    protected boolean initialized = false;
 
-    @Transient private transient Player player = null;
-    @Transient private transient boolean temporary = false;
-    @Transient private transient boolean halted = false;
+    @Transient protected transient Player player = null;
+    @Transient protected transient boolean temporary = false;
+    @Transient protected transient boolean halted = false;
 
     public PayloadProfile() {
     }
