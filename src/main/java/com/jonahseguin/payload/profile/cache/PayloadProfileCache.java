@@ -18,17 +18,18 @@ import com.jonahseguin.payload.profile.task.PCacheCleanupTask;
 import com.jonahseguin.payload.profile.task.PJoinTask;
 import com.jonahseguin.payload.profile.type.ProfileCacheSettings;
 import lombok.Getter;
-
-import java.util.AbstractMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+
+import java.util.AbstractMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 /**
  * The internal base of the Payload PayloadProfile Cache system.
@@ -243,23 +244,31 @@ public class PayloadProfileCache<T extends PayloadProfile> {
                         count++;
                     } catch (Exception ex) {
                         failed++;
-                        player.sendMessage(ChatColor.RED + "Attempted to save all profile but your obj experienced an error caching.");
+                        player.sendMessage(ChatColor.RED + "Attempted to save all profiles but your profile experienced an error caching.");
                         player.sendMessage(ChatColor.RED + "This should not happen.  Notify an administrator.");
                         player.sendMessage(ChatColor.RED + "If this problem persists and/or no administrators are available, please re-log.");
                         player.sendMessage(ChatColor.RED + "Sorry for the inconvenience.  This is to ensure that you do not lose any data.");
-                        debugger.error(ex, "Exception while saving all for obj " + player.getName());
+                        debugger.error(ex, "Exception while saving all for profile " + player.getName());
                     }
                 } else {
                     failed++;
-                    player.sendMessage(ChatColor.RED + "Attempted to save all profile but your obj is not cached.");
+                    player.sendMessage(ChatColor.RED + "Attempted to save all profiles but your profile is not cached.");
                     player.sendMessage(ChatColor.RED + "This should not happen.  Notify an administrator.");
                     player.sendMessage(ChatColor.RED + "If this problem persists and/or no administrators are available, please re-log.");
                     player.sendMessage(ChatColor.RED + "Sorry for the inconvenience.  This is to ensure that you do not lose any data.");
-                    debugger.debug("&c" + player.getName() + "'s obj was not cached during a saveAll profile call");
+                    debugger.debug("&c" + player.getName() + "'s profile was not cached during a saveAll profiles call");
                 }
             }
             callback.call(new AbstractMap.SimpleEntry<>(count, failed));
         });
+    }
+
+    public Set<T> getOnlineProfiles() {
+        return getCachedProfiles().stream().filter(t -> t.getPlayer() != null && t.getPlayer().isOnline()).collect(Collectors.toSet());
+    }
+
+    public Set<T> getCachedProfiles() {
+        return getLayerController().getLocalLayer().getLocalCache().values().stream().map(CachedProfile::getProfile).collect(Collectors.toSet());
     }
 
 }
