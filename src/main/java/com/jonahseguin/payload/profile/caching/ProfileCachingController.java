@@ -43,6 +43,7 @@ public class ProfileCachingController<X extends PayloadProfile> {
     }
 
     public X cache() {
+        getCache().getDebugger().debug("Payload: Cache for " + passable.getName());
         cachingProfile = tryPreCaching(); // Init Caching PayloadProfile
         if (cachingProfile != null) {
             cachingProfile.setController(this);
@@ -86,12 +87,15 @@ public class ProfileCachingController<X extends PayloadProfile> {
     }
 
     public void join(Player player) {
+        getCache().getDebugger().debug("Payload: Join for " + player.getName());
         this.player = player;
         if (!joinable) {
             player.kickPlayer(PayloadProfileCache.FAILED_CACHE_KICK_MESSAGE);
             return;
         }
-        if (profile != null && !profile.isInitialized()) {
+        getCache().getDebugger().debug("profile null: " + (profile == null));
+        getCache().getDebugger().debug("profile initialized: " + (profile.isInitialized()));
+        if (profile != null) {
             cache.initProfile(player, profile);
         }
         if (cachingProfile != null) {

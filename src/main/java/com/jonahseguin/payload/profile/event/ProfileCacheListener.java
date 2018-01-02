@@ -24,16 +24,19 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
 
     @EventHandler(priority = EventPriority.LOW)
     public void onAsyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
+        profileCache.getDebugger().debug("Called AsyncPlayerPreLoginEvent: " + event.getName());
         if (!profileCache.isAllowJoinsMode()) {
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST,
                     ChatColor.GREEN + "The server's cache system is still starting up, please try logging in again.");
             return;
         }
         if (profileCache.getSettings().isEnableAsyncCaching()) {
+            profileCache.getDebugger().debug("Using async caching");
             Payload.runASync(profileCache.getPlugin(), () -> profileCache.getController(event.getName(), event.getUniqueId().toString())
                     .cache());
         }
         else {
+            profileCache.getDebugger().debug("Using sync caching");
             ProfileCachingController<T> controller = profileCache.getController(event.getName(), event.getUniqueId().toString());
             T profile = controller.cache();
             if (!controller.isJoinable()) {
@@ -54,6 +57,7 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
 
     @EventHandler
     public void onProfileInitialized(PayloadProfileInitializedEvent<T> event) {
+        profileCache.getDebugger().debug("Called PayloadProfileInitializedEvent: " + event.getProfile().getName());
         if (event.getCache().getCacheId().equals(profileCache.getCacheId())) {
             profileCache.getDebugger().debug("Initialized profile: " + event.getProfile().getName());
         }
@@ -61,39 +65,26 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
 
     @EventHandler(priority = EventPriority.LOW) // To load first -- but also have a possible event that happens before (LOWEST) in case another plugin wanted that
     public void onPlayerJoin(PlayerJoinEvent event) {
+        profileCache.getDebugger().debug("Called PlayerJoinEvent: " + event.getPlayer().getName());
         if (profileCache.hasController(event.getPlayer().getUniqueId().toString())) {
             ProfileCachingController<T> controller = profileCache.getController(event.getPlayer());
             controller.join(event.getPlayer()); // Handle the continuation of caching after join
         }
-    }
-
-    @EventHandler(priority = EventPriority.LOW)
-    public void onProfileCached(PayloadProfileLoadedEvent<T> event) {
-        if (event.getCache().getCacheId().equals(profileCache.getCacheId())) {
-            if (event.getProfile() != null) {
-                if (!event.getProfile().isInitialized()) {
-                    Player player = event.tryToGetPlayer();
-                    if (player != null) {
-                        event.getCache().initProfile(player, event.getProfile());
-                    } else {
-                        profileCache.addAfterJoinTask(event.getCachingProfile(), (cachingProfile, player1) -> {
-                            if (player1 != null) {
-                                event.getCache().initProfile(player1, event.getProfile());
-                            }
-                        });
-                    }
-                }
-                event.getCache().destroyController(event.getProfile().getUniqueId()); // Get rid of their controller after they are loaded
-            }
+        else {
+            event.getPlayer().kickPlayer(PayloadProfileCache.FAILED_CACHE_KICK_MESSAGE);
+            profileCache.getDebugger().debug("Did not have controller on join for " + event.getPlayer().getName());
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST) // Have it occur second last to allow flexibility of other plugins
     public void onQuitSaveProfile(final PlayerQuitEvent event) {
-        profileCache.destroyController(event.getPlayer().getUniqueId().toString());
         Payload.runASync(profileCache.getPlugin(), () -> {
+            profileCache.destroyController(event.getPlayer().getUniqueId().toString());
             T profile = profileCache.getProfile(event.getPlayer());
             if (profile != null) {
+                PayloadProfilePreQuitSaveEvent<T> preQuitSaveEvent = new PayloadProfilePreQuitSaveEvent<>(true, profile, profileCache);
+                profileCache.getPlugin().getServer().getPluginManager().callEvent(preQuitSaveEvent);
+                profile.setInitialized(false);
                 profileCache.getLayerController().getRedisLayer().save(profile); // Save to redis always (3 hour exp.)
                 if (profileCache.getSettings().isCacheLogoutSaveDatabase()) {
                     profileCache.getLayerController().getMongoLayer().save(profile); // Save to MongoDB if enabled

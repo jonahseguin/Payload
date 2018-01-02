@@ -137,15 +137,13 @@ public class PayloadProfileCache<T extends PayloadProfile> {
         if (this.controllers.containsKey(uniqueId)) {
             return this.controllers.get(uniqueId);
         }
-        return new ProfileCachingController<>(this, new SimpleProfilePassable(uniqueId, username));
+        ProfileCachingController<T> controller = new ProfileCachingController<>(this, new SimpleProfilePassable(uniqueId, username));
+        controllers.put(uniqueId, controller);
+        return controller;
     }
 
     public ProfileCachingController<T> getController(Player player) {
-        if (this.controllers.containsKey(player.getUniqueId().toString())) {
-            return this.controllers.get(player.getUniqueId().toString());
-        }
-        return new ProfileCachingController<>(this, new SimpleProfilePassable(player.getUniqueId().toString(), player.getName()))
-                .withPlayer(player);
+        return getController(player.getName(), player.getUniqueId().toString()).withPlayer(player);
     }
 
     public boolean hasController(String uniqueId) {
@@ -153,6 +151,7 @@ public class PayloadProfileCache<T extends PayloadProfile> {
     }
 
     public void destroyController(String uniqueId) {
+        getDebugger().debug("Called destroyController: " + uniqueId);
         this.controllers.remove(uniqueId);
     }
 
@@ -222,6 +221,7 @@ public class PayloadProfileCache<T extends PayloadProfile> {
      * @param profile PayloadProfile
      */
     public void initProfile(Player player, T profile) {
+        getDebugger().debug("Init profile: " + player.getName());
         if (!profile.isInitialized()) {
             profile.setTemporary(false);
             profile.setHalted(false);

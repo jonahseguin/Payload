@@ -76,6 +76,11 @@ public class ProfileCacheBuilder<T extends PayloadProfile> {
         return this;
     }
 
+    public ProfileCacheBuilder<T> withRedisKey(String redisKey) {
+        this.settings.setRedisKeyPrefix(redisKey);
+        return this;
+    }
+
     public PayloadProfileCache<T> build() {
         return new PayloadProfileCache<>(settings, profileClass);
     }

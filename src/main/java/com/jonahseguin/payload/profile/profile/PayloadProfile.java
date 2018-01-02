@@ -2,9 +2,12 @@ package com.jonahseguin.payload.profile.profile;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.bson.types.ObjectId;
 import org.mongodb.morphia.annotations.Entity;
+import org.mongodb.morphia.annotations.Id;
 import org.mongodb.morphia.annotations.Transient;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 /**
@@ -18,10 +21,12 @@ import org.bukkit.entity.Player;
 @Setter
 public class PayloadProfile implements ProfilePassable {
 
+    @Id
+    protected ObjectId id;
     protected String name;
     protected String uniqueId;
-    protected boolean initialized = false;
 
+    @Transient protected transient boolean initialized = false;
     @Transient protected transient Player player = null;
     @Transient protected transient boolean temporary = false;
     @Transient protected transient boolean halted = false;

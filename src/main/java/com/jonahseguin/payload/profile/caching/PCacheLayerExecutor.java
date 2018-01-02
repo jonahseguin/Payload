@@ -29,6 +29,7 @@ public class PCacheLayerExecutor<P extends PayloadProfile, T extends ProfilePass
             if (ret != null) {
                 provided = ret;
                 success = true;
+                cacheLayer.getCache().getDebugger().debug("Loaded profile for " + passable.getName() + " from layer " + cacheLayer.source().toString());
             }
             else {
                 success = false;
