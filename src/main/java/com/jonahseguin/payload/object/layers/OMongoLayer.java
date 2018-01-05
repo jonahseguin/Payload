@@ -6,9 +6,11 @@ import com.jonahseguin.payload.object.event.ObjectPreSaveEvent;
 import com.jonahseguin.payload.object.event.ObjectSavedEvent;
 import com.jonahseguin.payload.object.obj.ObjectCacheable;
 import com.jonahseguin.payload.object.type.OLayerType;
+import com.jonahseguin.payload.object.util.QueryCriteriaModifier;
 import com.mongodb.MongoException;
 import org.mongodb.morphia.query.Query;
 
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -18,6 +20,7 @@ import java.util.stream.Stream;
 public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> {
 
     private final Class<X> clazz;
+    private final Set<QueryCriteriaModifier<X>> queryCriteriaModifiers = new HashSet<>();
 
     public OMongoLayer(PayloadObjectCache<X> cache, CacheDatabase database, Class<X> clazz) {
         super(cache, database);
@@ -130,10 +133,23 @@ public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
         return 0;
     }
 
+    public void addCriteriaModifier(QueryCriteriaModifier<X> modifier) {
+        this.queryCriteriaModifiers.add(modifier);
+    }
+
+    public void removeCriteriaModifier(QueryCriteriaModifier<X> modifier) {
+        if (this.queryCriteriaModifiers.contains(modifier)) {
+            this.queryCriteriaModifiers.remove(modifier);
+        }
+    }
+
     public Query<X> getQuery(String id) {
         Query<X> q = database.getDatastore().createQuery(clazz);
         q.maxTime(10, TimeUnit.SECONDS);
         q.criteria(getCache().getSettings().getMongoIdentifierField()).equalIgnoreCase(id);
+        for (QueryCriteriaModifier<X> modifier : queryCriteriaModifiers) {
+            modifier.apply(q, id);
+        }
         return q;
     }
 
