@@ -10,7 +10,9 @@ import com.mongodb.MongoException;
 import org.mongodb.morphia.query.Query;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> {
@@ -106,6 +108,11 @@ public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
             }
         });
         return false;
+    }
+
+    public Set<X> getAll() {
+        Query<X> q = database.getDatastore().createQuery(clazz);
+        return q.asList().stream().collect(Collectors.toSet());
     }
 
     @Override
