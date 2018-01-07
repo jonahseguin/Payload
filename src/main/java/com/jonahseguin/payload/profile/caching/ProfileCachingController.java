@@ -31,6 +31,7 @@ public class ProfileCachingController<X extends PayloadProfile> {
     private boolean joinable = true; // whether the obj could join (based on if they got at least a caching profile)
     private PCacheSource loadedFrom = null;
     private Player player = null;
+    private String joinDenyMessage = PayloadProfileCache.FAILED_CACHE_KICK_MESSAGE;
 
     public ProfileCachingController(PayloadProfileCache<X> cache, ProfilePassable passable) {
         this.cache = cache;
@@ -67,7 +68,12 @@ public class ProfileCachingController<X extends PayloadProfile> {
             if (profile != null) {
                 if (saveProfileAfterLoadCache(profile, loadedFrom)) {
                     cachingProfile.setStage(PCacheStage.LOADED);
-                    getCache().getPlugin().getServer().getPluginManager().callEvent(new PayloadProfileLoadedEvent<>(cachingProfile, cache, profile));
+                    PayloadProfileLoadedEvent<X> event = new PayloadProfileLoadedEvent<>(cachingProfile, cache, profile);
+                    getCache().getPlugin().getServer().getPluginManager().callEvent(event);
+                    if (!event.isJoinable()) {
+                        joinable = false;
+                        joinDenyMessage = event.getJoinDenyMessage();
+                    }
                 } else {
                     cache.getFailureHandler().startFailureHandling(cachingProfile);
                     return null;

@@ -22,6 +22,8 @@ public class PayloadProfileLoadedEvent<X extends PayloadProfile> extends Event {
     private final CachingProfile<X> cachingProfile;
     private final PayloadProfileCache<X> cache;
     private final X profile;
+    private boolean joinable = true;
+    private String joinDenyMessage = PayloadProfileCache.FAILED_CACHE_KICK_MESSAGE;
 
     public PayloadProfileLoadedEvent(CachingProfile<X> cachingProfile, PayloadProfileCache<X> cache, X profile) {
         super(true);
@@ -36,6 +38,22 @@ public class PayloadProfileLoadedEvent<X extends PayloadProfile> extends Event {
 
     public Player tryToGetPlayer() {
         return Bukkit.getPlayerExact(profile.getName());
+    }
+
+    public String getJoinDenyMessage() {
+        return joinDenyMessage;
+    }
+
+    public void setJoinDenyMessage(String joinDenyMessage) {
+        this.joinDenyMessage = joinDenyMessage;
+    }
+
+    public boolean isJoinable() {
+        return joinable;
+    }
+
+    public void setJoinable(boolean joinable) {
+        this.joinable = joinable;
     }
 
     @Override

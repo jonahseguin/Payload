@@ -6,7 +6,6 @@ import com.jonahseguin.payload.profile.caching.ProfileCachingController;
 import com.jonahseguin.payload.profile.profile.PayloadProfile;
 
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -40,7 +39,7 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
             ProfileCachingController<T> controller = profileCache.getController(event.getName(), event.getUniqueId().toString());
             T profile = controller.cache();
             if (!controller.isJoinable()) {
-                event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, PayloadProfileCache.FAILED_CACHE_KICK_MESSAGE);
+                event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, controller.getJoinDenyMessage());
             }
             else {
                 if (profile == null) {
@@ -48,7 +47,7 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
                         controller.getCache().getFailureHandler().startFailureHandling(controller.getCachingProfile());
                     }
                     else {
-                        event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, PayloadProfileCache.FAILED_CACHE_KICK_MESSAGE);
+                        event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, controller.getJoinDenyMessage());
                     }
                 }
             }
