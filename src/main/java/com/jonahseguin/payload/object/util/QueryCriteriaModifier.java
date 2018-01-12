@@ -11,6 +11,6 @@ import org.mongodb.morphia.query.Query;
  */
 public interface QueryCriteriaModifier<X extends ObjectCacheable> {
 
-    void apply(Query<X> query, String id);
+    void apply(Query<X> query);
 
 }

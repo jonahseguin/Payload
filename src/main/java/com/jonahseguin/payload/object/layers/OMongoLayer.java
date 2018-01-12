@@ -143,13 +143,22 @@ public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
         }
     }
 
-    public Query<X> getQuery(String id) {
+    public void applyCriteriaModifiers(Query<X> query) {
+        for (QueryCriteriaModifier<X> modifier : queryCriteriaModifiers) {
+            modifier.apply(query);
+        }
+    }
+
+    public Query<X> getQuery() {
         Query<X> q = database.getDatastore().createQuery(clazz);
+        applyCriteriaModifiers(q);
+        return q;
+    }
+
+    public Query<X> getQuery(String id) {
+        Query<X> q = getQuery();
         q.maxTime(10, TimeUnit.SECONDS);
         q.criteria(getCache().getSettings().getMongoIdentifierField()).equalIgnoreCase(id);
-        for (QueryCriteriaModifier<X> modifier : queryCriteriaModifiers) {
-            modifier.apply(q, id);
-        }
         return q;
     }
 
