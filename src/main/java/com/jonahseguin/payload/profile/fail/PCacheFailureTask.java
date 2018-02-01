@@ -47,9 +47,9 @@ public class PCacheFailureTask<X extends PayloadProfile> implements Runnable {
             Player player = profile.tryToGetPlayer();
             if (player != null && player.isOnline()) {
                 player.sendMessage(ChatColor.GRAY + "Attempting to load your profile...");
-                ProfileCachingController<X> controller = this.profileCache.getController(player.getName(), player.getUniqueId().toString());
+                ProfileCachingController<X> controller = this.profileCache.getController(player.getName(), player.getUniqueId().toString(), profile.getLoginIp());
 
-                X result = controller.cache();
+                X result = controller.cache(profile.getLoginIp());
                 if(!controller.isJoinable()) {
                     player.kickPlayer(PayloadProfileCache.FAILED_CACHE_KICK_MESSAGE);
                     toRemove.add(profile);

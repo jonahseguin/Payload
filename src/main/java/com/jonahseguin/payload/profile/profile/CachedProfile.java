@@ -16,6 +16,7 @@ public class CachedProfile<T extends PayloadProfile> implements ProfilePassable 
 
     private final T profile;
     private final long initialCacheTime;
+    private final String loginIp;
     private long expiry = 0;
     private long loggedOutTime = 0;
 

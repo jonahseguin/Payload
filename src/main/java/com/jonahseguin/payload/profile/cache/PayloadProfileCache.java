@@ -18,10 +18,6 @@ import com.jonahseguin.payload.profile.task.PCacheCleanupTask;
 import com.jonahseguin.payload.profile.task.PJoinTask;
 import com.jonahseguin.payload.profile.type.ProfileCacheSettings;
 import lombok.Getter;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 import java.util.AbstractMap;
 import java.util.Map;
@@ -30,6 +26,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
+
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
 /**
  * The internal base of the Payload PayloadProfile Cache system.
@@ -133,17 +134,17 @@ public class PayloadProfileCache<T extends PayloadProfile> {
         }
     }
 
-    public ProfileCachingController<T> getController(String username, String uniqueId) {
+    public ProfileCachingController<T> getController(String username, String uniqueId, String ip) {
         if (this.controllers.containsKey(uniqueId)) {
             return this.controllers.get(uniqueId);
         }
-        ProfileCachingController<T> controller = new ProfileCachingController<>(this, new SimpleProfilePassable(uniqueId, username));
+        ProfileCachingController<T> controller = new ProfileCachingController<>(this, new SimpleProfilePassable(uniqueId, username, ip));
         controllers.put(uniqueId, controller);
         return controller;
     }
 
     public ProfileCachingController<T> getController(Player player) {
-        return getController(player.getName(), player.getUniqueId().toString()).withPlayer(player);
+        return getController(player.getName(), player.getUniqueId().toString(), Payload.getIP(player.getAddress().getAddress())).withPlayer(player);
     }
 
     public boolean hasController(String uniqueId) {

@@ -41,7 +41,7 @@ public class PCacheFailureHandler<X extends PayloadProfile> {
 
     public FailedCachedProfile<X> startFailureHandling(CachingProfile<X> cachingProfile) {
         if (!hasFailedProfile(cachingProfile.getUniqueId())) {
-            FailedCachedProfile<X> failedCachedProfile = new FailedCachedProfile<>(cachingProfile, cachingProfile.getName(), cachingProfile.getUniqueId());
+            FailedCachedProfile<X> failedCachedProfile = new FailedCachedProfile<>(cachingProfile, cachingProfile.getName(), cachingProfile.getUniqueId(), cachingProfile.getLoginIp());
             this.failedCaches.add(failedCachedProfile);
 
             cache.getAfterJoinTask().addTask(cachingProfile, ((cp, player) -> {

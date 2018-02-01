@@ -8,11 +8,18 @@ public class FailedCachedProfile<T extends PayloadProfile> implements ProfilePas
     private final CachingProfile<T> cachingProfile;
     private final String username;
     private final String uniqueId;
+    private final String loginIp;
 
-    public FailedCachedProfile(CachingProfile<T> cachingProfile, String username, String uniqueId) {
+    public FailedCachedProfile(CachingProfile<T> cachingProfile, String username, String uniqueId, String ip) {
         this.cachingProfile = cachingProfile;
         this.username = username;
         this.uniqueId = uniqueId;
+        this.loginIp = ip;
+    }
+
+    @Override
+    public String getLoginIp() {
+        return loginIp;
     }
 
     public boolean isOnline() {

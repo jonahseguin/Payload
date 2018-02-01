@@ -54,6 +54,11 @@ public class PUsernameUUIDLayer<X extends PayloadProfile> extends ProfileCacheLa
             public String getUniqueId() {
                 return uniqueId.toLowerCase();
             }
+
+            @Override
+            public String getLoginIp() {
+                return null;
+            }
         };
     }
 

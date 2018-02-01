@@ -23,6 +23,7 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
 
     @EventHandler(priority = EventPriority.LOW)
     public void onAsyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
+        final String ip = Payload.getIP(event.getAddress());
         profileCache.getDebugger().debug("Called AsyncPlayerPreLoginEvent: " + event.getName());
         if (!profileCache.isAllowJoinsMode()) {
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST,
@@ -31,13 +32,13 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
         }
         if (profileCache.getSettings().isEnableAsyncCaching()) {
             profileCache.getDebugger().debug("Using async caching");
-            Payload.runASync(profileCache.getPlugin(), () -> profileCache.getController(event.getName(), event.getUniqueId().toString())
-                    .cache());
+            Payload.runASync(profileCache.getPlugin(), () -> profileCache.getController(event.getName(), event.getUniqueId().toString(), ip)
+                    .cache(ip));
         }
         else {
             profileCache.getDebugger().debug("Using sync caching");
-            ProfileCachingController<T> controller = profileCache.getController(event.getName(), event.getUniqueId().toString());
-            T profile = controller.cache();
+            ProfileCachingController<T> controller = profileCache.getController(event.getName(), event.getUniqueId().toString(), ip);
+            T profile = controller.cache(ip);
             if (!controller.isJoinable()) {
                 event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, controller.getJoinDenyMessage());
             }

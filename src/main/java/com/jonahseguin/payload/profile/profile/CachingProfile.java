@@ -19,6 +19,7 @@ public class CachingProfile<T extends PayloadProfile> implements ProfilePassable
     private final PayloadProfileCache<T> cache;
     private final String name;
     private final String uniqueId;
+    private final String loginIp;
     private final long time;
     private PCacheStage stage = PCacheStage.INIT;
     private PCacheSource loadingSource = null;

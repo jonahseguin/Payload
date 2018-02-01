@@ -22,14 +22,16 @@ public class PayloadProfileLoadedEvent<X extends PayloadProfile> extends Event {
     private final CachingProfile<X> cachingProfile;
     private final PayloadProfileCache<X> cache;
     private final X profile;
+    private final String ip;
     private boolean joinable = true;
     private String joinDenyMessage = PayloadProfileCache.FAILED_CACHE_KICK_MESSAGE;
 
-    public PayloadProfileLoadedEvent(CachingProfile<X> cachingProfile, PayloadProfileCache<X> cache, X profile) {
+    public PayloadProfileLoadedEvent(CachingProfile<X> cachingProfile, PayloadProfileCache<X> cache, X profile, String ip) {
         super(true);
         this.cachingProfile = cachingProfile;
         this.cache = cache;
         this.profile = profile;
+        this.ip = ip;
     }
 
     public static HandlerList getHandlerList() {
@@ -38,6 +40,10 @@ public class PayloadProfileLoadedEvent<X extends PayloadProfile> extends Event {
 
     public Player tryToGetPlayer() {
         return Bukkit.getPlayerExact(profile.getName());
+    }
+
+    public String getIp() {
+        return ip;
     }
 
     public String getJoinDenyMessage() {

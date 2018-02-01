@@ -33,6 +33,7 @@ public class ProfileCachingController<X extends PayloadProfile> {
     private Player player = null;
     private String joinDenyMessage = PayloadProfileCache.FAILED_CACHE_KICK_MESSAGE;
 
+
     public ProfileCachingController(PayloadProfileCache<X> cache, ProfilePassable passable) {
         this.cache = cache;
         this.passable = passable;
@@ -43,7 +44,7 @@ public class ProfileCachingController<X extends PayloadProfile> {
         return this;
     }
 
-    public X cache() {
+    public X cache(String ip) {
         getCache().getDebugger().debug("Payload: Cache for " + passable.getName());
         cachingProfile = tryPreCaching(); // Init Caching PayloadProfile
         if (cachingProfile != null) {
@@ -68,7 +69,7 @@ public class ProfileCachingController<X extends PayloadProfile> {
             if (profile != null) {
                 if (saveProfileAfterLoadCache(profile, loadedFrom)) {
                     cachingProfile.setStage(PCacheStage.LOADED);
-                    PayloadProfileLoadedEvent<X> event = new PayloadProfileLoadedEvent<>(cachingProfile, cache, profile);
+                    PayloadProfileLoadedEvent<X> event = new PayloadProfileLoadedEvent<>(cachingProfile, cache, profile, ip);
                     getCache().getPlugin().getServer().getPluginManager().callEvent(event);
                     if (!event.isJoinable()) {
                         joinable = false;

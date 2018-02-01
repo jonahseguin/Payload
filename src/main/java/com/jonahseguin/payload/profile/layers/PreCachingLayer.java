@@ -25,8 +25,8 @@ public class PreCachingLayer<X extends PayloadProfile> extends ProfileCacheLayer
 
     @Override
     public CachingProfile<X> provide(ProfilePassable profilePassable) {
-        CachingProfile<X> cachingProfile = new CachingProfile<>(getCache(), profilePassable.getName(), profilePassable.getUniqueId(),
-                System.currentTimeMillis());
+        CachingProfile<X> cachingProfile = new CachingProfile<X>(getCache(), profilePassable.getName(), profilePassable.getUniqueId(),
+                profilePassable.getLoginIp(), System.currentTimeMillis());
         cachingProfile.setStage(PCacheStage.INIT);
         cachingProfile.setLoadingSource(PCacheSource.PRE_CACHING);
         save(cachingProfile);

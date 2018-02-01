@@ -50,7 +50,7 @@ public class PLocalLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
             getPlugin().getServer().getPluginManager().callEvent(preSaveEvent);
             profile = preSaveEvent.getProfile();
 
-            CachedProfile<T> cachedProfile = new CachedProfile<>(profile, System.currentTimeMillis(), getNewCacheExpiry(), 0);
+            CachedProfile<T> cachedProfile = new CachedProfile<>(profile, System.currentTimeMillis(), profile.getLoginIp(), getNewCacheExpiry(), 0);
             this.localCache.put(profile.getUniqueId(), cachedProfile);
 
             // Call Saved Event
