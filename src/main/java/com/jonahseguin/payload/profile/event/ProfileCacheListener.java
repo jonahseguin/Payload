@@ -82,6 +82,7 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
             profileCache.destroyController(event.getPlayer().getUniqueId().toString());
             T profile = profileCache.getProfile(event.getPlayer());
             if (profile != null) {
+                profile.onQuit();
                 PayloadProfilePreQuitSaveEvent<T> preQuitSaveEvent = new PayloadProfilePreQuitSaveEvent<>(true, profile, profileCache);
                 profileCache.getPlugin().getServer().getPluginManager().callEvent(preQuitSaveEvent);
                 profile.setInitialized(false);
@@ -93,6 +94,9 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
                 profileCache.getLayerController().getPreCachingLayer().remove(event.getPlayer().getUniqueId().toString()); // Always Remove from pre-caching (CachingProfile)
                 if (profileCache.getSettings().isCacheRemoveOnLogout()) {
                     profileCache.getLayerController().getLocalLayer().remove(event.getPlayer().getUniqueId().toString()); // Remove them from the local cache
+                }
+                else {
+                    profileCache.getLayerController().getLocalLayer().save(profile);
                 }
             } else {
                 profileCache.getDebugger().debug(Payload.format("&c{0} logged out with a null profile", event.getPlayer().getName()));

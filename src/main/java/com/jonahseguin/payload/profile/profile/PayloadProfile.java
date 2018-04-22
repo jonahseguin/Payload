@@ -55,4 +55,8 @@ public class PayloadProfile implements ProfilePassable {
         this.initialized = true;
     }
 
+    public void onQuit() {
+
+    }
+
 }
