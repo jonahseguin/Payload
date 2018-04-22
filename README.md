@@ -22,10 +22,11 @@ and this to your dependencies:
 ```xml
 <dependency>
     <groupId>com.github.jonahseguin</groupId>
-    <artifactId>aBsorb</artifactId>
-    <version>0.1</version>
+    <artifactId>Payload</artifactId>
+    <version>1.0</version>
 </dependency>
 ```
+
 
 ## API Usage (WIP)
 *More documentation is needed, as well as wiki pages, examples, etc.*
