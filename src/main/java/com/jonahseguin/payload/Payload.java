@@ -11,8 +11,15 @@ import org.bukkit.plugin.java.JavaPlugin;
  * Project: Payload
  *
  * @ 6:44 PM
+ *
+ * This class is just here so that Payload can be used as a dependency via
+ * loaded plugin instead of being shaded.
+ *
+ * Also provides some utility methods.
  */
 public class Payload extends JavaPlugin {
+
+    private static Payload instance = null;
 
     public static String format(String s, String... args) {
         if (args != null) {
@@ -36,14 +43,17 @@ public class Payload extends JavaPlugin {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, runnable);
     }
 
+    public static Payload getInstance() {
+        return instance;
+    }
+
     @Override
     public void onEnable() {
-
+        Payload.instance = this;
     }
 
     @Override
     public void onDisable() {
-
+        Payload.instance = null;
     }
-
 }

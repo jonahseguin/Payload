@@ -78,6 +78,9 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
 
     @Override
     public boolean has(String uniqueId) {
+        if (uniqueId == null) {
+            return false;
+        }
         try {
             return jedis.exists(uniqueId);
         } catch (JedisException ex) {
@@ -88,6 +91,9 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
 
     @Override
     public boolean remove(String uniqueId) {
+        if (uniqueId == null) {
+            return false;
+        }
         try {
             jedis.del(REDIS_KEY_PREFIX + uniqueId); // returns long --> code reply?  not sure if it's the amount deleted
             return true;
