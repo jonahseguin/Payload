@@ -8,7 +8,6 @@ import com.jonahseguin.payload.profile.profile.ProfilePassable;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 import lombok.Getter;
 
-import org.bukkit.ChatColor;
 import org.bukkit.plugin.Plugin;
 
 @Getter
@@ -34,20 +33,6 @@ public abstract class ProfileCacheLayer<P extends PayloadProfile, T extends Prof
 
     public void error(Exception ex) {
         getCache().getDebugger().error(ex);
-    }
-
-    protected String format(String s, String... args) {
-        if (args != null) {
-            if (args.length > 0) {
-                for (int i = 0; i < args.length; i++) {
-                    if (s.contains("{" + i + "}")) {
-                        s = s.replace("{" + i + "}", args[i]);
-                    }
-                }
-            }
-        }
-
-        return ChatColor.translateAlternateColorCodes('&', s);
     }
 
     /**

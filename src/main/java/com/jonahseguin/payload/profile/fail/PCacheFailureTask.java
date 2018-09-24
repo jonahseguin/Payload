@@ -56,7 +56,7 @@ public class PCacheFailureTask<X extends PayloadProfile> implements Runnable {
                     continue;
                 }
                 if (result != null) {
-                    player.sendMessage(ChatColor.GREEN + "Success.  PayloadProfile loaded.");
+                    player.sendMessage(ChatColor.GREEN + "Success.  Profile loaded.");
                     toRemove.add(profile);
                     controller.join(player);
                 }
