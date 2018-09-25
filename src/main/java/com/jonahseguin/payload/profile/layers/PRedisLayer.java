@@ -19,14 +19,12 @@ import java.util.Map;
 
 public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, T, CachingProfile<T>> {
 
-    private final String REDIS_KEY;
     private final Class<T> clazz;
     private Jedis jedis = null;
 
     public PRedisLayer(PayloadProfileCache<T> cache, CacheDatabase database, Class<T> clazz) {
         super(cache, database);
         this.clazz = clazz;
-        this.REDIS_KEY = cache.getSettings().getRedisKey();
     }
 
     @Override
@@ -42,7 +40,7 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
 
     @Override
     public T get(String uniqueId) {
-        String json = jedis.hget(this.REDIS_KEY, uniqueId);
+        String json = jedis.hget(this.cache.getSettings().getRedisKey(), uniqueId);
         if (json != null) {
             return mapProfile(json); // Can be null
         } else {
@@ -62,7 +60,7 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
                 profilePassable = preSaveEvent.getProfile();
 
                 // Save profile to Redis in the hash at the specified key
-                jedis.hset(this.REDIS_KEY, profilePassable.getUniqueId(), json);
+                jedis.hset(this.cache.getSettings().getRedisKey(), profilePassable.getUniqueId(), json);
 
                 // Call Saved Event
                 PayloadProfileSavedEvent<T> savedEvent = new PayloadProfileSavedEvent<>(profilePassable, getCache(), source());
@@ -85,7 +83,7 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
             return false;
         }
         try {
-            return jedis.hexists(this.REDIS_KEY, uniqueId);
+            return jedis.hexists(this.cache.getSettings().getRedisKey(), uniqueId);
         } catch (JedisException ex) {
             super.getCache().getDebugger().error(ex, "An exception occurred with Jedis while attempting has/exists call");
             return false;
@@ -98,7 +96,7 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
             return false;
         }
         try {
-            jedis.hdel(this.REDIS_KEY, uniqueId);
+            jedis.hdel(this.cache.getSettings().getRedisKey(), uniqueId);
             return true;
         } catch (JedisException ex) {
             super.getCache().getDebugger().error(ex, "An exception occurred with Jedis while attempting to remove a PayloadProfile from Redis cache");
@@ -110,7 +108,7 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
     @Override
     public boolean init() {
         // Ensure the redis key has been set for this Payload instance
-        if (this.REDIS_KEY.equalsIgnoreCase("payload")) {
+        if (this.cache.getSettings().getRedisKey().equalsIgnoreCase("payload")) {
             super.getCache().getDebugger().error(new PayloadException("Redis key must be changed from default 'payload' value!"));
             return false;
         }
@@ -148,7 +146,7 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
         final int cacheRedisExpiryMinutes = this.cache.getSettings().getCacheRedisExpiryMinutes(); // TTL
         // if a Profile has a cachedTime of <= expiredTimestamp, remove
         final long expiredTimestamp = System.currentTimeMillis() - (1000 * 60 * cacheRedisExpiryMinutes);
-        Map<String, String> objectsString = jedis.hgetAll(this.REDIS_KEY);
+        Map<String, String> objectsString = jedis.hgetAll(this.cache.getSettings().getRedisKey());
         int cleaned = 0;
         for (Map.Entry<String, String> entry : objectsString.entrySet()) {
             try {
@@ -156,17 +154,17 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
                 if (object != null) {
                     if (object.getRedisCacheTime() <= expiredTimestamp) {
                         // Object is expired, remove it from Redis
-                        jedis.hdel(this.REDIS_KEY, entry.getKey());
+                        jedis.hdel(this.cache.getSettings().getRedisKey(), entry.getKey());
                     }
                 }
                 else {
                     // If the object is null, let's remove it from Redis (if it couldn't map or is just null)
-                    jedis.hdel(this.REDIS_KEY, entry.getKey());
+                    jedis.hdel(this.cache.getSettings().getRedisKey(), entry.getKey());
                 }
             }
             catch (Exception ex) {
                 // If we get an error [are unable to map the profile], let's remove it from Redis.
-                jedis.hdel(this.REDIS_KEY, entry.getKey());
+                jedis.hdel(this.cache.getSettings().getRedisKey(), entry.getKey());
             }
         }
         return cleaned;
@@ -178,8 +176,8 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
      */
     @Override
     public int clear() {
-        final int size = jedis.hkeys(this.REDIS_KEY).size();
-        jedis.del(this.REDIS_KEY);
+        final int size = jedis.hkeys(this.cache.getSettings().getRedisKey()).size();
+        jedis.del(this.cache.getSettings().getRedisKey());
         return size;
     }
 
