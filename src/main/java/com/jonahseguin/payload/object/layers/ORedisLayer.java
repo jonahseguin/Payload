@@ -2,6 +2,7 @@ package com.jonahseguin.payload.object.layers;
 
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.common.exception.CachingException;
+import com.jonahseguin.payload.common.exception.PayloadException;
 import com.jonahseguin.payload.object.cache.PayloadObjectCache;
 import com.jonahseguin.payload.object.event.ObjectPreSaveEvent;
 import com.jonahseguin.payload.object.event.ObjectSavedEvent;
@@ -27,7 +28,7 @@ public class ORedisLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
         if (!cache.getSettings().isUseRedis()) {
             throw new CachingException("Cannot use Redis layer when useRedis is disabled!");
         }
-        String json = jedis.get(cache.getSettings().getRedisKey() + id);
+        String json = jedis.hget(cache.getSettings().getRedisKey(), id);
         if (json != null) {
             return mapObject(json);
         }
@@ -49,7 +50,7 @@ public class ORedisLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
         x = preSaveEvent.getObject();
 
         String json = jsonifyObject(x);
-        jedis.set(cache.getSettings().getRedisKey() + id, json);
+        jedis.hset(cache.getSettings().getRedisKey(), id, json);
 
         // Saved Event
         ObjectSavedEvent<X> savedEvent = new ObjectSavedEvent<>(x, source(), cache);
@@ -63,7 +64,7 @@ public class ORedisLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
         if (!cache.getSettings().isUseRedis()) {
             throw new CachingException("Cannot use Redis layer when useRedis is disabled!");
         }
-        return jedis.exists(cache.getSettings().getRedisKey() + id);
+        return jedis.hexists(cache.getSettings().getRedisKey(), id);
     }
 
     @Override
@@ -71,7 +72,7 @@ public class ORedisLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
         if (!cache.getSettings().isUseRedis()) {
             throw new CachingException("Cannot use Redis layer when useRedis is disabled!");
         }
-        jedis.del(cache.getSettings().getRedisKey() + id);
+        jedis.hdel(cache.getSettings().getRedisKey(), id);
         return true;
     }
 
@@ -80,6 +81,13 @@ public class ORedisLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
         if (!cache.getSettings().isUseRedis()) {
             throw new CachingException("Cannot use Redis layer when useRedis is disabled!");
         }
+
+        // Ensure the redis key has been set for this Payload instance
+        if (this.cache.getSettings().getRedisKey().equalsIgnoreCase("payload")) {
+            super.getCache().getDebugger().error(new PayloadException("Redis key must be changed from default 'payload' value!"));
+            return false;
+        }
+
         try {
             jedis = database.getJedis();
             return true;
@@ -114,7 +122,9 @@ public class ORedisLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
 
     @Override
     public int clear() {
-        return 0;
+        final int size = jedis.hkeys(this.cache.getSettings().getRedisKey()).size();
+        jedis.del(this.cache.getSettings().getRedisKey());
+        return size;
     }
 
     private String jsonifyObject(X obj) {

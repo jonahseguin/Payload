@@ -1,5 +1,6 @@
 package com.jonahseguin.payload.object.caching;
 
+import com.jonahseguin.payload.common.exception.CachingException;
 import com.jonahseguin.payload.object.cache.PayloadObjectCache;
 import com.jonahseguin.payload.object.obj.ObjectCacheable;
 import com.jonahseguin.payload.object.type.OLayerType;
@@ -38,7 +39,8 @@ public class ObjectCachingController<X extends ObjectCacheable> {
 
         if (loaded != null) {
             if (cache.getSettings().isSaveAfterLoad()) {
-                saveObjectAfterLoad(loaded, loadedFrom);
+                boolean successSaving = saveObjectAfterLoad(loaded, loadedFrom);
+                // Do something with the result of the success?
             }
             return loaded;
         }
@@ -55,7 +57,7 @@ public class ObjectCachingController<X extends ObjectCacheable> {
             boolean local = cache.getLayerController().getLocalLayer().save(obj.getIdentifier(), obj);
             success = local;
             if (!local) {
-                cache.getDebugger().debug("Local layer failed to save when saving Object after load for ID " + obj.getIdentifier());
+                cache.getDebugger().error(new CachingException("Local layer failed to save when saving Object after load for ID " + obj.getIdentifier()));
             }
         }
         if (except == null || !except.equals(OLayerType.REDIS)) {
@@ -64,7 +66,7 @@ public class ObjectCachingController<X extends ObjectCacheable> {
                 success = redis;
             }
             if (!redis) {
-                cache.getDebugger().debug("Redis layer failed to save when saving Object after load for ID " + obj.getIdentifier());
+                cache.getDebugger().error(new CachingException("Redis layer failed to save when saving Object after load for ID " + obj.getIdentifier()));
             }
         }
         if (except == null || !except.equals(OLayerType.MONGO)) {
@@ -73,7 +75,7 @@ public class ObjectCachingController<X extends ObjectCacheable> {
                 success = mongo;
             }
             if (!mongo) {
-                cache.getDebugger().debug("Mongo layer failed to save when saving Object after load for ID " + obj.getIdentifier());
+                cache.getDebugger().error(new CachingException("Mongo layer failed to save when saving Object after load for ID " + obj.getIdentifier()));
             }
         }
         return success;
