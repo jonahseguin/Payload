@@ -7,15 +7,13 @@ import com.jonahseguin.payload.object.layers.ObjectLayerController;
 import com.jonahseguin.payload.object.obj.ObjectCacheable;
 import com.jonahseguin.payload.object.type.OLayerType;
 import com.jonahseguin.payload.object.type.ObjectCacheSettings;
-import com.jonahseguin.payload.profile.event.ProfileCacheListener;
-import com.jonahseguin.payload.profile.event.ProfileHaltedListener;
-import com.jonahseguin.payload.profile.task.PCacheAutoSaveTask;
 import lombok.Getter;
-import org.bukkit.plugin.Plugin;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
+import org.bukkit.plugin.Plugin;
 
 @Getter
 public class PayloadObjectCache<X extends ObjectCacheable> {
@@ -56,7 +54,7 @@ public class PayloadObjectCache<X extends ObjectCacheable> {
     }
 
     private void handleStartupFail() {
-        debugger.debug("[FATAL ERROR]  An error occurred while starting up the cache..");
+        debugger.error("[FATAL ERROR]  An error occurred while starting up the cache..");
         if(getDebugger().onStartupFailure()) {
             shutdown();
         }
