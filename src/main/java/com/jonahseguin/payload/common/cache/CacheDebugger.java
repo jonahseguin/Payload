@@ -24,6 +24,12 @@ public interface CacheDebugger {
     void error(Exception ex);
 
     /**
+     * Called when an error occurs within Payload (usually a self-generated one)
+     * @param message String
+     */
+    void error(String message);
+
+    /**
      * Called when a specific exception occurs within Payload and a message is provided by Payload
      * @param ex Exception
      * @param message String
