@@ -173,6 +173,10 @@ public class PayloadProfileCache<T extends PayloadProfile> {
         return null;
     }
 
+    public T getProfile(UUID uniqueId) {
+        return this.getProfile(uniqueId.toString().toLowerCase());
+    }
+
     public T getProfile(String uniqueId) {
         // Ensure the profile we get is not temporary
         // If not cached, check for PreCached [CachingProfile] or FailedCachedProfile
@@ -263,6 +267,7 @@ public class PayloadProfileCache<T extends PayloadProfile> {
             }
             callback.call(new AbstractMap.SimpleEntry<>(count, failed));
         });
+
     }
 
     public Set<T> getOnlineProfiles() {
