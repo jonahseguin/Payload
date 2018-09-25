@@ -14,7 +14,6 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> {
@@ -31,7 +30,7 @@ public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
     public X provide(String id) {
         if (!cache.getSettings().isUseMongo()) return null;
         try {
-            Query<X> q = getQuery(id);
+            Query<X> q = createQuery(id);
             Stream<X> stream = q.asList().stream();
             Optional<X> xp = stream.findFirst();
             return xp.orElse(null);
@@ -70,7 +69,7 @@ public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
     public boolean has(String id) {
         if (!cache.getSettings().isUseMongo()) return false;
         try {
-            Query<X> q = getQuery(id);
+            Query<X> q = createQuery(id);
             Stream<X> stream = q.asList().stream();
             Optional<X> xp = stream.findFirst();
             return xp.isPresent();
@@ -86,7 +85,7 @@ public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
     public boolean remove(String id) {
         if (!cache.getSettings().isUseMongo()) return false;
         try {
-            Query<X> q = getQuery(id);
+            Query<X> q = createQuery(id);
             X obj = getDatabase().getDatastore().findAndDelete(q);
             return obj != null;
         } catch (MongoException ex) {
@@ -115,7 +114,7 @@ public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
 
     public Set<X> getAll() {
         Query<X> q = database.getDatastore().createQuery(clazz);
-        return q.asList().stream().collect(Collectors.toSet());
+        return new HashSet<>(q.asList());
     }
 
     @Override
@@ -149,14 +148,14 @@ public class OMongoLayer<X extends ObjectCacheable> extends ObjectCacheLayer<X> 
         }
     }
 
-    public Query<X> getQuery() {
+    public Query<X> createQuery() {
         Query<X> q = database.getDatastore().createQuery(clazz);
         applyCriteriaModifiers(q);
         return q;
     }
 
-    public Query<X> getQuery(String id) {
-        Query<X> q = getQuery();
+    public Query<X> createQuery(String id) {
+        Query<X> q = createQuery();
         q.maxTime(10, TimeUnit.SECONDS);
         q.criteria(getCache().getSettings().getMongoIdentifierField()).equalIgnoreCase(id);
         return q;
