@@ -25,6 +25,7 @@ public class PayloadProfile implements ProfilePassable {
     protected String name;
     protected String uniqueId;
     protected String loginIp;
+    protected long redisCacheTime = 0;
 
     @Transient protected transient boolean initialized = false;
     @Transient protected transient Player player = null;

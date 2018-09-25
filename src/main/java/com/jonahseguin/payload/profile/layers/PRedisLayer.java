@@ -2,6 +2,7 @@ package com.jonahseguin.payload.profile.layers;
 
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.common.exception.CachingException;
+import com.jonahseguin.payload.common.exception.PayloadException;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.event.PayloadProfilePreSaveEvent;
 import com.jonahseguin.payload.profile.event.PayloadProfileSavedEvent;
@@ -10,21 +11,22 @@ import com.jonahseguin.payload.profile.profile.PayloadProfile;
 import com.jonahseguin.payload.profile.type.PCacheSource;
 import com.jonahseguin.payload.profile.type.PCacheStage;
 import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
 import com.mongodb.util.JSONParseException;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisException;
 
+import java.util.Map;
+
 public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, T, CachingProfile<T>> {
 
-    private final String REDIS_KEY_PREFIX; // <key>.profile.<UUID>
+    private final String REDIS_KEY;
     private final Class<T> clazz;
     private Jedis jedis = null;
 
     public PRedisLayer(PayloadProfileCache<T> cache, CacheDatabase database, Class<T> clazz) {
         super(cache, database);
         this.clazz = clazz;
-        this.REDIS_KEY_PREFIX = cache.getSettings().getRedisKeyPrefix() + ".profile.";
+        this.REDIS_KEY = cache.getSettings().getRedisKey();
     }
 
     @Override
@@ -40,7 +42,7 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
 
     @Override
     public T get(String uniqueId) {
-        String json = jedis.get(REDIS_KEY_PREFIX + uniqueId);
+        String json = jedis.hget(this.REDIS_KEY, uniqueId);
         if (json != null) {
             return mapProfile(json); // Can be null
         } else {
@@ -59,7 +61,8 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
                 getPlugin().getServer().getPluginManager().callEvent(preSaveEvent);
                 profilePassable = preSaveEvent.getProfile();
 
-                jedis.set(REDIS_KEY_PREFIX + profilePassable.getUniqueId(), json);
+                // Save profile to Redis in the hash at the specified key
+                jedis.hset(this.REDIS_KEY, profilePassable.getUniqueId(), json);
 
                 // Call Saved Event
                 PayloadProfileSavedEvent<T> savedEvent = new PayloadProfileSavedEvent<>(profilePassable, getCache(), source());
@@ -78,11 +81,11 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
 
     @Override
     public boolean has(String uniqueId) {
-        if (uniqueId == null) {
+        if (uniqueId == null || uniqueId.length() <= 0) {
             return false;
         }
         try {
-            return jedis.exists(uniqueId);
+            return jedis.hexists(this.REDIS_KEY, uniqueId);
         } catch (JedisException ex) {
             super.getCache().getDebugger().error(ex, "An exception occurred with Jedis while attempting has/exists call");
             return false;
@@ -95,7 +98,7 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
             return false;
         }
         try {
-            jedis.del(REDIS_KEY_PREFIX + uniqueId); // returns long --> code reply?  not sure if it's the amount deleted
+            jedis.hdel(this.REDIS_KEY, uniqueId);
             return true;
         } catch (JedisException ex) {
             super.getCache().getDebugger().error(ex, "An exception occurred with Jedis while attempting to remove a PayloadProfile from Redis cache");
@@ -106,6 +109,12 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
 
     @Override
     public boolean init() {
+        // Ensure the redis key has been set for this Payload instance
+        if (this.REDIS_KEY.equalsIgnoreCase("payload")) {
+            super.getCache().getDebugger().error(new PayloadException("Redis key must be changed from default 'payload' value!"));
+            return false;
+        }
+
         try {
             this.jedis = database.getJedis();
             return true;
@@ -136,17 +145,47 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
 
     @Override
     public int cleanup() {
-        return 0;
+        final int cacheRedisExpiryMinutes = this.cache.getSettings().getCacheRedisExpiryMinutes(); // TTL
+        // if a Profile has a cachedTime of <= expiredTimestamp, remove
+        final long expiredTimestamp = System.currentTimeMillis() - (1000 * 60 * cacheRedisExpiryMinutes);
+        Map<String, String> objectsString = jedis.hgetAll(this.REDIS_KEY);
+        int cleaned = 0;
+        for (Map.Entry<String, String> entry : objectsString.entrySet()) {
+            try {
+                T object = mapProfile(entry.getValue());
+                if (object != null) {
+                    if (object.getRedisCacheTime() <= expiredTimestamp) {
+                        // Object is expired, remove it from Redis
+                        jedis.hdel(this.REDIS_KEY, entry.getKey());
+                    }
+                }
+                else {
+                    // If the object is null, let's remove it from Redis (if it couldn't map or is just null)
+                    jedis.hdel(this.REDIS_KEY, entry.getKey());
+                }
+            }
+            catch (Exception ex) {
+                // If we get an error [are unable to map the profile], let's remove it from Redis.
+                jedis.hdel(this.REDIS_KEY, entry.getKey());
+            }
+        }
+        return cleaned;
     }
 
+    /**
+     * WARNING: Using this method will completely clear the cache from Redis [only for this plugin/project]
+     * @return The amount of keys removed from our cache
+     */
     @Override
     public int clear() {
-        jedis.flushDB();
-        return -1;
+        final int size = jedis.hkeys(this.REDIS_KEY).size();
+        jedis.del(this.REDIS_KEY);
+        return size;
     }
 
     private String jsonifyProfile(T profile) {
         try {
+            profile.setRedisCacheTime(System.currentTimeMillis());
             BasicDBObject dbObject = (BasicDBObject) database.getMorphia().toDBObject(profile);
             return dbObject.toJson();
         } catch (JSONParseException ex) {
@@ -159,7 +198,7 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
 
     private T mapProfile(String json) {
         try {
-            DBObject dbObject = BasicDBObject.parse(json);
+            BasicDBObject dbObject = BasicDBObject.parse(json);
             T profile = database.getMorphia().fromDBObject(database.getDatastore(), clazz, dbObject);
             if (profile != null) {
                 return profile;

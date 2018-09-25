@@ -62,7 +62,7 @@ public abstract class ProfileCacheLayer<P extends PayloadProfile, T extends Prof
 
     public abstract int clear();
 
-    public PCacheFailureHandler<P> getFailureHandler() {
+    PCacheFailureHandler<P> getFailureHandler() {
         return cache.getFailureHandler();
     }
 

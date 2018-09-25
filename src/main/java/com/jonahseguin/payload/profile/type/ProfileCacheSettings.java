@@ -35,7 +35,8 @@ public class ProfileCacheSettings<T extends PayloadProfile> {
     private boolean cacheRemoveOnLogout = false; // Whether to remove a profile from the local cache when logging out
     private boolean enableHaltListener = true; // Whether to register the halt listener that prevents obj actions while halted
     private int cacheFailRetryIntervalSeconds = 30; // How frequently (seconds) to attempt to load failed profile
-    private String redisKeyPrefix = "payload"; // Ensure this is changed if using Payload on the same database with multiple plugins!
+    private String redisKey = "payload"; // Ensure this is changed!  Your redis key (i.e your project/plugin name)
     private boolean enableAsyncCaching = true; // Whether to Async. caching in a new thread from the AsyncPlayerPreLoginEvent... i.e allow them to login before being fully cached
+    private int cacheRedisExpiryMinutes = 240; // Maximum time a profile can remain cached in Redis before it needs to be recached [4 hours] Set to 0 for no cache expiry
 
 }

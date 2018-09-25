@@ -43,7 +43,7 @@ public class Payload extends JavaPlugin {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, runnable);
     }
 
-    public static Payload getInstance() {
+    public static Payload get() {
         return instance;
     }
 

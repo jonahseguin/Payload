@@ -1,6 +1,6 @@
 name: Payload
 main: com.jonahseguin.payload.Payload
-version: 1.1.0
+version: ${project.version}
 author: Jonah Seguin
-website: https://jonahseguin.com
+website: jonahseguin.com
 description: fail-safe asynchronous profile & object caching for spigot servers
