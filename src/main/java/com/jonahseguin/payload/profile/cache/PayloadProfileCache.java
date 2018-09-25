@@ -17,7 +17,9 @@ import com.jonahseguin.payload.profile.task.PCacheAutoSaveTask;
 import com.jonahseguin.payload.profile.task.PCacheCleanupTask;
 import com.jonahseguin.payload.profile.task.PJoinTask;
 import com.jonahseguin.payload.profile.type.ProfileCacheSettings;
+import com.jonahseguin.payload.profile.type.ProfileCriteria;
 import lombok.Getter;
+import org.apache.commons.lang.Validate;
 
 import java.util.AbstractMap;
 import java.util.Map;
@@ -46,7 +48,6 @@ public class PayloadProfileCache<T extends PayloadProfile> {
             ChatColor.RED + "This is should not happen.  Try re-logging and contact an administrator.\n" +
             ChatColor.GRAY + "We apologize for the inconvenience.";
     private final String cacheId = UUID.randomUUID().toString();
-    private final SimpleProfileCache<T> simpleCache = new SimpleProfileCache<>(this);
     private final ConcurrentMap<String, ProfileCachingController<T>> controllers = new ConcurrentHashMap<>();
     private final Plugin plugin;
     private final Class<T> profileClass;
@@ -270,6 +271,48 @@ public class PayloadProfileCache<T extends PayloadProfile> {
 
     public Set<T> getCachedProfiles() {
         return getLayerController().getLocalLayer().getLocalCache().values().stream().map(CachedProfile::getProfile).collect(Collectors.toSet());
+    }
+
+    /**
+     * Gets a profile from a username {@link Player#getName()}
+     * Will attempt to convert it to a UUID if possible, otherwise fetch from Mongo using the username
+     * @param username The obj's username
+     * @return The profile or null if it does not exist locally, via username-->uuid reverse lookup, or in Mongo
+     */
+    public T getProfileByUsername(String username) {
+        Validate.notNull(username, "Username cannot be null");
+        if (getLayerController().getUsernameUUIDLayer().hasUniqueId(username)) {
+            return getProfile(getLayerController().getUsernameUUIDLayer().getUniqueId(username));
+        }
+        else {
+            Player exact = Bukkit.getPlayerExact(username);
+            if (exact != null) {
+                return getProfile(exact);
+            }
+            else {
+                // Manual via MongoDB
+                return getLayerController().getMongoLayer().getByUsername(username);
+            }
+        }
+    }
+
+    /**
+     * Checks if a profile exists in any layer with given criteria
+     * @param criteria The PayloadProfile Criteria
+     * @return boolean: True if exists
+     */
+    public boolean hasProfileAvailable(ProfileCriteria criteria) {
+        if (criteria.getType() == ProfileCriteria.Type.USERNAME) {
+            String username = criteria.getValue();
+            return getProfileByUsername(username) != null;
+        }
+        else if (criteria.getType() == ProfileCriteria.Type.UUID) {
+            String uniqueId = criteria.getValue();
+            return getProfile(uniqueId) != null;
+        }
+        else {
+            throw new IllegalArgumentException("Unknown ProfileCritera Type: " + criteria.getType().toString());
+        }
     }
 
 }
