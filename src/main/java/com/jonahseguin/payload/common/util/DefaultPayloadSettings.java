@@ -36,6 +36,11 @@ public class DefaultPayloadSettings {
         }
 
         @Override
+        public void error(String message) {
+
+        }
+
+        @Override
         public void error(Exception ex, String message) {
 
         }

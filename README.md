@@ -1,133 +1,148 @@
 # Payload
 *Fail-safe asynchronous profile caching via Redis &amp; MongoDB in Java for Spigot*
 
+
 ## About
 
-Payload aims to provide an all-in-one solution for the profile caching use cases that I've reused across so many of my plugins.  
-It features error handling, verbose debugging, an API with asynchronous events, and easy expandibility through an abstract layer-based system.
-
-The cache is split into "layers": Pre-Caching, Username/UUID, Local (cache), Redis, Mongo, and Profile Creation.  Each layer is attempted in the given order
-asynchronously, and features error-redundancy and after-login async. error handling that allows the player to join even if their profile does not
-load properly (it "halts" them until its loaded) -- of course this is configurable via a settings object that is passed into your ProfileCache.
-
-## Maven: pom.xml
-Add this to your repositories:
-```xml
-<repository>
-    <id>jitpack.io</id>
-    <url>https://jitpack.io</url>
-</repository>
-```
-and this to your dependencies:
-```xml
-<dependency>
-    <groupId>com.github.jonahseguin</groupId>
-    <artifactId>Payload</artifactId>
-    <version>1.0</version>
-</dependency>
-```
+**Payload aims to provide an all-in-one solution for the profile caching use cases that I've reused across so many of my plugins.**  
+It features *error handling*, *verbose debugging*, *an API with asynchronous events*, and *easy expandibility* through an abstract layer-based system.
 
 
-## API Usage (WIP)
-*More documentation is needed, as well as wiki pages, examples, etc.*
+## Key Features
+- Asynchronous
+- Supports Redis & MongoDB
+- Failure handling
+- User configurable settings
+- Custom error & debug handling
+- Multiple types of caches for Unique Player Profiles (persistant), Objects (persistant or non-persistant), and Simple Players (non-persistant)
+- Fast & easy to use across multiple services, plugins, and servers
 
-Payload provides an easy automation of Profile Caching with fail-safe checks for errors.  It handles it's own cleanup, auto-saving, errors, and more.
 
-The user (you!) must provide information to payload in order for it to function:
-- Database objects & connections (mongo+morphia, jedis (redis)) -- the libraries for these databases are shaded into Payload by default
-- Settings (such as re-try intervals, whether to save/remove on logout, etc.)
-- Providers for Payload functions (instantiator to create **your** Profile object when a new player joins, the profile class, debugging methods that are called by payload; you decide what to do with the information
+## Cache Types
+There are *three different types of caches* within Payload: **Profile**, **Object**, and **Simple**
 
-A general example of a very basic Payload implementation can be seen in the [PayloadExample.java](https://github.com/jonahseguin/Payload/blob/master/src/main/java/com/jonahseguin/payload/PayloadExample.java)
 
-### Creating a ProfileCache: the base of Payload
+### Profile
+For **Profile Caching**, cache system is split into "layers": Pre-Caching, Username/UUID, Local (cache), Redis, Mongo, and Profile Creation.  
 
-You could instantiate a ProfileClass object and pass in your settings object with your Profile Class (ie MyProfile.class -- which extends Payload's Profile class)
+Each layer is attempted in the given order
+asynchronously, and features error-redundancy and after-login asynchronous error handling that allows the player to join even if their profile does not
+load properly (it "halts" them until its loaded) -- of course this is configurable via a settings object that is passed into your Payload Cache.
 
-```java
-CacheSettings settings = new MyCacheSettings(); // where MyCacheSettings extends CacheSettings and implements everything necessary
-ProfileCache<MyProfile> cache = new ProfileCache<>(settings, MyProfile.class)
-```
-or.. you could make your life a little easier and use the builder provided by Payload to create your Cache, such as shown in the PayloadExample:
+Get started with Profile Caching on the [Profile Caching](https://github.com/jonahseguin/Payload/wiki/Using-the-Profile-Cache) wiki page.
 
-```java
-ProfileCache<MyProfile> cache = new CacheBuilder<MyProfile>(this) // where this = your JavaPlugin
-                .withProfileClass(MyProfile.class) // Our Profile
-                .withCacheLocalExpiryMinutes(30) // Local profiles expire after 30 mins of being inactive (i.e logging out)
-                .withCacheLogoutSaveDatabase(true) // Save their profile to *Mongo* (and always redis) when they logout
-                .withCacheRemoveOnLogout(false) // Don't remove them from the local cache when they logout
-                .withHaltListenerEnabled(true) // Allow Payload to handle the halt listener
-                .withCacheFailRetryIntervalSeconds(30) // Re-try caching for fails every 30 seconds
-                .withDatabase(new CacheDatabase(mongoClient, mongoDatabase, jedis, morphia, datastore)) // Pass in our database properties
-                .withDebugger(new CacheDebugger() { // Handle the debug and errors provided by Payload
+*The codebase for the Profile Caching system can be found in the [profile package](https://github.com/jonahseguin/Payload/tree/master/src/main/java/com/jonahseguin/payload/profile).*
 
-                    @Override
-                    public void debug(String message) {
-                        if (debug) {
-                            getLogger().info("[Debug][Cache] " + message);
-                        }
-                    }
 
-                    @Override
-                    public void error(Exception ex) {
-                        getLogger().info("[Error][Cache] An exception occurred: " + ex.getMessage());
-                        if (debug) {
-                            ex.printStackTrace();
-                        }
-                    }
+### Object
+Payload also now supports **object caching**.  Objects (such as Factions, Claims, or other non-player objects) can be cached and automatically handled by Payload.  They can be persistent or non-persistent.  
 
-                    @Override
-                    public void error(Exception ex, String message) {
-                        getLogger().info("[Error][Cache] An exception occurred: " + message);
-                        if (debug) {
-                            ex.printStackTrace();
-                        }
-                    }
+Like the Profile Cache, the Object Caching System also works in layers (Local -> Redis -> Mongo).  You can configure whether you want Redis & Mongo to be enabled.
 
-                    @Override
-                    public boolean onStartupFailure() {
-                        maintenanceMode = true; // Enable maintenance mode to prevent more players from joining
+Get started with Object Caching on the [Object Caching](https://github.com/jonahseguin/Payload/wiki/Using-the-Object-Cache) wiki page.
 
-                        for (Player pl : getServer().getOnlinePlayers()) {
-                            if (!pl.isOp()) {
-                                pl.kickPlayer(ChatColor.RED + "The server is experiencing technical difficulties.\n" +
-                                "Please join back later.");
-                            }
-                            else {
-                                pl.sendMessage(ChatColor.RED + "All players were kicked due to a cache startup failure.");
-                            }
-                        }
+*The codebase for the Object Caching system can be found in the [object package](https://github.com/jonahseguin/Payload/tree/master/src/main/java/com/jonahseguin/payload/object).*
 
-                        return true; // Shutdown cache if it fails to start
-                    }
-                })
-                .withInstantiator((username, uniqueId) -> new MyProfile(username, uniqueId)) // This handles the instantiation of our Profile when a new one is created
-                .build(); // Done
-```
+### Simple
+This is the most, well, simple cache type.  It is a non-persistant mode that allows for the creation of local player-based objects which are cached for that session of the server being online.  Of course there are TTL settings for these objects as well.
 
-Once you have created your cache, you'll want to start it up:
-```java
-boolean success = cache.init();
-if (!success)
-  doSomethingToHandleErrorWhenCacheDoesNotStartUpProperly() // or something like that... you get the idea
-```
+Get started with Simple Caching on the [Simple Caching](https://github.com/jonahseguin/Payload/wiki/Using-the-Simple-Cache) wiki page.
 
-and likewise when your plugin disables:
-```java
-boolean success = cache.shutdown();
-```
+*The codebase for the Simple Caching system can be found in the [simple package](https://github.com/jonahseguin/Payload/tree/master/src/main/java/com/jonahseguin/payload/simple).*
 
-From there, the basics are done.  Payload handles the rest.
 
-Now, how do you get a profile, you ask?  Easy.
+## Add Payload as a dependency
+For information on how to install Payload as a dependency in your project, visit the [Getting Started](https://github.com/jonahseguin/Payload/wiki/Getting-Started) wiki page!
+
+
+## Examples
 
 ```java
-// There are several methods you can use:
+PayloadProfileCache<MyProfile> cache = ...; // learn how to setup your Profile Cache on the Profile Cache wiki page!
+```
+
+### Getting a Profile
+```java
 MyProfile profile = cache.getProfile(player);
-MyProfile profile = cache.getProfile(uniqueId);
-MyProfile profile = cache.getSimpleCache().getProfileByUsername(username);
-MyProfile profile = cache.getSimpleCache().getLocalProfile(player);
-MyProfile profile = cache.getLayerController().getLocalLayer().get(uniqueId);
+
+MyProfile profile = cache.getProfile("uniqueId");
+
+MyProfile profile = cache.getProfileByUsername("username");
+
 ```
 
-More examples to be added.
+### Save a profile
+```java
+cache.saveEverywhere(profile); // Sync
+```
+
+### Get all cached profiles
+```java
+cache.getCachedProfiles()
+
+// Or get only the online cached profiles:
+cache.getOnlineProfiles()
+
+```
+
+### Save all profiles
+```java
+cache.saveAll(callback -> {
+    int count = callback.getKey(); // Total # profiles saved
+    int failed = callback.getValue(); // # profiles that failed to save
+    if (failed > 0)
+        Bukkit.broadcastMessage("Warning: " + failed + " profiles failed to save!");
+});
+```
+
+### Get an object: such as a Faction
+```java
+Faction faction = factionObjectCache.get("factionName");
+```
+
+### Get an object from a specific layer
+```java
+factionObjectCache.getFrom(OLayerType.REDIS, "factionName");
+```
+
+### Remove an object from the local cache
+```java
+factionObjectCache.uncache(faction);
+// or
+factionObjectCache.uncache("factionName");
+```
+
+### Save an object
+```java
+factionObjectCache.saveEverywhere(faction);
+```
+
+### Delete an object from everywhere (Local + Redis + Mongo)
+```java
+factionObjectCache.deleteEverywhere("factionName");
+```
+
+### You can even get or delete an object from a specific layer
+```java
+factionObjectCache.getLayerController().getLocalLayer().provide("factionName");
+
+// or delete:
+factionObjectCache.getLayerController().getLocalLayer().remove("factionName");
+
+// from any layer
+factionObjectCache.getLayerController().getRedisLayer()...
+factionObjectCache.getLayerController().getMongoLayer()...
+```
+
+### You can even access the controller for each cached object to see how they were cached, or manually load the object
+```java
+OLayerType cacheSource = factionObjectCache.getController("factionName").getLoadedFrom(); // Local / Redis / Mongo
+
+// or manually load it / cache it
+Faction faction = factionObjectCache.getController("factionName").cache(); // If no controller exists, one is automatically created
+if (faction == null) {
+    // doesn't exist; create the faction [there is also a setting to allow Payload to do this automatically: 'createOnNull']
+    faction = new Faction("factionName");
+    factionObjectCache.saveEverywhere(faction);
+}
+```
