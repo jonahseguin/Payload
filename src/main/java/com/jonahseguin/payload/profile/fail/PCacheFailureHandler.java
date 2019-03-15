@@ -69,13 +69,13 @@ public class PCacheFailureHandler<X extends PayloadProfile> {
         PCacheSource nextSource = layer.source().next();
         if (nextSource != null) {
             if (nextSource == PCacheSource.LOCAL) {
-                layer.debug("[ProfileCache fail] Attempting to provide for " + target.getName() + " from local layer");
+                layer.debug("[ProfileCache fail] Attempting to provide for " + target.getName() + " from Local layer");
                 return cache.getLayerController().getLocalLayer().provide(target);
             } else if (nextSource == PCacheSource.REDIS) {
-                layer.debug("[ProfileCache fail] Attempting to provide for " + target.getName() + " from redis layer");
+                layer.debug("[ProfileCache fail] Attempting to provide for " + target.getName() + " from Redis layer");
                 return cache.getLayerController().getRedisLayer().provide(target);
             } else if (nextSource == PCacheSource.MONGO) {
-                layer.debug("[ProfileCache fail] Attempting to provide for " + target.getName() + " from mongo layer");
+                layer.debug("[ProfileCache fail] Attempting to provide for " + target.getName() + " from Mongo layer");
                 return cache.getLayerController().getMongoLayer().provide(target);
             } else {
                 // Mongo failed; FAIL --> Add to failure handler task etc.

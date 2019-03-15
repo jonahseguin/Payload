@@ -56,6 +56,11 @@ public class ProfileCacheBuilder<T extends PayloadProfile> {
         return this;
     }
 
+    public ProfileCacheBuilder<T> withCacheRedisExpiryMinutes(int minutes) {
+        this.settings.setCacheRedisExpiryMinutes(minutes);
+        return this;
+    }
+
     public ProfileCacheBuilder<T> withCacheRemoveOnLogout(boolean removeLogout) {
         this.settings.setCacheRemoveOnLogout(removeLogout);
         return this;
