@@ -50,10 +50,12 @@ public class Payload extends JavaPlugin {
     @Override
     public void onEnable() {
         Payload.instance = this;
+        getLogger().info(Payload.format("Payload v{0} by Jonah Seguin enabled.", Payload.get().getDescription().getVersion()));
     }
 
     @Override
     public void onDisable() {
+        getLogger().info(Payload.format("Payload v{0} by Jonah Seguin disabled.", Payload.get().getDescription().getVersion()));
         Payload.instance = null;
     }
 }
