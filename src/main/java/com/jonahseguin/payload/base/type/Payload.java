@@ -1,4 +1,4 @@
-package com.jonahseguin.payload.base;
+package com.jonahseguin.payload.base.type;
 
 /**
  * A Payload is an object that can be cached, saved, or loaded within the payload system.  Is it the functional

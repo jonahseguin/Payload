@@ -1,6 +1,6 @@
 package com.jonahseguin.payload.profile.event;
 
-import com.jonahseguin.payload.Payload;
+import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.caching.ProfileCachingController;
 import com.jonahseguin.payload.profile.profile.PayloadProfile;
@@ -23,7 +23,7 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
 
     @EventHandler(priority = EventPriority.LOW)
     public void onAsyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
-        final String ip = Payload.getIP(event.getAddress());
+        final String ip = PayloadPlugin.getIP(event.getAddress());
         profileCache.getDebugger().debug("Called AsyncPlayerPreLoginEvent: " + event.getName());
         if (!profileCache.isAllowJoinsMode()) {
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST,
@@ -32,7 +32,7 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
         }
         if (profileCache.getSettings().isEnableAsyncCaching()) {
             profileCache.getDebugger().debug("Using async caching");
-            Payload.runASync(profileCache.getPlugin(), () -> profileCache.getController(event.getName(), event.getUniqueId().toString(), ip)
+            PayloadPlugin.runASync(profileCache.getPlugin(), () -> profileCache.getController(event.getName(), event.getUniqueId().toString(), ip)
                     .cache(ip));
         }
         else {
@@ -78,7 +78,7 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
 
     @EventHandler(priority = EventPriority.HIGHEST) // Have it occur second last to allow flexibility of other plugins
     public void onQuitSaveProfile(final PlayerQuitEvent event) {
-        Payload.runASync(profileCache.getPlugin(), () -> {
+        PayloadPlugin.runASync(profileCache.getPlugin(), () -> {
             profileCache.destroyController(event.getPlayer().getUniqueId().toString());
             T profile = profileCache.getProfile(event.getPlayer());
             if (profile != null) {
@@ -99,7 +99,7 @@ public class ProfileCacheListener<T extends PayloadProfile> implements Listener 
                     profileCache.getLayerController().getLocalLayer().save(profile);
                 }
             } else {
-                profileCache.getDebugger().debug(Payload.format("&c{0} logged out with a null profile", event.getPlayer().getName()));
+                profileCache.getDebugger().debug(PayloadPlugin.format("&c{0} logged out with a null profile", event.getPlayer().getName()));
             }
         });
     }

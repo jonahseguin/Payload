@@ -17,9 +17,9 @@ import org.bukkit.plugin.java.JavaPlugin;
  *
  * Also provides some utility methods.
  */
-public class Payload extends JavaPlugin {
+public class PayloadPlugin extends JavaPlugin {
 
-    private static Payload instance = null;
+    private static PayloadPlugin instance = null;
 
     public static String format(String s, String... args) {
         if (args != null) {
@@ -43,19 +43,19 @@ public class Payload extends JavaPlugin {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, runnable);
     }
 
-    public static Payload get() {
+    public static PayloadPlugin get() {
         return instance;
     }
 
     @Override
     public void onEnable() {
-        Payload.instance = this;
-        getLogger().info(Payload.format("Payload v{0} by Jonah Seguin enabled.", Payload.get().getDescription().getVersion()));
+        PayloadPlugin.instance = this;
+        getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", PayloadPlugin.get().getDescription().getVersion()));
     }
 
     @Override
     public void onDisable() {
-        getLogger().info(Payload.format("Payload v{0} by Jonah Seguin disabled.", Payload.get().getDescription().getVersion()));
-        Payload.instance = null;
+        getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin disabled.", PayloadPlugin.get().getDescription().getVersion()));
+        PayloadPlugin.instance = null;
     }
 }

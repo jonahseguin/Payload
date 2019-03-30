@@ -1,6 +1,6 @@
 package com.jonahseguin.payload.profile.fail;
 
-import com.jonahseguin.payload.Payload;
+import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.layers.ProfileCacheLayer;
 import com.jonahseguin.payload.profile.profile.CachingProfile;
@@ -45,10 +45,10 @@ public class PCacheFailureHandler<X extends PayloadProfile> {
             this.failedCaches.add(failedCachedProfile);
 
             cache.getAfterJoinTask().addTask(cachingProfile, ((cp, player) -> {
-                player.sendMessage(Payload.format("&4&lYour profile failed to load."));
-                player.sendMessage(Payload.format("&cWe will continue to attempt to load your profile."));
-                player.sendMessage(Payload.format("&cIf this problem persists, try re-logging and contact an administrator."));
-                player.sendMessage(Payload.format("&7We apologize for the inconvenience.  Our database may be down, or we may be experiencing temporary issues."));
+                player.sendMessage(PayloadPlugin.format("&4&lYour profile failed to load."));
+                player.sendMessage(PayloadPlugin.format("&cWe will continue to attempt to load your profile."));
+                player.sendMessage(PayloadPlugin.format("&cIf this problem persists, try re-logging and contact an administrator."));
+                player.sendMessage(PayloadPlugin.format("&7We apologize for the inconvenience.  Our database may be down, or we may be experiencing temporary issues."));
             }));
             return failedCachedProfile;
         } else {

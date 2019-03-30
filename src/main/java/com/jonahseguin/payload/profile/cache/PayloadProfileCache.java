@@ -1,6 +1,6 @@
 package com.jonahseguin.payload.profile.cache;
 
-import com.jonahseguin.payload.Payload;
+import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.common.cache.CacheDebugger;
 import com.jonahseguin.payload.common.util.PayloadCallback;
@@ -145,7 +145,7 @@ public class PayloadProfileCache<T extends PayloadProfile> {
     }
 
     public ProfileCachingController<T> getController(Player player) {
-        return getController(player.getName(), player.getUniqueId().toString(), Payload.getIP(player.getAddress().getAddress())).withPlayer(player);
+        return getController(player.getName(), player.getUniqueId().toString(), PayloadPlugin.getIP(player.getAddress().getAddress())).withPlayer(player);
     }
 
     public boolean hasController(String uniqueId) {
@@ -239,7 +239,7 @@ public class PayloadProfileCache<T extends PayloadProfile> {
     }
 
     public void saveAll(PayloadCallback<Map.Entry<Integer, Integer>> callback) {
-        Payload.runASync(plugin, () -> {
+        PayloadPlugin.runASync(plugin, () -> {
             int count = 0;
             int failed = 0;
             for (Player player : Bukkit.getOnlinePlayers()) {

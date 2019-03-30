@@ -1,6 +1,6 @@
 package com.jonahseguin.payload.profile.layers;
 
-import com.jonahseguin.payload.Payload;
+import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.profile.cache.PayloadProfileCache;
 import com.jonahseguin.payload.profile.caching.ProfileLayerResult;
@@ -157,13 +157,13 @@ public class PMongoLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
                 // Save only here (Mongo)
                 if (!this.save(profile)) {
                     player.sendMessage(ChatColor.RED + "Failed to save your profile during shutdown.  Please notify an administrator of this error.");
-                    debug(Payload.format("&c{0}'s profile failed to save during shutdown. (FATAL ERROR: potential data loss)"));
+                    debug(PayloadPlugin.format("&c{0}'s profile failed to save during shutdown. (FATAL ERROR: potential data loss)"));
                     errors++;
                 }
             } else {
                 // Player is online without a loaded PayloadProfile... this should not happen
                 player.sendMessage(ChatColor.RED + "You do not appear to have a loaded profile.  Please notify an administrator of this error.");
-                debug(Payload.format("&c{0} is online without a loaded profile.  This should not happen. (shutdown)", player.getName()));
+                debug(PayloadPlugin.format("&c{0} is online without a loaded profile.  This should not happen. (shutdown)", player.getName()));
                 errors++;
             }
         }
