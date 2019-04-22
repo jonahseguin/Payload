@@ -1,5 +1,7 @@
 package com.jonahseguin.payload.base.type;
 
+import com.jonahseguin.payload.base.PayloadCache;
+
 /**
  * A Payload is an object that can be cached, saved, or loaded within the payload system.  Is it the functional
  * object that we aim to handle.  Multiple implementations of a Payload are available for different caching strategies
@@ -12,5 +14,12 @@ public interface Payload {
      * @return String Identifier
      */
     String getIdentifier();
+
+    /**
+     * Internal method to get the cache associated with this Payload object.
+     * Every Payload object must have their matching cache stored in their object locally (non-persistent / transient)
+     * @return PayloadCache
+     */
+    PayloadCache getCache();
 
 }
