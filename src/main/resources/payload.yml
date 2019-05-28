@@ -1,0 +1,7 @@
+####
+#### Payload
+#### by Jonah Seguin
+####
+#### The purpose of this file is to store the unique identifier for this specific instance of Payload,
+#### linked to this server instance.  This allows for persisting cache data correctly, relative to this server.
+####

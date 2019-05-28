@@ -16,21 +16,8 @@ public class CacheState<K, X extends Payload> {
     private volatile boolean locked = false; // lock caching, tasks, etc.
     private volatile boolean joinable = false; // can players join
 
-    private volatile boolean mongoConnected = false;
-    private volatile boolean redisConnected = false;
-
-    private volatile boolean mongoConnecting = false;
-
     public CacheState(PayloadCache<K, X> cache) {
         this.cache = cache;
-    }
-
-    /**
-     * Check the connectivity of both databases
-     * @return true if both are connected
-     */
-    public boolean isDatabaseConnected() {
-        return this.mongoConnected && this.redisConnected;
     }
 
     /**
@@ -45,6 +32,10 @@ public class CacheState<K, X extends Payload> {
         }
     }
 
+    /**
+     * Unlocks the cache opposite of {@link #lock()}
+     * @see #lock()
+     */
     public final void unlock() {
         if (this.locked) {
             this.locked = false;

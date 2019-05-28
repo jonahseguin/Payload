@@ -1,10 +1,14 @@
 package com.jonahseguin.payload.base;
 
-import com.jonahseguin.payload.base.database.PayloadDatabase;
+import com.jonahseguin.payload.PayloadHook;
+import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.database.DatabaseDependent;
+import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.base.error.DefaultErrorHandler;
 import com.jonahseguin.payload.base.error.PayloadErrorHandler;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.lang.PayloadLangController;
+import com.jonahseguin.payload.base.state.CacheState;
 import com.jonahseguin.payload.base.state.PayloadTaskExecutor;
 import com.jonahseguin.payload.base.type.Payload;
 import lombok.Getter;
@@ -25,24 +29,48 @@ import java.util.concurrent.Executors;
  */
 @Entity("payloadCache")
 @Getter
-public abstract class PayloadCache<K, X extends Payload> {
+public abstract class PayloadCache<K, X extends Payload> implements DatabaseDependent<K, X> {
 
-    protected final transient Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
+    private final transient Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
+
     @Id
     protected ObjectId id; // Persist
     protected String name; // Persist
 
-    protected transient PayloadErrorHandler<K, X> errorHandler = new DefaultErrorHandler<>();
+    private transient boolean debug = false; // Debug for this cache
+
+    protected transient PayloadErrorHandler errorHandler = new DefaultErrorHandler();
     private transient PayloadDatabase payloadDatabase = null;
 
     private transient final ExecutorService pool = Executors.newCachedThreadPool();
     private transient final PayloadTaskExecutor<K, X> executor;
     private transient final PayloadLangController langController = new PayloadLangController();
+    private transient final CacheState<K, X> state;
 
-    public PayloadCache(final Plugin plugin, final String name) {
-        this.plugin = plugin;
+    private transient final Class<K> keyType;
+    private transient final Class<X> valueType;
+    private transient final Class<PayloadCache<K, X>> cacheType;
+
+    public PayloadCache(final PayloadHook hook, final String name, Class<K> keyType, Class<X> valueType, Class<PayloadCache<K, X>> cacheType) {
+        if (hook.getPlugin() == null) {
+            throw new IllegalArgumentException("Plugin cannot be null");
+        }
+        if (name == null) {
+            throw new IllegalArgumentException("Name cannot be null");
+        }
+        if (hook.getPlugin() instanceof PayloadPlugin) {
+            throw new IllegalArgumentException("Plugin cannot be PayloadPlugin");
+        }
+        if (!hook.isValid()) {
+            throw new IllegalStateException("Provided PayloadHook is not valid; cannot create cache '" + name + "'");
+        }
+        this.keyType = keyType;
+        this.valueType = valueType;
+        this.cacheType = cacheType;
+        this.plugin = hook.getPlugin();
         this.name = name;
         this.executor = new PayloadTaskExecutor<>(this);
+        this.state = new CacheState<>(this);
     }
 
     public void alert(PayloadPermission required, PLang lang, String... args) {
@@ -54,6 +82,10 @@ public abstract class PayloadCache<K, X extends Payload> {
         }
     }
 
+    public final boolean isLocked() {
+        return this.state.isLocked() || PayloadPlugin.get().isLocked();
+    }
+
     public final boolean start() {
         if (this.connect()) {
             boolean load = this.load();
@@ -62,7 +94,7 @@ public abstract class PayloadCache<K, X extends Payload> {
             }
             return load;
         } else {
-            // Failed to connect; do something?  or should error be handled in connect() function
+            // Failed
             return false;
         }
     }
@@ -71,38 +103,12 @@ public abstract class PayloadCache<K, X extends Payload> {
         this.shutdown(); // Allow the implementing cache to do it's shutdown first
         this.pool.shutdown(); // Shutdown our thread pool
         if (this.save()) {
-            boolean disconnect = this.disconnect();
-            if (!disconnect) {
-                // Do something todo
-            }
-            return disconnect;
+            return true;
         } else {
-            // Failed to save todo? or handle in save() func
+            // Failed to save
+            getErrorHandler().error(this.name, "Failed to save during shutdown");
             return false;
         }
-
-    }
-
-    protected final boolean connect() {
-        Validate.notNull(this.payloadDatabase, "Database has not been setup.  Call cache.setupDatabase() before calling start() or connect()");
-
-        boolean mongo = this.payloadDatabase.connectMongo();
-
-        if (!mongo) {
-            // Lock the cache until mongo connects successfully
-
-        }
-    }
-
-    private boolean connectRedis() {
-
-    }
-
-    protected final boolean disconnect() {
-
-    }
-
-    protected final boolean load() {
 
     }
 
@@ -110,14 +116,7 @@ public abstract class PayloadCache<K, X extends Payload> {
 
     }
 
-    public final void isDatabaseConnected(PayloadCallback<Boolean> callback) {
-        this.plugin.getServer().getScheduler().runTaskAsynchronously(this.plugin, () -> {
-            // TODO: Check database connection
-            callback.callback(false);
-        });
-    }
-
-    protected final void setupDatabase(PayloadDatabase database) {
+    public final void setupDatabase(PayloadDatabase database) {
         if (this.payloadDatabase != null) {
             throw new IllegalStateException("Database has already been defined");
         }
@@ -170,7 +169,7 @@ public abstract class PayloadCache<K, X extends Payload> {
      *
      * @return Plugin
      */
-    protected final Plugin getPlugin() {
+    public final Plugin getPlugin() {
         return this.plugin;
     }
 

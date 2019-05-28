@@ -1,38 +1,37 @@
 package com.jonahseguin.payload.base.error;
 
-import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.type.Payload;
-import org.bukkit.Bukkit;
+import com.jonahseguin.payload.PayloadPlugin;
 
-public class DefaultErrorHandler<K, X extends Payload> implements PayloadErrorHandler<K, X> {
+public class DefaultErrorHandler implements PayloadErrorHandler {
 
     @Override
-    public void exception(Throwable throwable) {
-        Bukkit.getLogger().warning("Payload error: " + throwable.getMessage());
+    public void debug(String cacheName, String message) {
+        PayloadPlugin.get().getLogger().info("[Debug][" + cacheName + "] " + message);
     }
 
     @Override
-    public void error(String message) {
-        Bukkit.getLogger().warning("Payload error: " + message);
+    public void error(String cacheName, String message) {
+        PayloadPlugin.get().getLogger().info("[Error][" + cacheName + "] " + message);
     }
 
     @Override
-    public void error(PayloadCache cache, String message) {
-        Bukkit.getLogger().warning("Payload error: " + message);
+    public void exception(String cacheName, Throwable throwable) {
+        PayloadPlugin.get().getLogger().info("[Exception][" + cacheName + "] " + throwable.getMessage());
+        if (this.isDebug()) {
+            throwable.printStackTrace();
+        }
     }
 
     @Override
-    public void exception(PayloadCache cache, Throwable throwable) {
-        Bukkit.getLogger().warning("Payload error: " + throwable.getMessage());
+    public void exception(String cacheName, Throwable throwable, String message) {
+        PayloadPlugin.get().getLogger().info("[Exception][" + cacheName + "] " + message);
+        if (this.isDebug()) {
+            throwable.printStackTrace();
+        }
     }
 
-    @Override
-    public void exception(Throwable throwable, String message) {
-        Bukkit.getLogger().warning("Payload error: " + message + " :" + throwable.getMessage());
+    public boolean isDebug() {
+        return PayloadPlugin.get().isDebug();
     }
 
-    @Override
-    public void exception(PayloadCache cache, Throwable throwable, String message) {
-        Bukkit.getLogger().warning("Payload error: " + message + " :" + throwable.getMessage());
-    }
 }

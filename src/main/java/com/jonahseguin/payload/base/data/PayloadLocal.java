@@ -20,6 +20,7 @@ import java.util.UUID;
 public class PayloadLocal {
 
     private String payloadID = null;
+    private boolean firstStartup = true;
 
     public String getPayloadID() {
         return payloadID;
@@ -60,6 +61,7 @@ public class PayloadLocal {
 
         if (!config.contains("payload-id")) {
             this.payloadID = UUID.randomUUID().toString();
+            this.firstStartup = true;
             config.set("payload-id", this.payloadID);
             try {
                 config.save(payloadFile);
@@ -71,9 +73,18 @@ public class PayloadLocal {
             }
         }
         else {
+            this.firstStartup = false;
             this.payloadID = config.getString("payload-id");
         }
         return true;
+    }
+
+    /**
+     * Is this the first time the Payload plugin has loaded on this server?
+     * (No payload.yml present)
+     */
+    public boolean isFirstStartup() {
+        return this.firstStartup;
     }
 
     private void handleError() {

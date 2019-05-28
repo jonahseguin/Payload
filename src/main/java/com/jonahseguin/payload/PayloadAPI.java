@@ -1,0 +1,97 @@
+package com.jonahseguin.payload;
+
+import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.exception.runtime.PayloadProvisionException;
+import com.jonahseguin.payload.base.type.Payload;
+import org.bukkit.plugin.Plugin;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+public class PayloadAPI {
+
+    private static PayloadAPI instance;
+    private final PayloadPlugin plugin;
+    private final ConcurrentMap<String, PayloadHook> hooks = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, PayloadCache> caches = new ConcurrentHashMap<>();
+    private final Set<String> requested = new HashSet<>();
+
+    protected PayloadAPI(PayloadPlugin plugin) throws IllegalAccessException {
+        this.plugin = plugin;
+        if (PayloadAPI.instance != null) {
+            throw new IllegalAccessException("PayloadAPI can only be created by the internal Payload plugin.");
+        }
+        PayloadAPI.instance = this;
+    }
+
+    public final boolean validateHook(Plugin plugin, PayloadHook hook) {
+        return this.isProvisioned(plugin) && getHook(plugin).equals(hook);
+    }
+
+    public static PayloadAPI get() {
+        return PayloadAPI.instance;
+    }
+
+    public final void saveCache(PayloadCache cache, PayloadHook hook) {
+        if (!this.validateHook(hook.getPlugin(), hook)) {
+            throw new IllegalStateException("Hook is not valid for cache to save in PayloadAPI");
+        }
+        this.caches.put(cache.getName(), cache);
+    }
+
+    public boolean isProvisioned(Plugin plugin) {
+        return this.hooks.containsKey(plugin.getName());
+    }
+
+    public PayloadHook getHook(Plugin plugin) {
+        if (!this.isProvisioned(plugin)) {
+            throw new PayloadProvisionException("Cannot get a hook that is not yet provisioned.  Use requestProvision() first.");
+        }
+        return this.hooks.get(plugin.getName());
+    }
+
+    public CompletableFuture<PayloadHook> requestProvision(final Plugin plugin) {
+        if (this.hooks.containsKey(plugin.getName())) {
+            throw new IllegalStateException("Hook has already been provisioned for plugin " + plugin.getName());
+        }
+        if (this.requested.contains(plugin.getName())) {
+            throw new IllegalStateException("Hook is already awaiting provisioning for plugin " + plugin.getName());
+        }
+        if (plugin instanceof PayloadPlugin) {
+            CompletableFuture<PayloadHook> future = new CompletableFuture<>();
+            future.completeExceptionally(new IllegalArgumentException("Plugin requesting provision cannot be of instance PayloadPlugin"));
+            return future;
+        }
+        this.requested.add(plugin.getName());
+        return CompletableFuture.supplyAsync(() -> {
+            while (PayloadPlugin.get().isLocked()) {
+                try {
+                    Thread.sleep(10);
+                }
+                catch (InterruptedException ex) {
+                    throw new PayloadProvisionException("Interrupted while waiting for provision for plugin " + plugin.getName(), ex);
+                }
+            }
+            this.requested.remove(plugin.getName());
+            PayloadHook hook = new PayloadHook(plugin);
+            this.hooks.putIfAbsent(plugin.getName(), hook);
+            return hook;
+        });
+    }
+
+    /**
+     * Get a cache by name
+     * @param name Name of the cache
+     * @param <K> Key type (i.e String for uuid)
+     * @param <X> Value type (object to cache; i.e Profile)
+     * @return The Cache
+     */
+    @SuppressWarnings("unchecked") // bad
+    public <K, X extends Payload> PayloadCache<K, X> getCache(String name) {
+        return (PayloadCache<K, X>) this.caches.get(name);
+    }
+
+}

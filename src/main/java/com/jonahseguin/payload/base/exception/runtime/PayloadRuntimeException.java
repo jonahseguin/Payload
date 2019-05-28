@@ -16,6 +16,10 @@ public class PayloadRuntimeException extends RuntimeException {
         super("Payload exception: " + message, cause);
     }
 
+    public PayloadRuntimeException(Throwable cause) {
+        super("Payload exception: " + cause);
+    }
+
     public PayloadRuntimeException(String message, PayloadCache cache) {
         super("Payload [" + cache.getName() + "] exception: " + message);
     }

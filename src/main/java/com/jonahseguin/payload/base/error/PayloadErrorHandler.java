@@ -8,27 +8,23 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
-public interface PayloadErrorHandler<K, X extends Payload> {
+public interface PayloadErrorHandler {
 
-    default void debug(String message) {
+    default void debug(String cacheName, String message) {
         Bukkit.getLogger().info(PayloadPlugin.PREFIX + message);
         for (Player pl : PayloadPlugin.get().getServer().getOnlinePlayers()) {
             if (PayloadPermission.DEBUG.has(pl)) {
-                pl.sendMessage(ChatColor.GRAY + "[Payload][Debug] " + message);
+                pl.sendMessage(ChatColor.GRAY + "[Payload][Debug][" + cacheName + "] " + message);
             }
         }
     }
 
-    void exception(Throwable throwable);
+    void error(String cacheName, String message);
 
-    void error(String message);
+    void exception(String cacheName, Throwable throwable);
 
-    void error(PayloadCache<K, X> cache, String message);
+    void exception(String cacheName, Throwable throwable, String message);
 
-    void exception(PayloadCache<K, X> cache, Throwable throwable);
-
-    void exception(Throwable throwable, String message);
-
-    void exception(PayloadCache<K, X> cache, Throwable throwable, String message);
+    boolean isDebug();
 
 }

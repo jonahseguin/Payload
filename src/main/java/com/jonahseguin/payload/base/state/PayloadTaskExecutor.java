@@ -21,7 +21,7 @@ public class PayloadTaskExecutor<K, X extends Payload> {
         if (!running) {
             this.cache.getPool().submit(() -> {
                 while(this.running) {
-                    if (this.cache.isLocked()) continue;
+                    if (this.cache.getState().isLocked()) continue;
                     try {
                         this.tasks.take().run().run();
                     }
@@ -31,6 +31,7 @@ public class PayloadTaskExecutor<K, X extends Payload> {
                 }
             });
             this.allowSubmission = true;
+            this.running = true;
         }
         else {
             throw new IllegalStateException("Payload Task Executor is already running; cannot start");
@@ -52,7 +53,7 @@ public class PayloadTaskExecutor<K, X extends Payload> {
     }
 
     public boolean canSubmit() {
-        return this.allowSubmission;
+        return this.allowSubmission && !this.cache.getState().isLocked();
     }
 
     public boolean submit(PayloadTask runnable) {
