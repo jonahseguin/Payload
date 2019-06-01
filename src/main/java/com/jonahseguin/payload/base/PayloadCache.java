@@ -30,7 +30,7 @@ import java.util.concurrent.Executors;
  */
 @Entity("payloadCache")
 @Getter
-public abstract class PayloadCache<K, X extends Payload, D extends PayloadData<K>> implements DatabaseDependent {
+public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> implements DatabaseDependent {
 
     protected final transient Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
 
@@ -177,4 +177,61 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData<K
         return this.plugin;
     }
 
+    @Override
+    public void onMongoDbDisconnect() {
+        this.getPayloadDatabase().getState().setMongoConnected(false);
+        this.getState().lock();
+    }
+
+    @Override
+    public void onRedisDisconnect() {
+        this.getPayloadDatabase().getState().setRedisConnected(false);
+        this.getState().lock();
+    }
+
+    @Override
+    public void onMongoDbReconnect() {
+        this.getPayloadDatabase().getState().setMongoConnected(true);
+        if (this.getPayloadDatabase().getState().isDatabaseConnected()) {
+            // Both connected
+            this.getState().unlock();
+        }
+    }
+
+    @Override
+    public void onRedisReconnect() {
+        this.getPayloadDatabase().getState().setRedisConnected(true);
+        if (this.getPayloadDatabase().getState().isDatabaseConnected()) {
+            // Both connected
+            this.getState().unlock();
+        }
+    }
+
+    @Override
+    public void onMongoDbInitConnect() {
+        this.getPayloadDatabase().getState().setMongoConnected(true);
+        if (this.getPayloadDatabase().getState().isDatabaseConnected()) {
+            // Both connected
+            this.getState().unlock();
+        }
+    }
+
+    @Override
+    public void onRedisInitConnect() {
+        this.getPayloadDatabase().getState().setRedisConnected(true);
+        if (this.getPayloadDatabase().getState().isDatabaseConnected()) {
+            // Both connected
+            this.getState().unlock();
+        }
+    }
+
+    @Override
+    public boolean requireRedis() {
+        return true;
+    }
+
+    @Override
+    public boolean requireMongoDb() {
+        return true;
+    }
 }

@@ -10,8 +10,6 @@ public class DatabaseState {
     private volatile boolean mongoConnected = false;
     private volatile boolean redisConnected = false;
 
-    private volatile boolean mongoConnecting = false;
-
     /**
      * Check the connectivity of both databases
      * @return true if both are connected

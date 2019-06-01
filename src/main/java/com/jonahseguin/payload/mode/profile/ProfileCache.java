@@ -27,36 +27,6 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String,
     }
 
     @Override
-    public void onMongoDbDisconnect() {
-
-    }
-
-    @Override
-    public void onRedisDisconnect() {
-
-    }
-
-    @Override
-    public void onMongoDbReconnect() {
-
-    }
-
-    @Override
-    public void onRedisReconnect() {
-
-    }
-
-    @Override
-    public void onMongoDbInitConnect() {
-
-    }
-
-    @Override
-    public void onRedisInitConnect() {
-
-    }
-
-    @Override
     public boolean requireRedis() {
         return true;
     }

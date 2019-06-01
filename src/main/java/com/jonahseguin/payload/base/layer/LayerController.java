@@ -19,10 +19,6 @@ public class LayerController<X extends Payload, D extends PayloadData> {
 
     private final ArrayList<PayloadLayer<X, D>> layers = new ArrayList<>();
 
-    // want to allow layers to be registered by the cache
-    // how can they set the order?
-    //
-
     /**
      * Register a layer to be used within the caching process
      * @param layer the layer to register, in order
