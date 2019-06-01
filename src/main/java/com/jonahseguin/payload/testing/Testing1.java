@@ -9,15 +9,17 @@ import java.io.File;
 
 public class Testing1 extends JavaPlugin {
 
+    private PayloadDatabase payloadDatabase = null;
     private ProfileCache<TestProfile> cache = null;
 
     @Override
     public void onEnable() {
+        getLogger().info("Awaiting provision from Payload");
+        PayloadAPI.get().requestProvision(this).thenAcceptAsync(hook -> {
+            payloadDatabase = PayloadDatabase.fromConfigFile(this, "database.yml", "purifiedDatabase");
+            payloadDatabase.start();
 
-        PayloadAPI.get().requestProvision(this).thenAccept(hook -> {
-            PayloadDatabase db = PayloadDatabase.fromConfigFile(new File(this.getDataFolder() + File.separator + "database.yml"), "purifiedDatabase");
-
-            this.cache = hook.createProfileCache(db,"purifiedProfiles", TestProfile.class);
+            this.cache = hook.createProfileCache(payloadDatabase,"purifiedProfiles", TestProfile.class);
 
             if (cache.start()) {
                 // success
@@ -27,14 +29,17 @@ public class Testing1 extends JavaPlugin {
                 // fail
             }
 
-        });
 
+        });
     }
 
     @Override
     public void onDisable() {
         if (this.cache != null) {
             this.cache.stop();
+        }
+        if (this.payloadDatabase != null) {
+            this.payloadDatabase.stop();
         }
     }
 

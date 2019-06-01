@@ -20,5 +20,20 @@ public class DatabaseState {
         return this.mongoConnected && this.redisConnected;
     }
 
+    public boolean canCacheFunction(DatabaseDependent dependent) {
+        boolean mongo = true;
+        if (dependent.requireMongoDb()) {
+            if (!this.mongoConnected) {
+                mongo = false;
+            }
+        }
+        boolean redis = true;
+        if (dependent.requireRedis()) {
+            if (!this.redisConnected) {
+                redis = false;
+            }
+        }
+        return mongo && redis;
+    }
 
 }

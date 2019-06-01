@@ -25,10 +25,7 @@ import org.bukkit.plugin.java.JavaPluginLoader;
  *
  * @ 6:44 PM
  *
- * This class is just here so that Payload can be used as a dependency via
- * loaded plugin instead of being shaded.
- *
- * Also provides some utility methods.
+ * Main Bukkit/Spigot JavaPlugin class, entrance point of this piece of software
  */
 public class PayloadPlugin extends JavaPlugin {
 
@@ -40,6 +37,8 @@ public class PayloadPlugin extends JavaPlugin {
     private boolean debug = false;
     private final PayloadLangController globalLangController = new PayloadLangController();
     private final PayloadLocal local = new PayloadLocal();
+
+    private PayloadMode mode = PayloadMode.STANDALONE;
 
     public PayloadPlugin() {
         if (PayloadPlugin.instance != null) {
@@ -69,9 +68,6 @@ public class PayloadPlugin extends JavaPlugin {
             // Failed to load.  This will be handled by the method itself.
             this.getLogger().warning("[FATAL] Payload failed to load it's local file (payload.yml)");
         }
-        else {
-            this.locked = false;
-        }
         if (this.local.isFirstStartup()) {
             this.getLogger().info("This is the first startup for Payload on this server instance.  Files created.");
         }
@@ -79,6 +75,7 @@ public class PayloadPlugin extends JavaPlugin {
         this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", PayloadPlugin.get().getDescription().getVersion()));
         try {
             new PayloadAPI(this);
+            this.locked = false;
         }
         catch (IllegalAccessException ex) {
             this.getLogger().warning("Payload failed to initialize API; was already created... LOCKING");
@@ -192,6 +189,23 @@ public class PayloadPlugin extends JavaPlugin {
         return debug;
     }
 
+    /**
+     * Get the current Mode Payload is functioning in
+     * There are two modes: STANDALONE, or NETWORK_NODE
+     * In standalone mode, Payload functions as it's own entity and will use login/logout events to handle caching normally
+     * In contrast, in network node mode, Payload functions as a node in a BungeeCord/etc. proxied network,
+     * where in such logins are handled before logouts, data is transferred through a handshake via Redis pub/sub if
+     * a player is already logged into another node.
+     * @return {@link PayloadMode} the current mode
+     */
+    public PayloadMode getMode() {
+        return mode;
+    }
+
+    /**
+     * Get the Global plugin-wide default Language Controller
+     * @return {@link PayloadLangController} default
+     */
     public PayloadLangController getGlobalLangController() {
         return globalLangController;
     }

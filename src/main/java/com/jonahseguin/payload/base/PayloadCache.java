@@ -2,6 +2,8 @@ package com.jonahseguin.payload.base;
 
 import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.base.layer.LayerController;
+import com.jonahseguin.payload.base.type.PayloadData;
 import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.base.error.DefaultErrorHandler;
@@ -12,7 +14,6 @@ import com.jonahseguin.payload.base.state.CacheState;
 import com.jonahseguin.payload.base.state.PayloadTaskExecutor;
 import com.jonahseguin.payload.base.type.Payload;
 import lombok.Getter;
-import org.apache.commons.lang.Validate;
 import org.bson.types.ObjectId;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -29,29 +30,31 @@ import java.util.concurrent.Executors;
  */
 @Entity("payloadCache")
 @Getter
-public abstract class PayloadCache<K, X extends Payload> implements DatabaseDependent<K, X> {
+public abstract class PayloadCache<K, X extends Payload, D extends PayloadData<K>> implements DatabaseDependent {
 
-    private final transient Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
+    protected final transient Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
 
     @Id
     protected ObjectId id; // Persist
     protected String name; // Persist
+    protected String payloadId; // Persist
 
-    private transient boolean debug = false; // Debug for this cache
+    protected transient boolean debug = false; // Debug for this cache
 
     protected transient PayloadErrorHandler errorHandler = new DefaultErrorHandler();
-    private transient PayloadDatabase payloadDatabase = null;
+    protected transient PayloadDatabase payloadDatabase = null;
 
-    private transient final ExecutorService pool = Executors.newCachedThreadPool();
-    private transient final PayloadTaskExecutor<K, X> executor;
-    private transient final PayloadLangController langController = new PayloadLangController();
-    private transient final CacheState<K, X> state;
+    protected transient final ExecutorService pool = Executors.newCachedThreadPool();
+    protected transient final PayloadTaskExecutor<K, X> executor;
+    protected transient final PayloadLangController langController = new PayloadLangController();
+    protected transient final CacheState<K, X> state;
+    protected transient final LayerController<X, D> layerController = new LayerController<>();
 
-    private transient final Class<K> keyType;
-    private transient final Class<X> valueType;
-    private transient final Class<PayloadCache<K, X>> cacheType;
+    protected transient final Class<K> keyType;
+    protected transient final Class<X> valueType;
+    //private transient final Class<PayloadCache<K, X>> cacheType;
 
-    public PayloadCache(final PayloadHook hook, final String name, Class<K> keyType, Class<X> valueType, Class<PayloadCache<K, X>> cacheType) {
+    public PayloadCache(final PayloadHook hook, final String name, Class<K> keyType, Class<X> valueType) {
         if (hook.getPlugin() == null) {
             throw new IllegalArgumentException("Plugin cannot be null");
         }
@@ -66,11 +69,11 @@ public abstract class PayloadCache<K, X extends Payload> implements DatabaseDepe
         }
         this.keyType = keyType;
         this.valueType = valueType;
-        this.cacheType = cacheType;
         this.plugin = hook.getPlugin();
         this.name = name;
         this.executor = new PayloadTaskExecutor<>(this);
         this.state = new CacheState<>(this);
+        this.payloadId = PayloadPlugin.get().getLocal().getPayloadID();
     }
 
     public void alert(PayloadPermission required, PLang lang, String... args) {
@@ -87,16 +90,9 @@ public abstract class PayloadCache<K, X extends Payload> implements DatabaseDepe
     }
 
     public final boolean start() {
-        if (this.connect()) {
-            boolean load = this.load();
-            if (!load) {
-                // Do something todo
-            }
-            return load;
-        } else {
-            // Failed
-            return false;
-        }
+        // What else should be implemented here?
+        this.init();
+        return true;
     }
 
     public final boolean stop() {
@@ -109,11 +105,17 @@ public abstract class PayloadCache<K, X extends Payload> implements DatabaseDepe
             getErrorHandler().error(this.name, "Failed to save during shutdown");
             return false;
         }
-
     }
 
     protected final boolean save() {
-
+        try {
+            payloadDatabase.getDatastore().save(this);
+            return true;
+        }
+        catch (Exception ex) {
+            this.getErrorHandler().exception(this.name, ex, "Failed to save cache");
+            return false;
+        }
     }
 
     public final void setupDatabase(PayloadDatabase database) {
@@ -126,19 +128,21 @@ public abstract class PayloadCache<K, X extends Payload> implements DatabaseDepe
     /**
      * Starts up & initializes the cache.
      * Prepares everything for a fresh startup, ensures database connections, etc.
-     *
-     * @return boolean: true if successful, false if any errors encountered
      */
-    protected abstract boolean init();
+    protected abstract void init();
 
     /**
      * Shut down the cache.
      * Saves everything first, and safely shuts down
-     *
-     * @return boolean: true if successful, false if any errors encountered
      */
-    protected abstract boolean shutdown();
+    protected abstract void shutdown();
 
+
+    /**
+     * Get an object stored in this cache, using the best method provided by the cache
+     * @param key The key to use to get the object (i.e a string, number, etc.)
+     * @return The object if available (else null)
+     */
     protected abstract X get(K key);
 
     /**
@@ -172,7 +176,5 @@ public abstract class PayloadCache<K, X extends Payload> implements DatabaseDepe
     public final Plugin getPlugin() {
         return this.plugin;
     }
-
-    protected abstract PayloadMode mode();
 
 }

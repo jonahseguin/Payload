@@ -12,6 +12,7 @@ import lombok.Data;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.plugin.Plugin;
 import org.mongodb.morphia.Datastore;
 import org.mongodb.morphia.Morphia;
 import org.mongodb.morphia.query.Query;
@@ -67,6 +68,7 @@ public class PayloadDatabase {
         Query<C> q = this.datastore.createQuery(cacheClass);
         q.maxTime(10, TimeUnit.SECONDS);
         q.criteria("name").equalIgnoreCase(name);
+        q.criteria("payloadId").equalIgnoreCase(PayloadPlugin.get().getLocal().getPayloadID());
         Stream<C> stream = q.asList().stream();
         Optional<C> optCache = stream.findFirst();
 
@@ -86,6 +88,9 @@ public class PayloadDatabase {
     }
 
     public boolean connectMongo() {
+        if (this.mongoClient != null) {
+            throw new IllegalStateException("MongoClient instance already exists for database " + this.name);
+        }
         PayloadMongo payloadMongo = this.mongo; // MongoDB information
 
         try {
@@ -123,12 +128,14 @@ public class PayloadDatabase {
     }
 
     public boolean connectRedis() {
+        if (this.jedis != null) {
+            throw new IllegalStateException("Jedis instance already exists for database " + this.name);
+        }
         this.redisMonitor = new PayloadRedisMonitor(this);
         this.redisMonitor.start();
         try {
             // Try connection
             PayloadRedis payloadRedis = this.redis;
-            Jedis jedis;
             if (payloadRedis.useURI()) {
                 jedis = new Jedis(URI.create(payloadRedis.getUri()));
             } else {
@@ -205,7 +212,7 @@ public class PayloadDatabase {
      * @return a new {@link PayloadDatabase} instance
      * @throws PayloadConfigException If any errors occur during loading the config or parsing database information
      */
-    public static PayloadDatabase fromConfigFile(File file, String name) throws PayloadConfigException {
+    public static PayloadDatabase loadConfigFile(File file, String name) throws PayloadConfigException {
         YamlConfiguration config = new YamlConfiguration();
         try {
             config.load(file);
@@ -220,9 +227,9 @@ public class PayloadDatabase {
     }
 
     /**
-     * Same as {@link #fromConfigFile(File, String)} (PayloadCache, YamlConfiguration)}, but instead uses a File: loads that file as a YamlConfiguration
+     * Same as {@link #loadConfigFile(File, String)}, but instead uses a File: loads that file as a YamlConfiguration
      * and then calls {@link #fromConfig(YamlConfiguration, String)}
-     * The difference in this method from {@link #fromConfigFile(File, String)} is that it will
+     * The difference in this method from {@link #loadConfigFile(File, String)} is that it will
      * CREATE the file and copy the default config if it doesn't exist.
      *
      * @param file The file to load the config info from
@@ -231,7 +238,7 @@ public class PayloadDatabase {
      * @return a new {@link PayloadDatabase} instance
      * @throws PayloadConfigException If any errors occur during loading the config or parsing database information
      */
-    public static PayloadDatabase getConfigFile(File file, String name) throws PayloadConfigException {
+    public static PayloadDatabase fromConfigFile(File file, String name) throws PayloadConfigException {
         if (!file.exists()) {
             try {
                 file.mkdirs();
@@ -247,7 +254,22 @@ public class PayloadDatabase {
                 throw new PayloadConfigException("Error creating file '" + file.getName() + "' for new Payload config copy");
             }
         }
-        return fromConfigFile(file, name);
+        return loadConfigFile(file, name);
+    }
+
+    /**
+     * Same as {@link #fromConfigFile(File, String)}, but uses the plugin's data folder and a file name
+     * Will create and copy default if it doesn't exist
+     * This is the recommended method to use for loading a database object from a config file
+     * @param plugin Plugin
+     * @param fileName File name (ending in .yml) to load from
+     * @param name A unique name for the Database, for debugging purposes etc.
+     * @return a new {@link PayloadDatabase} instance
+     *
+     * @throws PayloadConfigException  If any errors occur during loading the config or parsing database information
+     */
+    public static PayloadDatabase fromConfigFile(Plugin plugin, String fileName, String name) throws PayloadConfigException {
+        return fromConfigFile(new File(plugin.getDataFolder() + File.separator + fileName), name);
     }
 
 }

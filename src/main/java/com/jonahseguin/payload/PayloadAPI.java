@@ -3,6 +3,7 @@ package com.jonahseguin.payload;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.exception.runtime.PayloadProvisionException;
 import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadData;
 import org.bukkit.plugin.Plugin;
 
 import java.util.HashSet;
@@ -27,14 +28,37 @@ public class PayloadAPI {
         PayloadAPI.instance = this;
     }
 
+    /**
+     * Get the local unique ID associated with this server's instance of Payload
+     * @return String unique ID
+     */
+    public String getPayloadID() {
+        return this.plugin.getLocal().getPayloadID();
+    }
+
+    /**
+     * Check if a hook is valid for a plugin
+     * @param plugin Plugin
+     * @param hook PayloadHook
+     * @return True if valid, else false
+     */
     public final boolean validateHook(Plugin plugin, PayloadHook hook) {
         return this.isProvisioned(plugin) && getHook(plugin).equals(hook);
     }
 
+    /**
+     * Get the singleton instance of the Payload API
+     * @return {@link PayloadAPI}
+     */
     public static PayloadAPI get() {
         return PayloadAPI.instance;
     }
 
+    /**
+     * Register a cache w/ a hook
+     * @param cache {@link PayloadCache}
+     * @param hook {@link PayloadHook}
+     */
     public final void saveCache(PayloadCache cache, PayloadHook hook) {
         if (!this.validateHook(hook.getPlugin(), hook)) {
             throw new IllegalStateException("Hook is not valid for cache to save in PayloadAPI");
@@ -42,10 +66,21 @@ public class PayloadAPI {
         this.caches.put(cache.getName(), cache);
     }
 
+    /**
+     * Check if a hook has been provisioned for a plugin
+     * @param plugin {@link Plugin}
+     * @return True if provisioned, else false
+     */
     public boolean isProvisioned(Plugin plugin) {
         return this.hooks.containsKey(plugin.getName());
     }
 
+
+    /**
+     * Get the {@link PayloadHook} for a {@link Plugin}
+     * @param plugin {@link Plugin}
+     * @return {@link PayloadHook} if the plugin is provisioned ({@link #isProvisioned(Plugin)})
+     */
     public PayloadHook getHook(Plugin plugin) {
         if (!this.isProvisioned(plugin)) {
             throw new PayloadProvisionException("Cannot get a hook that is not yet provisioned.  Use requestProvision() first.");
@@ -53,6 +88,14 @@ public class PayloadAPI {
         return this.hooks.get(plugin.getName());
     }
 
+    /**
+     * Request a provision for a Plugin, async.
+     * This is the method for obtaining an {@link PayloadHook} for a {@link Plugin} / JavaPlugin instance,
+     * for an external hooking plugin.
+     * @param plugin {@link Plugin} the hooking plugin
+     * @return A {@link CompletableFuture<PayloadHook>} that will be completed once provisioning is complete,
+     * might also throw an exception which can be handled within the CompletableFuture
+     */
     public CompletableFuture<PayloadHook> requestProvision(final Plugin plugin) {
         if (this.hooks.containsKey(plugin.getName())) {
             throw new IllegalStateException("Hook has already been provisioned for plugin " + plugin.getName());
@@ -90,8 +133,8 @@ public class PayloadAPI {
      * @return The Cache
      */
     @SuppressWarnings("unchecked") // bad
-    public <K, X extends Payload> PayloadCache<K, X> getCache(String name) {
-        return (PayloadCache<K, X>) this.caches.get(name);
+    public <K, X extends Payload, D extends PayloadData<K>> PayloadCache<K, X, D> getCache(String name) {
+        return (PayloadCache<K, X, D>) this.caches.get(name);
     }
 
 }

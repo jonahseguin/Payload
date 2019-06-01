@@ -3,7 +3,7 @@ package com.jonahseguin.payload.database;
 import com.jonahseguin.payload.base.error.PayloadErrorHandler;
 import com.jonahseguin.payload.base.type.Payload;
 
-public interface DatabaseDependent<K, X extends Payload> {
+public interface DatabaseDependent {
 
     /**
      * Called when MongoDB loses an active connection
