@@ -1,14 +1,11 @@
 package com.jonahseguin.payload;
 
-import java.io.File;
-import java.net.InetAddress;
-
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.data.PayloadLocal;
 import com.jonahseguin.payload.base.lang.PLang;
-import com.jonahseguin.payload.base.lang.PayloadLang;
 import com.jonahseguin.payload.base.lang.PayloadLangController;
 import com.jonahseguin.payload.base.listener.LockListener;
+import com.jonahseguin.payload.command.PCommandHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
@@ -18,6 +15,9 @@ import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginLoader;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.java.JavaPluginLoader;
+
+import java.io.File;
+import java.net.InetAddress;
 
 /**
  * Created by Jonah on 11/16/2017.
@@ -37,6 +37,7 @@ public class PayloadPlugin extends JavaPlugin {
     private boolean debug = false;
     private final PayloadLangController globalLangController = new PayloadLangController();
     private final PayloadLocal local = new PayloadLocal();
+    private final PCommandHandler commandHandler = new PCommandHandler();
 
     private PayloadMode mode = PayloadMode.STANDALONE;
 
@@ -72,6 +73,7 @@ public class PayloadPlugin extends JavaPlugin {
             this.getLogger().info("This is the first startup for Payload on this server instance.  Files created.");
         }
         this.getServer().getPluginManager().registerEvents(new LockListener(), this);
+        this.getCommand("payload").setExecutor(this.commandHandler);
         this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", PayloadPlugin.get().getDescription().getVersion()));
         try {
             new PayloadAPI(this);
@@ -208,5 +210,15 @@ public class PayloadPlugin extends JavaPlugin {
      */
     public PayloadLangController getGlobalLangController() {
         return globalLangController;
+    }
+
+    /**
+     * Get the Payload Command Handler
+     * For internal Payload use only.
+     *
+     * @return PCommandHandler
+     */
+    public PCommandHandler getCommandHandler() {
+        return commandHandler;
     }
 }

@@ -2,25 +2,22 @@ package com.jonahseguin.payload.base;
 
 import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.PayloadPlugin;
-import com.jonahseguin.payload.base.layer.LayerController;
-import com.jonahseguin.payload.base.type.PayloadData;
-import com.jonahseguin.payload.database.DatabaseDependent;
-import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.base.error.DefaultErrorHandler;
 import com.jonahseguin.payload.base.error.PayloadErrorHandler;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.lang.PayloadLangController;
+import com.jonahseguin.payload.base.layer.LayerController;
 import com.jonahseguin.payload.base.state.CacheState;
 import com.jonahseguin.payload.base.state.PayloadTaskExecutor;
 import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadData;
+import com.jonahseguin.payload.database.DatabaseDependent;
+import com.jonahseguin.payload.database.PayloadDatabase;
 import lombok.Getter;
-import org.bson.types.ObjectId;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.mongodb.morphia.annotations.Entity;
 
-import javax.persistence.Id;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -28,16 +25,12 @@ import java.util.concurrent.Executors;
  * The abstract backbone of all Payload cache systems.
  * All Caching modes (profile, object, simple) extend this class.
  */
-@Entity("payloadCache")
 @Getter
 public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> implements DatabaseDependent {
 
     protected final transient Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
 
-    @Id
-    protected ObjectId id; // Persist
-    protected String name; // Persist
-    protected String payloadId; // Persist
+    protected String name; // The name for this payload cache
 
     protected transient boolean debug = false; // Debug for this cache
 
@@ -73,7 +66,6 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         this.name = name;
         this.executor = new PayloadTaskExecutor<>(this);
         this.state = new CacheState<>(this);
-        this.payloadId = PayloadPlugin.get().getLocal().getPayloadID();
     }
 
     public void alert(PayloadPermission required, PLang lang, String... args) {
@@ -145,16 +137,6 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
      */
     protected abstract X get(K key);
 
-    /**
-     * Randomly generated MongoDB identifier for this cache.
-     * Must be unique.  A {@link com.jonahseguin.payload.base.exception.DuplicateCacheException} error will be thrown
-     * if another cache exists with the same ID during creation.
-     *
-     * @return String: Cache ID
-     */
-    public final String getCacheId() {
-        return this.id.toString();
-    }
 
     /**
      * Get the name of this cache (set by the end user, should be unique)

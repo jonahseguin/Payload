@@ -5,7 +5,8 @@ import org.bukkit.permissions.Permissible;
 public enum PayloadPermission {
 
     DEBUG("debug"),
-    ADMIN("admin")
+    ADMIN("admin"),
+    NONE("")
 
     ;
 
@@ -20,6 +21,9 @@ public enum PayloadPermission {
     }
 
     public boolean has(Permissible permissible) {
+        if (this.permission.length() == 0) {
+            return true; // if its empty, assume this is the NONE permission which everyone has by default
+        }
         return permissible.hasPermission(this.getPermission());
     }
 

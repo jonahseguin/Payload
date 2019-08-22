@@ -16,6 +16,9 @@ public enum PLang {
     KICK_MESSAGE_ADMIN_LOCKED("&7[Payload] &4[Fatal] &cThe server has been locked to players due to a fatal error during Payload startup.  Try restarting the server, and check the error logs for details."),
     CACHE_LOCKED("&7[Payload] The cache &b{0} &7has been &clocked&7. ({1})"), // argument is for the reason
     CACHE_UNLOCKED("&7[Payload] The cache &b{0} &7has been &aunlocked&7. ({1})"),  // argument is for the reason
+    UNKNOWN_COMMAND("&cPayload: Sub-command '{0}' does not exist.  Type /payload help for a list of commands."),
+    COMMAND_NO_PERMISSION("&cPayload: You do not have permission to use this command."),
+    COMMAND_PLAYER_ONLY("&c:Payload: This is a player-only command.")
     ;
 
     private final String text;

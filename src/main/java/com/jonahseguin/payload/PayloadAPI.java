@@ -133,7 +133,7 @@ public class PayloadAPI {
      * @return The Cache
      */
     @SuppressWarnings("unchecked") // bad
-    public <K, X extends Payload, D extends PayloadData<K>> PayloadCache<K, X, D> getCache(String name) {
+    public <K, X extends Payload, D extends PayloadData> PayloadCache<K, X, D> getCache(String name) {
         return (PayloadCache<K, X, D>) this.caches.get(name);
     }
 
