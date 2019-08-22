@@ -1,9 +1,9 @@
 package com.jonahseguin.payload.testing;
 
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.mode.profile.PayloadProfile;
 
-public class TestProfile implements Payload {
+public class TestProfile extends PayloadProfile {
 
     @Override
     public String getIdentifier() {
@@ -14,5 +14,4 @@ public class TestProfile implements Payload {
     public PayloadCache getCache() {
         return null;
     }
-
 }

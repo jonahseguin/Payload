@@ -1,6 +1,7 @@
 package com.jonahseguin.payload.database;
 
 import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.base.PayloadCache;
 import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.Jedis;
 
@@ -64,6 +65,12 @@ public class PayloadRedisMonitor implements Runnable {
     private void handleConnected() {
         if (!this.database.getState().isRedisConnected()) {
             this.database.getState().setRedisConnected(true);
+            if (this.database.getState().isRedisInitConnect()) {
+                this.database.getHooks().forEach(PayloadCache::onRedisReconnect);
+            } else {
+                this.database.getState().setRedisInitConnect(true);
+                this.database.getHooks().forEach(PayloadCache::onRedisInitConnect);
+            }
             database.getErrorHandler().debug("Database: " + database.getName(), "Redis connected");
         }
     }
@@ -71,6 +78,7 @@ public class PayloadRedisMonitor implements Runnable {
     private void handleDisconnected() {
         if (this.database.getState().isRedisConnected()) {
             this.database.getState().setRedisConnected(false);
+            this.database.getHooks().forEach(PayloadCache::onRedisDisconnect);
             database.getErrorHandler().debug("Database: " + database.getName(), "Redis connection lost");
         }
     }

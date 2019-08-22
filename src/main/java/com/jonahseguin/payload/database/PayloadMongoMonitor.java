@@ -1,8 +1,5 @@
 package com.jonahseguin.payload.database;
 
-import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
 import com.mongodb.event.ServerHeartbeatFailedEvent;
 import com.mongodb.event.ServerHeartbeatStartedEvent;
 import com.mongodb.event.ServerHeartbeatSucceededEvent;
@@ -11,7 +8,6 @@ import com.mongodb.event.ServerMonitorListener;
 public class PayloadMongoMonitor implements ServerMonitorListener {
 
     private final PayloadDatabase database;
-    private boolean hasConnectedInit = false;
     private boolean connected = false;
 
     public PayloadMongoMonitor(PayloadDatabase database) {
@@ -26,9 +22,9 @@ public class PayloadMongoMonitor implements ServerMonitorListener {
     @Override
     public void serverHeartbeatSucceeded(ServerHeartbeatSucceededEvent event) {
         // Connected
-        if (!this.hasConnectedInit) {
+        if (!this.database.getState().isMongoInitConnect()) {
             this.database.getHooks().forEach(DatabaseDependent::onMongoDbInitConnect);
-            this.hasConnectedInit = true;
+            this.database.getState().setMongoInitConnect(true);
         }
         else {
             if (!this.connected) {

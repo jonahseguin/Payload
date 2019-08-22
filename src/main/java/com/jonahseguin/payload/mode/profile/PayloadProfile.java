@@ -31,4 +31,8 @@ public abstract class PayloadProfile implements Payload {
         this.loginIp = data.getIp();
     }
 
+    @Override
+    public void interact() {
+        this.lastInteractionTimestamp = System.currentTimeMillis();
+    }
 }

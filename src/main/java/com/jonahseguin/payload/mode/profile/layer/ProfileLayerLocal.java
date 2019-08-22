@@ -1,8 +1,6 @@
 package com.jonahseguin.payload.mode.profile.layer;
 
 import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
-import com.jonahseguin.payload.base.layer.PayloadLayer;
-import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
@@ -23,11 +21,14 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
         if (!this.has(data)) {
             throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in local layer for Profile username:" + data.getUsername(), this.cache);
         }
-        return this.localCache.get(data.getUniqueId());
+        X x = this.localCache.get(data.getUniqueId());
+        x.interact();
+        return x;
     }
 
     @Override
     public boolean save(X payload) {
+        payload.interact();
         this.localCache.put(payload.getUniqueId(), payload);
         return true;
     }
@@ -39,6 +40,7 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public boolean has(X payload) {
+        payload.interact();
         return this.localCache.containsKey(payload.getUniqueId());
     }
 

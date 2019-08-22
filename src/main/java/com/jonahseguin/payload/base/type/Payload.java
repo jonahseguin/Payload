@@ -22,4 +22,10 @@ public interface Payload {
      */
     PayloadCache getCache();
 
+    /**
+     * Called internally when this profile is accessed, used for updating last-access times to handle cache expiry/object
+     * cleanup internally.
+     */
+    void interact();
+
 }

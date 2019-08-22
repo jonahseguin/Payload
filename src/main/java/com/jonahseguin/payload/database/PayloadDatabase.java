@@ -6,6 +6,7 @@ import com.jonahseguin.payload.base.error.DefaultErrorHandler;
 import com.jonahseguin.payload.base.error.PayloadErrorHandler;
 import com.jonahseguin.payload.base.exception.runtime.PayloadConfigException;
 import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadData;
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
 import lombok.Data;
@@ -64,15 +65,34 @@ public class PayloadDatabase {
         }
     }
 
-    public <K, X extends Payload, C extends PayloadCache<K, X>> C loadCache(Class<C> cacheClass, String name) {
-        Query<C> q = this.datastore.createQuery(cacheClass);
-        q.maxTime(10, TimeUnit.SECONDS);
-        q.criteria("name").equalIgnoreCase(name);
-        q.criteria("payloadId").equalIgnoreCase(PayloadPlugin.get().getLocal().getPayloadID());
-        Stream<C> stream = q.asList().stream();
-        Optional<C> optCache = stream.findFirst();
-
-        return optCache.orElse(null);
+    /**
+     * Same as {@link #loadConfigFile(File, String)}, but instead uses a File: loads that file as a YamlConfiguration
+     * and then calls {@link #fromConfig(YamlConfiguration, String)}
+     * The difference in this method from {@link #loadConfigFile(File, String)} is that it will
+     * CREATE the file and copy the default config if it doesn't exist.
+     *
+     * @param file The file to load the config info from
+     * @param name A unique name for the Database, for debugging purposes etc.
+     * @return a new {@link PayloadDatabase} instance
+     * @throws PayloadConfigException If any errors occur during loading the config or parsing database information
+     */
+    public static PayloadDatabase fromConfigFile(File file, String name) throws PayloadConfigException {
+        if (!file.exists()) {
+            try {
+                file.mkdirs();
+                file.createNewFile();
+                File targetFile = new File(PayloadPlugin.get().getDataFolder() + File.separator + "database.yml");
+                if (!targetFile.exists()) {
+                    throw new PayloadConfigException("Default 'database.yml' file does not exist; could not be copied");
+                }
+                OutputStream os = new FileOutputStream(targetFile);
+                Files.copy(Paths.get(file.toURI()), os);
+                os.close();
+            } catch (IOException ex) {
+                throw new PayloadConfigException("Error creating file '" + file.getName() + "' for new Payload config copy", ex);
+            }
+        }
+        return loadConfigFile(file, name);
     }
 
     public boolean start() {
@@ -226,35 +246,15 @@ public class PayloadDatabase {
         return PayloadDatabase.fromConfig(config, name);
     }
 
-    /**
-     * Same as {@link #loadConfigFile(File, String)}, but instead uses a File: loads that file as a YamlConfiguration
-     * and then calls {@link #fromConfig(YamlConfiguration, String)}
-     * The difference in this method from {@link #loadConfigFile(File, String)} is that it will
-     * CREATE the file and copy the default config if it doesn't exist.
-     *
-     * @param file The file to load the config info from
-     * @param name A unique name for the Database, for debugging purposes etc.
-     *
-     * @return a new {@link PayloadDatabase} instance
-     * @throws PayloadConfigException If any errors occur during loading the config or parsing database information
-     */
-    public static PayloadDatabase fromConfigFile(File file, String name) throws PayloadConfigException {
-        if (!file.exists()) {
-            try {
-                file.mkdirs();
-                file.createNewFile();
-                File targetFile = new File(PayloadPlugin.get().getDataFolder() + File.separator + "database.yml");
-                if (!targetFile.exists()) {
-                    throw new PayloadConfigException("Default 'database.yml' file does not exist; could not be copied");
-                }
-                OutputStream os = new FileOutputStream(targetFile);
-                Files.copy(Paths.get(file.toURI()), os);
-                os.close();
-            } catch (IOException ex) {
-                throw new PayloadConfigException("Error creating file '" + file.getName() + "' for new Payload config copy");
-            }
-        }
-        return loadConfigFile(file, name);
+    public <K, X extends Payload, D extends PayloadData, C extends PayloadCache<K, X, D>> C loadCache(Class<C> cacheClass, String name) {
+        Query<C> q = this.datastore.createQuery(cacheClass);
+        q.maxTime(10, TimeUnit.SECONDS);
+        q.criteria("name").equalIgnoreCase(name);
+        q.criteria("payloadId").equalIgnoreCase(PayloadPlugin.get().getLocal().getPayloadID());
+        Stream<C> stream = q.asList().stream();
+        Optional<C> optCache = stream.findFirst();
+
+        return optCache.orElse(null);
     }
 
     /**
