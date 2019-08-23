@@ -152,7 +152,7 @@ public class PMongoLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
     public boolean shutdown() {
         int errors = 0;
         for (Player player : Bukkit.getOnlinePlayers()) {
-            T profile = getCache().getProfile(player);
+            T profile = getCache().getLocalProfile(player); // Get locally only
             if (profile != null) {
                 // Save only here (Mongo)
                 if (!this.save(profile)) {

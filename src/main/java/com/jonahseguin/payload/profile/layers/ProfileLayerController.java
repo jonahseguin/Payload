@@ -57,6 +57,12 @@ public class ProfileLayerController<T extends PayloadProfile> {
 
     public final boolean shutdown() {
         boolean success = true;
+        if (!mongoLayer.shutdown()) {
+            success = false;
+        }
+        if (!redisLayer.shutdown()) {
+            success = false;
+        }
         if (!preCachingLayer.shutdown()) {
             success = false;
         }
@@ -64,12 +70,6 @@ public class ProfileLayerController<T extends PayloadProfile> {
             success = false;
         }
         if (!localLayer.shutdown()) {
-            success = false;
-        }
-        if (!redisLayer.shutdown()) {
-            success = false;
-        }
-        if (!mongoLayer.shutdown()) {
             success = false;
         }
         return success;
