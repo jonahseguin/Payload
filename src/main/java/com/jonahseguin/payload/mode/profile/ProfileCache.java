@@ -3,6 +3,7 @@ package com.jonahseguin.payload.mode.profile;
 import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerLocal;
+import com.jonahseguin.payload.mode.profile.layer.ProfileLayerRedis;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import org.bukkit.entity.Player;
 
@@ -18,6 +19,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String,
     protected void init() {
         // somehow register layers ....
         this.layerController.register(new ProfileLayerLocal<>(this));
+        this.layerController.register(new ProfileLayerRedis<>(this));
     }
 
     @Override

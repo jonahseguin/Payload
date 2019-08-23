@@ -24,37 +24,72 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
         if (!this.has(data)) {
             throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in local layer for Profile username:" + data.getUsername(), this.cache);
         }
-        String json = jedis.hget(this.getCache().getName(), data.getUniqueId());
-        return mapProfile(json);
+        try {
+            String json = jedis.hget(this.getCache().getName(), data.getUniqueId());
+            return mapProfile(json);
+        }
+        catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache().getName(), expected, "Error getting Profile from Redis Layer: " + data.getUsername());
+            return null;
+        }
     }
 
     @Override
     public boolean save(X payload) {
         payload.interact();
         payload.interactRedis();
-        this.localCache.put(payload.getUniqueId(), payload);
-        return true;
+        String json = jsonifyProfile(payload);
+        try {
+            this.jedis.hset(this.getCache().getName(), payload.getUniqueId(), json);
+            return true;
+        }
+        catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache().getName(), expected, "Error saving Profile to Redis Layer: " + payload.getUsername());
+            return false;
+        }
     }
 
     @Override
     public boolean has(ProfileData data) {
-        return this.localCache.containsKey(data.getUniqueId());
+        try {
+            return this.jedis.hexists(this.getCache().getName(), data.getUniqueId());
+        }
+        catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache().getName(), expected, "Error checking if Profile exists in Redis Layer: " + data.getUsername());
+            return false;
+        }
     }
 
     @Override
     public boolean has(X payload) {
         payload.interact();
-        return this.localCache.containsKey(payload.getUniqueId());
+        try {
+            return this.jedis.hexists(this.getCache().getName(), payload.getUniqueId());
+        }
+        catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache().getName(), expected, "Error checking if Profile exists in Redis Layer: " + payload.getUsername());
+            return false;
+        }
     }
 
     @Override
     public void remove(ProfileData data) {
-        this.localCache.remove(data.getUniqueId());
+        try {
+            this.jedis.hdel(this.getCache().getName(), data.getUniqueId());
+        }
+        catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache().getName(), expected, "Error removing Profile from Redis Layer: " + data.getUsername());
+        }
     }
 
     @Override
     public void remove(X payload) {
-        this.localCache.remove(payload.getUniqueId());
+        try {
+            this.jedis.hdel(this.getCache().getName(), payload.getUniqueId());
+        }
+        catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache().getName(), expected, "Error removing Profile from Redis Layer: " + payload.getUsername());
+        }
     }
 
     @Override

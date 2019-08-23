@@ -1,4 +1,4 @@
-package com.jonahseguin.payload.database;
+package com.jonahseguin.payload.database.redis;
 
 import lombok.Data;
 import org.bukkit.configuration.ConfigurationSection;

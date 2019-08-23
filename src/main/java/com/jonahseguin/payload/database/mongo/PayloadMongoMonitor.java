@@ -1,5 +1,7 @@
-package com.jonahseguin.payload.database;
+package com.jonahseguin.payload.database.mongo;
 
+import com.jonahseguin.payload.database.DatabaseDependent;
+import com.jonahseguin.payload.database.PayloadDatabase;
 import com.mongodb.event.ServerHeartbeatFailedEvent;
 import com.mongodb.event.ServerHeartbeatStartedEvent;
 import com.mongodb.event.ServerHeartbeatSucceededEvent;

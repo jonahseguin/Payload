@@ -1,7 +1,8 @@
-package com.jonahseguin.payload.database;
+package com.jonahseguin.payload.database.redis;
 
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.database.PayloadDatabase;
 import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.Jedis;
 
