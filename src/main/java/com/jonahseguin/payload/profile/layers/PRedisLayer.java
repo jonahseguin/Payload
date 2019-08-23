@@ -1,5 +1,6 @@
 package com.jonahseguin.payload.profile.layers;
 
+import com.jonahseguin.payload.Payload;
 import com.jonahseguin.payload.common.cache.CacheDatabase;
 import com.jonahseguin.payload.common.exception.CachingException;
 import com.jonahseguin.payload.common.exception.PayloadException;
@@ -12,6 +13,9 @@ import com.jonahseguin.payload.profile.type.PCacheSource;
 import com.jonahseguin.payload.profile.type.PCacheStage;
 import com.mongodb.BasicDBObject;
 import com.mongodb.util.JSONParseException;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisException;
 
@@ -124,6 +128,25 @@ public class PRedisLayer<T extends PayloadProfile> extends ProfileCacheLayer<T, 
 
     @Override
     public boolean shutdown() {
+        int errors = 0;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            T profile = getCache().getLocalProfile(player); // Get locally only
+            if (profile != null) {
+                // Save only here (Redis)
+                if (!this.save(profile)) {
+                    player.sendMessage(ChatColor.RED + "Failed to save your profile during shutdown.  Please notify an administrator of this error.  [Redis]");
+                    debug(Payload.format("&c{0}'s profile failed to save during shutdown. (FATAL ERROR: potential data loss) [Redis]"));
+                    errors++;
+                }
+            } else {
+                // Player is online without a loaded PayloadProfile... this should not happen
+                player.sendMessage(ChatColor.RED + "You do not appear to have a loaded profile.  Please notify an administrator of this error.  [Redis]");
+                debug(Payload.format("&c{0} is online without a loaded profile.  This should not happen. (shutdown)  [Redis] ", player.getName()));
+                errors++;
+            }
+        }
+        debug(ChatColor.RED + "[FATAL ERROR] There were " + errors + " errors during MongoDB shutdown involving profile saving.  [Redis]");
+
         try {
             if (jedis != null) {
                 jedis.close();
