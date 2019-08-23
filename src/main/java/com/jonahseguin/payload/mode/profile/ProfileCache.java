@@ -4,6 +4,7 @@ import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerLocal;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
+import org.bukkit.entity.Player;
 
 public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String, X, ProfileData> {
 
@@ -22,6 +23,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String,
     @Override
     protected void shutdown() {
         // close layers in order, save all objects, etc.
+    }
+
+    public X getProfile(Player player) {
+        return this.get(player.getUniqueId().toString());
     }
 
     @Override

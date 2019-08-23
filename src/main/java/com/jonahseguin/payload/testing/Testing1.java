@@ -3,6 +3,7 @@ package com.jonahseguin.payload.testing;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class Testing1 extends JavaPlugin {
@@ -30,6 +31,9 @@ public class Testing1 extends JavaPlugin {
                 // fail
             }
 
+            TestProfile profile = this.cache.getProfile(Bukkit.getPlayer("Shawckz"));
+
+            String ip = profile.getLoginIp();
 
         });
 

@@ -49,6 +49,8 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     protected transient final Class<K> keyType;
     protected transient final Class<X> payloadClass;
 
+    protected transient boolean running = false;
+
     public PayloadCache(final PayloadHook hook, final String name, Class<K> keyType, Class<X> payloadClass) {
         if (hook.getPlugin() == null) {
             throw new IllegalArgumentException("Plugin cannot be null");
@@ -84,14 +86,18 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     }
 
     public final boolean start() {
+        if (this.isRunning()) return true;
         // What else should be implemented here?
         this.init();
+        this.running = true;
         return true;
     }
 
     public final boolean stop() {
+        if (!this.isRunning()) return true;
         this.shutdown(); // Allow the implementing cache to do it's shutdown first
         this.pool.shutdown(); // Shutdown our thread pool
+        this.running = false;
         if (this.save()) {
             return true;
         } else {

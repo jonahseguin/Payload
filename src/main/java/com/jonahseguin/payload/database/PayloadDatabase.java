@@ -100,6 +100,12 @@ public class PayloadDatabase {
     }
 
     public boolean stop() {
+        for (PayloadCache cache : this.getHooks()) {
+            if (cache.isRunning()) {
+                // Still running... don't just close the DB connection w/o proper shutdown
+                PayloadPlugin.get().getLogger().info("[Payload] Database '" + this.name + "' stopped, stopping dependent cache: " + cache.getName());
+            }
+        }
         boolean mongo = this.disconnectMongo();
         boolean redis = this.disconnectRedis();
         return mongo && redis;
