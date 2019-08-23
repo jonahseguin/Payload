@@ -59,7 +59,7 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public int cleanup() {
-        long expiryTimeSeconds = 7200; // 2 hours
+        long expiryTimeSeconds = this.getCache().getSettings().getLocalExpiryTimeSeconds();
         Set<String> purge = new HashSet<>();
         for (Map.Entry<String, X> entry : this.localCache.entrySet()) {
             if (entry.getValue().getLastInteractionTimestamp() < (System.currentTimeMillis() - (expiryTimeSeconds * 1000))) {

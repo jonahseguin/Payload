@@ -3,8 +3,11 @@ package com.jonahseguin.payload.mode.profile;
 import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerLocal;
+import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 
 public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String, X, ProfileData> {
+
+    private final ProfileCacheSettings settings = new ProfileCacheSettings();
 
     public ProfileCache(PayloadHook hook, String name, Class<X> type) {
         super(hook, name, String.class, type);
@@ -35,4 +38,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String,
     public boolean requireMongoDb() {
         return true;
     }
+
+    @Override
+    public ProfileCacheSettings getSettings() {
+        return this.settings;
+    }
+
 }

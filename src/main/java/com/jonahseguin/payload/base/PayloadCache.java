@@ -8,6 +8,7 @@ import com.jonahseguin.payload.base.error.PayloadErrorHandler;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.lang.PayloadLangController;
 import com.jonahseguin.payload.base.layer.LayerController;
+import com.jonahseguin.payload.base.settings.CacheSettings;
 import com.jonahseguin.payload.base.state.CacheState;
 import com.jonahseguin.payload.base.state.PayloadTaskExecutor;
 import com.jonahseguin.payload.base.type.Payload;
@@ -46,9 +47,9 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     protected transient final LayerController<X, D> layerController = new LayerController<>();
 
     protected transient final Class<K> keyType;
-    protected transient final Class<X> valueType;
+    protected transient final Class<X> payloadClass;
 
-    public PayloadCache(final PayloadHook hook, final String name, Class<K> keyType, Class<X> valueType) {
+    public PayloadCache(final PayloadHook hook, final String name, Class<K> keyType, Class<X> payloadClass) {
         if (hook.getPlugin() == null) {
             throw new IllegalArgumentException("Plugin cannot be null");
         }
@@ -62,7 +63,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
             throw new IllegalStateException("Provided PayloadHook is not valid; cannot create cache '" + name + "'");
         }
         this.keyType = keyType;
-        this.valueType = valueType;
+        this.payloadClass = payloadClass;
         this.plugin = hook.getPlugin();
         this.name = name;
         this.executor = new PayloadTaskExecutor<>(this);
@@ -104,8 +105,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         try {
             payloadDatabase.getDatastore().save(this);
             return true;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             this.getErrorHandler().exception(this.name, ex, "Failed to save cache");
             return false;
         }
@@ -117,6 +117,14 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         }
         this.payloadDatabase = database;
     }
+
+    /**
+     * Get the Cache Settings for this Cache
+     *
+     * @return Cache Settings
+     */
+    public abstract CacheSettings getSettings();
+
 
     /**
      * Starts up & initializes the cache.
@@ -133,6 +141,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
 
     /**
      * Get an object stored in this cache, using the best method provided by the cache
+     *
      * @param key The key to use to get the object (i.e a string, number, etc.)
      * @return The object if available (else null)
      */
