@@ -112,7 +112,7 @@ public class PayloadAPI {
         return CompletableFuture.supplyAsync(() -> {
             while (PayloadPlugin.get().isLocked()) {
                 try {
-                    Thread.sleep(10);
+                    Thread.sleep(1000);
                 }
                 catch (InterruptedException ex) {
                     throw new PayloadProvisionException("Interrupted while waiting for provision for plugin " + plugin.getName(), ex);

@@ -1,6 +1,7 @@
 package com.jonahseguin.payload.base;
 
 import com.jonahseguin.payload.PayloadHook;
+import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.error.DefaultErrorHandler;
 import com.jonahseguin.payload.base.error.PayloadErrorHandler;
@@ -36,6 +37,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
 
     protected transient PayloadErrorHandler errorHandler = new DefaultErrorHandler();
     protected transient PayloadDatabase payloadDatabase = null;
+    protected transient PayloadMode mode = PayloadMode.STANDALONE; // Payload Mode for this cache
 
     protected transient final ExecutorService pool = Executors.newCachedThreadPool();
     protected transient final PayloadTaskExecutor<K, X> executor;
@@ -45,7 +47,6 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
 
     protected transient final Class<K> keyType;
     protected transient final Class<X> valueType;
-    //private transient final Class<PayloadCache<K, X>> cacheType;
 
     public PayloadCache(final PayloadHook hook, final String name, Class<K> keyType, Class<X> valueType) {
         if (hook.getPlugin() == null) {
@@ -157,6 +158,31 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
      */
     public final Plugin getPlugin() {
         return this.plugin;
+    }
+
+    /**
+     * Get the current Mode this cache is functioning in
+     * There are two modes: STANDALONE, or NETWORK_NODE
+     * In standalone mode, a cache functions as it's own entity and will use login/logout events to handle caching normally
+     * In contrast, in network node mode, a cache functions as a node in a BungeeCord/etc. proxied network,
+     * where in such logins are handled before logouts, data is transferred through a handshake via Redis pub/sub if
+     * a player is already logged into another node.
+     *
+     * @return {@link PayloadMode} the current mode
+     */
+    public PayloadMode getMode() {
+        return mode;
+    }
+
+    /**
+     * Set the current Mode this cache is functioning in
+     * Two modes: STANDALONE, or NETWORK_NODE
+     *
+     * @param mode {@link PayloadMode} mode
+     * @see #getMode()
+     */
+    public void setMode(PayloadMode mode) {
+        this.mode = mode;
     }
 
     @Override

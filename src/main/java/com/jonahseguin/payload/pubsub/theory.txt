@@ -1,0 +1,13 @@
+
+Player is logged into a node on a network
+
+Player begins to join another node
+
+The node that receives the login of the player will publish an event to Redis: JOIN_PROFILE (or similar)
+
+Other nodes receive it.  They will quickly (async) check their caches for a profile with that name, that is online
+If one finds it, we have found the node they are connecting from.
+That node will send PROCEED_PROFILE (or similar) with that player's name/UUID AFTER saving their data to Redis.
+
+The node the player is connecting to will handle this process during AsyncPlayerPreLogin to allow the join process to wait
+until their data has been saved before going through with the connection.

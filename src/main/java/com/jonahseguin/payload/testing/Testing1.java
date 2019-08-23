@@ -5,8 +5,6 @@ import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-
 public class Testing1 extends JavaPlugin {
 
     private PayloadDatabase payloadDatabase = null;
@@ -14,8 +12,11 @@ public class Testing1 extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        getLogger().info("Awaiting provision from Payload");
-        PayloadAPI.get().requestProvision(this).thenAcceptAsync(hook -> {
+        getLogger().info("Awaiting cache provision from Payload");
+
+        PayloadAPI.get().requestProvision(this).thenAccept(hook -> {
+            getLogger().info("Provision received from Payload");
+
             payloadDatabase = PayloadDatabase.fromConfigFile(this, "database.yml", "purifiedDatabase");
             payloadDatabase.start();
 
@@ -31,6 +32,7 @@ public class Testing1 extends JavaPlugin {
 
 
         });
+
     }
 
     @Override

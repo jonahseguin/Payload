@@ -18,7 +18,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String,
 
     @Override
     protected void shutdown() {
-
+        // close layers in order, save all objects, etc.
     }
 
     @Override

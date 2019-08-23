@@ -5,6 +5,9 @@ import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
 
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -56,7 +59,20 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public int cleanup() {
-        return 0; // TODO: If last time a profile was interacted with exceeds a configurable time, remove the object
+        long expiryTimeSeconds = 7200; // 2 hours
+        Set<String> purge = new HashSet<>();
+        for (Map.Entry<String, X> entry : this.localCache.entrySet()) {
+            if (entry.getValue().getLastInteractionTimestamp() < (System.currentTimeMillis() - (expiryTimeSeconds * 1000))) {
+                // Expired
+                purge.add(entry.getKey());
+            }
+        }
+
+        for (String key : purge) {
+            this.localCache.remove(key);
+        }
+
+        return purge.size();
     }
 
     @Override
@@ -68,7 +84,7 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public void init() {
-
+        // Nothing to initialize
     }
 
     @Override

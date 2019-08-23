@@ -39,8 +39,6 @@ public class PayloadPlugin extends JavaPlugin {
     private final PayloadLocal local = new PayloadLocal();
     private final PCommandHandler commandHandler = new PCommandHandler();
 
-    private PayloadMode mode = PayloadMode.STANDALONE;
-
     public PayloadPlugin() {
         if (PayloadPlugin.instance != null) {
             throw new IllegalStateException("PayloadPlugin has already been created");
@@ -191,18 +189,6 @@ public class PayloadPlugin extends JavaPlugin {
         return debug;
     }
 
-    /**
-     * Get the current Mode Payload is functioning in
-     * There are two modes: STANDALONE, or NETWORK_NODE
-     * In standalone mode, Payload functions as it's own entity and will use login/logout events to handle caching normally
-     * In contrast, in network node mode, Payload functions as a node in a BungeeCord/etc. proxied network,
-     * where in such logins are handled before logouts, data is transferred through a handshake via Redis pub/sub if
-     * a player is already logged into another node.
-     * @return {@link PayloadMode} the current mode
-     */
-    public PayloadMode getMode() {
-        return mode;
-    }
 
     /**
      * Get the Global plugin-wide default Language Controller

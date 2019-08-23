@@ -5,8 +5,6 @@ import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.error.DefaultErrorHandler;
 import com.jonahseguin.payload.base.error.PayloadErrorHandler;
 import com.jonahseguin.payload.base.exception.runtime.PayloadConfigException;
-import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
 import lombok.Data;
@@ -16,16 +14,16 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.mongodb.morphia.Datastore;
 import org.mongodb.morphia.Morphia;
-import org.mongodb.morphia.query.Query;
 import redis.clients.jedis.Jedis;
 
 import java.io.*;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * The {@link PayloadDatabase} class provides the information required for connecting to the databases.
@@ -244,17 +242,6 @@ public class PayloadDatabase {
             throw new PayloadConfigException("Could not load Payload Database info from file (invalid config!)", ex);
         }
         return PayloadDatabase.fromConfig(config, name);
-    }
-
-    public <K, X extends Payload, D extends PayloadData, C extends PayloadCache<K, X, D>> C loadCache(Class<C> cacheClass, String name) {
-        Query<C> q = this.datastore.createQuery(cacheClass);
-        q.maxTime(10, TimeUnit.SECONDS);
-        q.criteria("name").equalIgnoreCase(name);
-        q.criteria("payloadId").equalIgnoreCase(PayloadPlugin.get().getLocal().getPayloadID());
-        Stream<C> stream = q.asList().stream();
-        Optional<C> optCache = stream.findFirst();
-
-        return optCache.orElse(null);
     }
 
     /**
