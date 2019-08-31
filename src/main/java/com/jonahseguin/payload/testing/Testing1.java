@@ -33,6 +33,7 @@ public class Testing1 extends JavaPlugin {
 
             TestProfile profile = this.cache.getProfile(Bukkit.getPlayer("Shawckz"));
 
+
             String ip = profile.getLoginIp();
 
         });

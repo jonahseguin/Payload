@@ -4,19 +4,20 @@ import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadData;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class CacheState<K, X extends Payload> {
+public class CacheState<K, X extends Payload, D extends PayloadData> {
 
-    private final PayloadCache<K, X> cache;
+    private final PayloadCache<K, X, D> cache;
 
     private volatile boolean locked = false; // lock caching, tasks, etc.
     private volatile boolean joinable = false; // can players join
 
-    public CacheState(PayloadCache<K, X> cache) {
+    public CacheState(PayloadCache<K, X, D> cache) {
         this.cache = cache;
     }
 

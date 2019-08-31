@@ -1,5 +1,6 @@
 package com.jonahseguin.payload;
 
+import com.google.common.collect.HashBiMap;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.data.PayloadLocal;
 import com.jonahseguin.payload.base.lang.PLang;
@@ -8,16 +9,15 @@ import com.jonahseguin.payload.base.listener.LockListener;
 import com.jonahseguin.payload.command.PCommandHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.PluginLoader;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.java.JavaPluginLoader;
 
 import java.io.File;
 import java.net.InetAddress;
+import java.util.UUID;
 
 /**
  * Created by Jonah on 11/16/2017.
@@ -38,15 +38,9 @@ public class PayloadPlugin extends JavaPlugin {
     private final PayloadLangController globalLangController = new PayloadLangController();
     private final PayloadLocal local = new PayloadLocal();
     private final PCommandHandler commandHandler = new PCommandHandler();
+    private final HashBiMap<String, UUID> uuids = HashBiMap.create(); // <Username, UUID>
 
     public PayloadPlugin() {
-        if (PayloadPlugin.instance != null) {
-            throw new IllegalStateException("PayloadPlugin has already been created");
-        }
-    }
-
-    public PayloadPlugin(PluginLoader loader, Server server, PluginDescriptionFile description, File dataFolder, File file) {
-        super(loader, server, description, dataFolder, file);
         if (PayloadPlugin.instance != null) {
             throw new IllegalStateException("PayloadPlugin has already been created");
         }
@@ -80,7 +74,7 @@ public class PayloadPlugin extends JavaPlugin {
         catch (IllegalAccessException ex) {
             this.getLogger().warning("Payload failed to initialize API; was already created... LOCKING");
             this.locked = true;
-            this.getLogger().warning("Ensure no other plugins are creating a PayloadAPI instance.  Payload has been locked.");
+            this.getLogger().warning("To ensure no other plugins are creating a PayloadAPI instance, Payload has been locked.");
         }
     }
 
@@ -99,6 +93,10 @@ public class PayloadPlugin extends JavaPlugin {
             this.saveResource("database.yml", false); // Copy the database.yml file from jar to plugin folder, don't replace if exists
             getLogger().info("Generated default database.yml");
         }
+    }
+
+    public HashBiMap<String, UUID> getUUIDs() {
+        return uuids;
     }
 
     /**

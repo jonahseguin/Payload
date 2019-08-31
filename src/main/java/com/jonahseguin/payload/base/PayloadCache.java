@@ -5,6 +5,7 @@ import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.error.DefaultErrorHandler;
 import com.jonahseguin.payload.base.error.PayloadErrorHandler;
+import com.jonahseguin.payload.base.failsafe.FailureManager;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.lang.PayloadLangController;
 import com.jonahseguin.payload.base.layer.LayerController;
@@ -12,6 +13,7 @@ import com.jonahseguin.payload.base.settings.CacheSettings;
 import com.jonahseguin.payload.base.state.CacheState;
 import com.jonahseguin.payload.base.state.PayloadTaskExecutor;
 import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadController;
 import com.jonahseguin.payload.base.type.PayloadData;
 import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.PayloadDatabase;
@@ -41,10 +43,11 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     protected transient PayloadMode mode = PayloadMode.STANDALONE; // Payload Mode for this cache
 
     protected transient final ExecutorService pool = Executors.newCachedThreadPool();
-    protected transient final PayloadTaskExecutor<K, X> executor;
+    protected transient final PayloadTaskExecutor<K, X, D> executor;
     protected transient final PayloadLangController langController = new PayloadLangController();
-    protected transient final CacheState<K, X> state;
+    protected transient final CacheState<K, X, D> state;
     protected transient final LayerController<X, D> layerController = new LayerController<>();
+    protected final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
 
     protected transient final Class<K> keyType;
     protected transient final Class<X> payloadClass;
@@ -90,6 +93,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         // What else should be implemented here?
         this.init();
         this.running = true;
+        this.failureManager.start();
         return true;
     }
 
@@ -98,11 +102,12 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         this.shutdown(); // Allow the implementing cache to do it's shutdown first
         this.pool.shutdown(); // Shutdown our thread pool
         this.running = false;
+        this.failureManager.stop();
         if (this.save()) {
             return true;
         } else {
             // Failed to save
-            getErrorHandler().error(this.name, "Failed to save during shutdown");
+            getErrorHandler().error(this, "Failed to save during shutdown");
             return false;
         }
     }
@@ -112,17 +117,31 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
             payloadDatabase.getDatastore().save(this);
             return true;
         } catch (Exception ex) {
-            this.getErrorHandler().exception(this.name, ex, "Failed to save cache");
+            this.getErrorHandler().exception(this, ex, "Failed to save cache");
             return false;
         }
     }
 
+    /**
+     * Pass the database object for this cache.
+     * Called internally.
+     *
+     * @param database PayloadDatabase
+     */
     public final void setupDatabase(PayloadDatabase database) {
         if (this.payloadDatabase != null) {
             throw new IllegalStateException("Database has already been defined");
         }
         this.payloadDatabase = database;
     }
+
+    /**
+     * Get/create a controller for specific data
+     *
+     * @param data {@link PayloadData}
+     * @return {@link PayloadController}
+     */
+    public abstract PayloadController<X> controller(D data);
 
     /**
      * Get the Cache Settings for this Cache

@@ -27,5 +27,6 @@ public interface PayloadLayer<X extends Payload, D extends PayloadData> {
 
     void shutdown();
 
+    String layerName();
 
 }

@@ -1,10 +1,12 @@
 package com.jonahseguin.payload.mode.profile.settings;
 
 import com.jonahseguin.payload.base.settings.CacheSettings;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-public class ProfileCacheSettings implements CacheSettings {
+@Getter
+@Setter
+public class ProfileCacheSettings extends CacheSettings {
 
     private int localExpiryTimeSeconds = 7200;
     private int redisExpiryTimeSeconds = 14400;

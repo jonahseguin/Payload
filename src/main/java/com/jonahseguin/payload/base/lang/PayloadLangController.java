@@ -65,6 +65,7 @@ public class PayloadLangController {
      * @return The raw definition
      */
     public String getRawDefinition(PLang key) {
+        Validate.notNull(key, "PLang must not be null");
         return this.definitions.getOrDefault(key, null);
     }
 
@@ -76,6 +77,7 @@ public class PayloadLangController {
      * @return The formatted text: with ChatColor and custom language / arguments
      */
     public String get(PLang key, String... args) {
+        Validate.notNull(key, "PLang must not be null");
         return PayloadPlugin.format(this.getRawDefinition(key), args);
     }
 

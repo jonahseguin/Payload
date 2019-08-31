@@ -2,18 +2,19 @@ package com.jonahseguin.payload.base.state;
 
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadData;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class PayloadTaskExecutor<K, X extends Payload> {
+public class PayloadTaskExecutor<K, X extends Payload, D extends PayloadData> {
 
-    private final PayloadCache<K, X> cache;
+    private final PayloadCache<K, X, D> cache;
     private final BlockingQueue<PayloadTask> tasks = new LinkedBlockingQueue<>();
     private volatile boolean running = false;
     private volatile boolean allowSubmission = false;
 
-    public PayloadTaskExecutor(PayloadCache<K, X> cache) {
+    public PayloadTaskExecutor(PayloadCache<K, X, D> cache) {
         this.cache = cache;
     }
 
@@ -26,7 +27,7 @@ public class PayloadTaskExecutor<K, X extends Payload> {
                         this.tasks.take().run().run();
                     }
                     catch (InterruptedException ex) {
-                        cache.getErrorHandler().exception(cache, ex, "Interruption in Payload Task Executor");
+                        cache.getErrorHandler().exception(cache.getName(), ex, "Interruption in Payload Task Executor");
                     }
                 }
             });

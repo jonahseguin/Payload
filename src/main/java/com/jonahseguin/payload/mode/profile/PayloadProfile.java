@@ -4,14 +4,22 @@ import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.type.Payload;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang3.Validate;
+import org.bson.types.ObjectId;
+import org.bukkit.entity.Player;
+import org.mongodb.morphia.annotations.Id;
+
+import java.util.UUID;
 
 // The implementing class of this abstract class must add an @Entity annotation (from MongoDB) with a collection name!
 @Getter
 @Setter
 public abstract class PayloadProfile implements Payload {
 
+    @Id
+    protected ObjectId objectId;
     protected String username;
-    protected String uniqueId;
+    protected UUID uniqueId;
     protected String loginIp = null;
     protected boolean online = false;
     protected String payloadId = null; // The ID of the Payload instance that currently holds this profile
@@ -19,11 +27,13 @@ public abstract class PayloadProfile implements Payload {
     protected long lastInteractionTimestamp = System.currentTimeMillis();
     protected long redisCacheTimestamp = System.currentTimeMillis();
 
+    protected transient Player player = null;
+
     public PayloadProfile() {
         this.payloadId = PayloadAPI.get().getPayloadID();
     }
 
-    public PayloadProfile(String username, String uniqueId) {
+    public PayloadProfile(String username, UUID uniqueId) {
         this();
         this.username = username;
         this.uniqueId = uniqueId;
@@ -34,6 +44,11 @@ public abstract class PayloadProfile implements Payload {
         this.loginIp = data.getIp();
     }
 
+    public void initializePlayer(Player player) {
+        Validate.notNull(player, "Player cannot be null for initializePlayer");
+        this.player = player;
+    }
+
     @Override
     public void interact() {
         this.lastInteractionTimestamp = System.currentTimeMillis();
@@ -41,6 +56,22 @@ public abstract class PayloadProfile implements Payload {
 
     public void interactRedis() {
         this.redisCacheTimestamp = System.currentTimeMillis();
+    }
+
+    @Override
+    public String getIdentifier() {
+        return this.uniqueId.toString();
+    }
+
+    @Override
+    public void sendMessage(String msg) {
+        if (this.isInitialized()) {
+            this.player.sendMessage(msg);
+        }
+    }
+
+    public boolean isInitialized() {
+        return this.player != null;
     }
 
 }

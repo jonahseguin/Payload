@@ -4,6 +4,7 @@ import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.exception.runtime.PayloadProvisionException;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
+import lombok.Getter;
 import org.bukkit.plugin.Plugin;
 
 import java.util.HashSet;
@@ -12,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+@Getter
 public class PayloadAPI {
 
     private static PayloadAPI instance;
@@ -113,8 +115,7 @@ public class PayloadAPI {
             while (PayloadPlugin.get().isLocked()) {
                 try {
                     Thread.sleep(1000);
-                }
-                catch (InterruptedException ex) {
+                } catch (InterruptedException ex) {
                     throw new PayloadProvisionException("Interrupted while waiting for provision for plugin " + plugin.getName(), ex);
                 }
             }
