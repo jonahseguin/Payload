@@ -50,6 +50,12 @@ public class ProfileListener implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         // TODO: Save, remove their controller, clear their data
+        PayloadAPI.get().getCaches().values().forEach(c -> {
+            if (c instanceof ProfileCache) {
+                ProfileCache cache = (ProfileCache) c;
+                cache.removeData(player.getUniqueId());
+            }
+        });
     }
 
 }
