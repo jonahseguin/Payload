@@ -4,16 +4,19 @@ import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
+import lombok.Getter;
 
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+@Getter
 public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLayer<X> {
 
-    private final ConcurrentMap<String, X> localCache = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, X> localCache = new ConcurrentHashMap<>();
 
     public ProfileLayerLocal(ProfileCache<X> cache) {
         super(cache);
@@ -60,15 +63,15 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
     @Override
     public int cleanup() {
         long expiryTimeSeconds = this.getCache().getSettings().getLocalExpiryTimeSeconds();
-        Set<String> purge = new HashSet<>();
-        for (Map.Entry<String, X> entry : this.localCache.entrySet()) {
+        Set<UUID> purge = new HashSet<>();
+        for (Map.Entry<UUID, X> entry : this.localCache.entrySet()) {
             if (entry.getValue().getLastInteractionTimestamp() < (System.currentTimeMillis() - (expiryTimeSeconds * 1000))) {
                 // Expired
                 purge.add(entry.getKey());
             }
         }
 
-        for (String key : purge) {
+        for (UUID key : purge) {
             this.localCache.remove(key);
         }
 
@@ -90,5 +93,10 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
     @Override
     public void shutdown() {
         this.clear(); // For memory purposes
+    }
+
+    @Override
+    public String layerName() {
+        return "Profile Local";
     }
 }
