@@ -8,6 +8,8 @@ import com.jonahseguin.payload.base.type.PayloadController;
 import lombok.Getter;
 import org.bukkit.entity.Player;
 
+import java.util.UUID;
+
 @Getter
 public class PayloadProfileController<X extends PayloadProfile> implements PayloadController<X> {
 
@@ -37,7 +39,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     }
 
     private X cacheStandalone() {
-        for (PayloadLayer<X, ProfileData> layer : this.cache.getLayerController().getLayers()) {
+        for (PayloadLayer<UUID, X, ProfileData> layer : this.cache.getLayerController().getLayers()) {
             if (layer.has(this.data)) {
                 try {
                     payload = layer.get(this.data);

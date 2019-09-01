@@ -95,7 +95,7 @@ public class FailureManager<K, X extends Payload, D extends PayloadData> impleme
                 Player player = PayloadPlugin.get().getServer().getPlayer(profileData.getUniqueId());
                 if (player != null) {
                     failedPayload.setPlayer(player);
-                    player.sendMessage(cache.getLangController().get(PLang.CACHE_FAILURE_PROFILE_ATTEMPT));
+                    player.sendMessage(cache.getLangController().get(PLang.CACHE_FAILURE_PROFILE_ATTEMPT, cache.getName()));
                 } else {
                     purge.add(failedPayload);
                     // Remove them if they aren't online anymore; no point trying to cache them anymore
@@ -120,18 +120,17 @@ public class FailureManager<K, X extends Payload, D extends PayloadData> impleme
                         PayloadProfile profile = (PayloadProfile) payload;
                         profile.initializePlayer(player);
                     }
-                    player.sendMessage(cache.getLangController().get(PLang.CACHE_FAILURE_PROFILE_ATTEMPT_SUCCESS));
+                    player.sendMessage(cache.getLangController().get(PLang.CACHE_FAILURE_PROFILE_ATTEMPT_SUCCESS, cache.getName()));
                 }
                 purge.add(failedPayload);
             } else {
                 // If failure
 
                 if (failedPayload.getData() instanceof ProfileData) {
-
                     ProfileData profileData = (ProfileData) failedPayload.getData();
                     Player player = PayloadPlugin.get().getServer().getPlayer(profileData.getUniqueId());
                     if (player != null && player.isOnline()) {
-                        player.sendMessage(cache.getLangController().get(PLang.CACHE_FAILURE_PROFILE_ATTEMPT_FAILURE, cache.getSettings().getFailureRetryIntervalSeconds() + ""));
+                        player.sendMessage(cache.getLangController().get(PLang.CACHE_FAILURE_PROFILE_ATTEMPT_FAILURE, cache.getName(), cache.getSettings().getFailureRetryIntervalSeconds() + ""));
                     } else {
                         purge.add(failedPayload);
                     }

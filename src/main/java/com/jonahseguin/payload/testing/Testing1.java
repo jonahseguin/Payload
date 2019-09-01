@@ -21,7 +21,7 @@ public class Testing1 extends JavaPlugin {
             payloadDatabase = PayloadDatabase.fromConfigFile(this, "database.yml", "Purified Database");
             payloadDatabase.start();
 
-            this.cache = hook.createProfileCache(payloadDatabase, "Purified Profile", TestProfile.class);
+            this.cache = hook.createProfileCache(payloadDatabase, "Pure Profiles", TestProfile.class);
             this.cache.withInstantiator(TestProfile::new);
 
             if (cache.start()) {

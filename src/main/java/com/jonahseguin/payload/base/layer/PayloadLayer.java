@@ -26,12 +26,14 @@ public interface PayloadLayer<K, X extends Payload, D extends PayloadData> {
 
     int cleanup();
 
-    int clear();
+    long clear();
 
     void init();
 
     void shutdown();
 
     String layerName();
+
+    long size();
 
 }

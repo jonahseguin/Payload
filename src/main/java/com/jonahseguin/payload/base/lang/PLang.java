@@ -12,7 +12,7 @@ package com.jonahseguin.payload.base.lang;
 public enum PLang {
 
     ERROR_FAILED_TO_LOAD_PAYLOAD_FILE("&7[Payload] &4[Fatal] Couldn't load payload.yml file.  Aborting startup and locking server."),
-    KICK_MESSAGE_LOCKED("&4The server is currently locked for maintenance.  We are working on resolving this problem as soon as possible.  Please try again soon."),
+    KICK_MESSAGE_LOCKED("&7[{0}] &4The server is currently locked for maintenance.  We are working on resolving this problem as soon as possible.  Please try again soon."),
     KICK_MESSAGE_ADMIN_LOCKED("&7[Payload] &4[Fatal] &cThe server has been locked to players due to a fatal error during Payload startup.  Try restarting the server, and check the error logs for details."),
     CACHE_LOCKED("&7[Payload] The cache &b{0} &7has been &clocked&7. ({1})"), // argument is for the reason
     CACHE_UNLOCKED("&7[Payload] The cache &b{0} &7has been &aunlocked&7. ({1})"),  // argument is for the reason
@@ -23,7 +23,7 @@ public enum PLang {
     ADMIN_ALERT_CACHE_ERROR("&7[Payload] &c[Error] &7{0}: &f{1}"),
     ADMIN_ALERT_CACHE_EXCEPTION("&7[Payload] &4[Exception] &7{0}: &f{1}"),
     CACHE_FAILURE_PROFILE_ATTEMPT_SUCCESS("&7[&6{0}&7] &aYour profile was loaded successfully."),
-    CACHE_FAILURE_PROFILE_ATTEMPT_FAILURE("&7[&6{0}&7] &cProfile loading attempt failed.  Trying again in {0} seconds..."),
+    CACHE_FAILURE_PROFILE_ATTEMPT_FAILURE("&7[&6{0}&7] &cProfile loading attempt failed.  Trying again in {1} seconds..."),
     CACHE_FAILURE_PROFILE_ATTEMPT("&7[&6{0}&7] Attempting to load your profile..."),
     CACHE_FAILURE_PROFILE_NOTICE("&7[&6{0}&7] &4Your profile failed to load.  We will automatically attempt to re-load it every {0} seconds."),
     PLAYER_ONLINE_NO_PROFILE("&cYou appear to have no profile loaded.  Attempting to fix..."),

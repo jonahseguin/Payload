@@ -27,7 +27,7 @@ public class ProfileListener implements Listener {
         for (PayloadCache c : PayloadAPI.get().getCaches().values()) {
             if (c instanceof ProfileCache) {
                 if (c.getState().isLocked()) {
-                    event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, c.getLangController().get(PLang.KICK_MESSAGE_LOCKED));
+                    event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, c.getLangController().get(PLang.KICK_MESSAGE_LOCKED, c.getName()));
                     return; // Stop here
                 }
             }

@@ -180,6 +180,8 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
      */
     protected abstract X get(K key);
 
+    public abstract long cachedObjectCount();
+
 
     /**
      * Get the name of this cache (set by the end user, should be unique)

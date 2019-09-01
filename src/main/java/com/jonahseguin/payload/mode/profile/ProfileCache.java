@@ -153,4 +153,8 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return this.settings;
     }
 
+    @Override
+    public long cachedObjectCount() {
+        return this.localLayer.size();
+    }
 }

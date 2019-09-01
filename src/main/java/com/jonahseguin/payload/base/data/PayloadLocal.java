@@ -89,7 +89,7 @@ public class PayloadLocal {
 
     private void handleError() {
         PayloadPlugin.get().setLocked(true); // Lock server
-        PayloadPlugin.get().alert(PayloadPermission.ADMIN, PLang.FAILED_TO_LOAD_PAYLOAD_FILE); // Alert online staff if any + console
+        PayloadPlugin.get().alert(PayloadPermission.ADMIN, PLang.ERROR_FAILED_TO_LOAD_PAYLOAD_FILE); // Alert online staff if any + console
     }
 
 }

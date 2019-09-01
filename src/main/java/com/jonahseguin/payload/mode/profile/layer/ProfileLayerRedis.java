@@ -148,10 +148,15 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     }
 
     @Override
-    public int clear() {
-        int size = this.jedis.hkeys(this.getCache().getName()).size();
+    public long clear() {
+        long size = this.jedis.hlen(this.getCache().getName());
         this.jedis.del(this.getCache().getName());
         return size;
+    }
+
+    @Override
+    public long size() {
+        return this.jedis.hlen(this.getCache().getName());
     }
 
     @Override

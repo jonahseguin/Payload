@@ -203,9 +203,14 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
     }
 
     @Override
-    public int clear() {
+    public long clear() {
         // For safety reasons...
         throw new UnsupportedOperationException("Cannot clear a MongoDB database from within Payload.");
+    }
+
+    @Override
+    public long size() {
+        return this.cache.getPayloadDatabase().getDatastore().getCount(this.cache.getPayloadClass());
     }
 
     @Override

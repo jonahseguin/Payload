@@ -7,6 +7,7 @@ import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.lang.PayloadLangController;
 import com.jonahseguin.payload.base.listener.LockListener;
 import com.jonahseguin.payload.command.PCommandHandler;
+import com.jonahseguin.payload.mode.profile.listener.ProfileListener;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -65,6 +66,7 @@ public class PayloadPlugin extends JavaPlugin {
             this.getLogger().info("This is the first startup for Payload on this server instance.  Files created.");
         }
         this.getServer().getPluginManager().registerEvents(new LockListener(), this);
+        this.getServer().getPluginManager().registerEvents(new ProfileListener(), this);
         this.getCommand("payload").setExecutor(this.commandHandler);
         this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", PayloadPlugin.get().getDescription().getVersion()));
         try {

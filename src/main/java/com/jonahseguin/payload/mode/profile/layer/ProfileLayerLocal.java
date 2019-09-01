@@ -94,10 +94,15 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
     }
 
     @Override
-    public int clear() {
-        int i = this.localCache.size();
+    public long clear() {
+        long i = this.localCache.size();
         this.localCache.clear();
         return i;
+    }
+
+    @Override
+    public long size() {
+        return this.localCache.size();
     }
 
     @Override
