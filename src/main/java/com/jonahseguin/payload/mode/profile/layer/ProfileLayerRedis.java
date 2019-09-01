@@ -37,6 +37,10 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     @Override
     public boolean has(UUID uuid) {
         try {
+            this.cache.getErrorHandler().debug(this.cache, "UUID null? " + (uuid == null));
+            this.cache.getErrorHandler().debug(this.cache, uuid.toString());
+            this.cache.getErrorHandler().debug(this.cache, this.getCache().getName());
+
             return this.jedis.hexists(this.getCache().getName(), uuid.toString());
         } catch (Exception expected) {
             this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error checking if Profile exists in Redis Layer: " + uuid.toString());

@@ -3,6 +3,7 @@ package com.jonahseguin.payload.base.data;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.PLang;
+import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -17,10 +18,12 @@ import java.util.UUID;
  * so that although there can be multiple PayloadCache objects in the database with the same name, they will have
  * different IDs, as mapped by the Payload plugin and stored locally in a .json file
  */
+@Getter
 public class PayloadLocal {
 
     private String payloadID = null;
     private boolean firstStartup = true;
+    private boolean debug = true;
 
     public String getPayloadID() {
         return payloadID;
@@ -63,6 +66,7 @@ public class PayloadLocal {
             this.payloadID = UUID.randomUUID().toString();
             this.firstStartup = true;
             config.set("payload-id", this.payloadID);
+            config.set("debug", true);
             try {
                 config.save(payloadFile);
             }
@@ -76,6 +80,9 @@ public class PayloadLocal {
             this.firstStartup = false;
             this.payloadID = config.getString("payload-id");
         }
+
+        this.debug = config.getBoolean("debug", true);
+
         return true;
     }
 

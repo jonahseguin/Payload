@@ -41,11 +41,14 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         this.layerController.register(this.localLayer);
         this.layerController.register(this.redisLayer);
         this.layerController.register(this.mongoLayer);
+
+        this.layerController.init();
     }
 
     @Override
     protected void shutdown() {
         // close layers in order, save all objects, etc.
+        this.layerController.shutdown();
     }
 
     public X getProfileByName(String username) {
@@ -128,6 +131,17 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         PayloadProfileController<X> controller = new PayloadProfileController<>(this, data);
         this.controllers.put(data.getUniqueId(), controller);
         return controller;
+    }
+
+    @Override
+    public boolean save(X payload) {
+        boolean x = true;
+        for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
+            if (!layer.save(payload)) {
+                x = false;
+            }
+        }
+        return x;
     }
 
     public PayloadProfileController<X> getController(UUID uuid) {

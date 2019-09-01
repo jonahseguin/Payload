@@ -18,7 +18,10 @@ public class PayloadMongoMonitor implements ServerMonitorListener {
 
     @Override
     public void serverHearbeatStarted(ServerHeartbeatStartedEvent event) {
-        // MongoDB connection attempting for first time
+        if (!this.connected && !this.database.getState().isMongoInitConnect()) {
+            // MongoDB connection attempting for first time
+            this.database.databaseDebug("Attempting MongoDB initial connection");
+        }
     }
 
     @Override
@@ -27,10 +30,12 @@ public class PayloadMongoMonitor implements ServerMonitorListener {
         if (!this.database.getState().isMongoInitConnect()) {
             this.database.getHooks().forEach(DatabaseDependent::onMongoDbInitConnect);
             this.database.getState().setMongoInitConnect(true);
+            this.database.databaseDebug("MongoDB initial connection succeeded");
         }
         else {
             if (!this.connected) {
                 this.database.getHooks().forEach(DatabaseDependent::onMongoDbReconnect);
+                this.database.databaseDebug("MongoDB re-connection succeeded");
             }
         }
         this.connected = true;
@@ -41,6 +46,7 @@ public class PayloadMongoMonitor implements ServerMonitorListener {
         // Lost connection or failed to connect
         if (this.connected) {
             this.database.getHooks().forEach(DatabaseDependent::onMongoDbDisconnect);
+            this.database.databaseDebug("MongoDB disconnected");
         }
         this.connected = false;
     }

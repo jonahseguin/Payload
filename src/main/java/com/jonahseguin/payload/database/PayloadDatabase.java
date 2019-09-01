@@ -80,14 +80,14 @@ public class PayloadDatabase {
     public static PayloadDatabase fromConfigFile(File file, String name) throws PayloadConfigException {
         if (!file.exists()) {
             try {
-                file.mkdirs();
                 file.createNewFile();
                 File targetFile = new File(PayloadPlugin.get().getDataFolder() + File.separator + "database.yml");
                 if (!targetFile.exists()) {
                     throw new PayloadConfigException("Default 'database.yml' file does not exist; could not be copied");
                 }
-                OutputStream os = new FileOutputStream(targetFile);
-                Files.copy(Paths.get(file.toURI()), os);
+                OutputStream os = new FileOutputStream(file);
+                Files.copy(Paths.get(targetFile.toURI()), os);
+                os.flush();
                 os.close();
             } catch (IOException ex) {
                 throw new PayloadConfigException("Error creating file '" + file.getName() + "' for new Payload config copy", ex);
@@ -96,22 +96,47 @@ public class PayloadDatabase {
         return loadConfigFile(file, name);
     }
 
-    public boolean start() {
-        boolean mongo = this.connectMongo();
-        boolean redis = this.connectRedis();
-        return mongo && redis;
+    /**
+     * Load an instance of a PayloadDatabase from a YAML configuration file (assumes certain key names!)
+     * * Must follow the payload spec.
+     *
+     * @param config The YamlConfiguration to load the data from
+     * @param name   A unique name for the Database, for debugging purposes etc.
+     * @return a new {@link PayloadDatabase} instance
+     * @throws PayloadConfigException Thrown if configuration format does not match Payload spec (as shown in default database.yml file)
+     */
+    public static PayloadDatabase fromConfig(YamlConfiguration config, String name) throws PayloadConfigException {
+        ConfigurationSection mongoSection = config.getConfigurationSection("mongodb");
+        ConfigurationSection redisSection = config.getConfigurationSection("redis");
+
+        if (mongoSection != null) {
+            if (redisSection != null) {
+                PayloadMongo mongo = PayloadMongo.fromConfig(mongoSection);
+                PayloadRedis redis = PayloadRedis.fromConfig(redisSection);
+
+                return new PayloadDatabase(name, mongo, redis);
+            } else {
+                throw new PayloadConfigException("'redis' configuration section missing when loading PayloadDatabase fromConfig.  See example database.yml for proper formatting.");
+            }
+        } else {
+            throw new PayloadConfigException("'mongodb' configuration section missing when loading PayloadDatabase fromConfig.  See example database.yml for proper formatting.");
+        }
     }
 
-    public boolean stop() {
-        for (PayloadCache cache : this.getHooks()) {
-            if (cache.isRunning()) {
-                // Still running... don't just close the DB connection w/o proper shutdown
-                PayloadPlugin.get().getLogger().info("[Payload] Database '" + this.name + "' stopped, stopping dependent cache: " + cache.getName());
-            }
-        }
-        boolean mongo = this.disconnectMongo();
-        boolean redis = this.disconnectRedis();
-        return mongo && redis;
+    /**
+     * Same as {@link #fromConfigFile(File, String)}, but uses the plugin's data folder and a file name
+     * Will create and copy default if it doesn't exist
+     * This is the recommended method to use for loading a database object from a config file
+     *
+     * @param plugin   Plugin
+     * @param fileName File name (ending in .yml) to load from
+     * @param name     A unique name for the Database, for debugging purposes etc.
+     * @return a new {@link PayloadDatabase} instance
+     * @throws PayloadConfigException If any errors occur during loading the config or parsing database information
+     */
+    public static PayloadDatabase fromConfigFile(Plugin plugin, String fileName, String name) throws PayloadConfigException {
+        plugin.getDataFolder().mkdirs();
+        return fromConfigFile(new File(plugin.getDataFolder() + File.separator + fileName), name);
     }
 
     public boolean connectMongo() {
@@ -201,32 +226,11 @@ public class PayloadDatabase {
         return true;
     }
 
-    /**
-     * Load an instance of a PayloadDatabase from a YAML configuration file (assumes certain key names!)
-     * * Must follow the payload spec.
-     *
-     * @param config The YamlConfiguration to load the data from
-     * @param name A unique name for the Database, for debugging purposes etc.
-     *
-     * @return a new {@link PayloadDatabase} instance
-     * @throws PayloadConfigException Thrown if configuration format does not match Payload spec (as shown in default database.yml file)
-     */
-    public static PayloadDatabase fromConfig(YamlConfiguration config, String name) throws PayloadConfigException {
-        ConfigurationSection mongoSection = config.getConfigurationSection("mongodb");
-        ConfigurationSection redisSection = config.getConfigurationSection("redis");
-
-        if (mongoSection != null) {
-            if (redisSection != null) {
-                PayloadMongo mongo = PayloadMongo.fromConfig(mongoSection);
-                PayloadRedis redis = PayloadRedis.fromConfig(redisSection);
-
-                return new PayloadDatabase(name, mongo, redis);
-            } else {
-                throw new PayloadConfigException("'redis' configuration section missing when loading PayloadDatabase fromConfig.  See example database.yml for proper formatting.");
-            }
-        } else {
-            throw new PayloadConfigException("'mongo' configuration section missing when loading PayloadDatabase fromConfig.  See example database.yml for proper formatting.");
-        }
+    public boolean start() {
+        boolean mongo = this.connectMongo();
+        boolean redis = this.connectRedis();
+        this.started = true;
+        return mongo && redis;
     }
 
     /**
@@ -253,30 +257,28 @@ public class PayloadDatabase {
         return PayloadDatabase.fromConfig(config, name);
     }
 
-    /**
-     * Same as {@link #fromConfigFile(File, String)}, but uses the plugin's data folder and a file name
-     * Will create and copy default if it doesn't exist
-     * This is the recommended method to use for loading a database object from a config file
-     * @param plugin Plugin
-     * @param fileName File name (ending in .yml) to load from
-     * @param name A unique name for the Database, for debugging purposes etc.
-     * @return a new {@link PayloadDatabase} instance
-     *
-     * @throws PayloadConfigException  If any errors occur during loading the config or parsing database information
-     */
-    public static PayloadDatabase fromConfigFile(Plugin plugin, String fileName, String name) throws PayloadConfigException {
-        return fromConfigFile(new File(plugin.getDataFolder() + File.separator + fileName), name);
+    public boolean stop() {
+        for (PayloadCache cache : this.getHooks()) {
+            if (cache.isRunning()) {
+                // Still running... don't just close the DB connection w/o proper shutdown
+                PayloadPlugin.get().getLogger().info("[Payload] Database '" + this.name + "' stopped, stopping dependent cache: " + cache.getName());
+            }
+        }
+        boolean mongo = this.disconnectMongo();
+        boolean redis = this.disconnectRedis();
+        this.started = false;
+        return mongo && redis;
     }
 
     public void databaseError(Throwable ex, String msg) {
-        PayloadPlugin.get().alert(PayloadPermission.DEBUG, "&c[Payload][Database: " + this.database.getName() + "] " + msg + " - " + ex.getMessage());
+        PayloadPlugin.get().alert(PayloadPermission.DEBUG, "&c[Payload][Database: " + this.getName() + "] " + msg + " - " + ex.getMessage());
         if (PayloadPlugin.get().isDebug()) {
             ex.printStackTrace();
         }
     }
 
     public void databaseDebug(String msg) {
-        PayloadPlugin.get().alert(PayloadPermission.DEBUG, PLang.DEBUG_DATABASE, this.database.getName(), msg);
+        PayloadPlugin.get().alert(PayloadPermission.DEBUG, PLang.DEBUG_DATABASE, this.getName(), msg);
     }
 
 }

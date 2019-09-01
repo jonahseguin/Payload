@@ -35,7 +35,6 @@ public class PayloadPlugin extends JavaPlugin {
     private static PayloadPlugin instance = null;
 
     private boolean locked = true;
-    private boolean debug = false;
     private final PayloadLangController globalLangController = new PayloadLangController();
     private final PayloadLocal local = new PayloadLocal();
     private final PCommandHandler commandHandler = new PCommandHandler();
@@ -196,7 +195,11 @@ public class PayloadPlugin extends JavaPlugin {
      * @return True if debug is enabled
      */
     public boolean isDebug() {
-        return debug;
+        return this.local.isDebug();
+    }
+
+    public void setDebug(boolean debug) {
+
     }
 
 

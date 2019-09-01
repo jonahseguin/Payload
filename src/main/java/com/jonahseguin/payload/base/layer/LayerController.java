@@ -27,5 +27,16 @@ public class LayerController<K, X extends Payload, D extends PayloadData> {
         this.layers.add(layer);
     }
 
+    public void init() {
+        for (PayloadLayer<K, X, D> layer : this.layers) {
+            layer.init();
+        }
+    }
+
+    public void shutdown() {
+        for (PayloadLayer<K, X, D> layer : this.layers) {
+            layer.shutdown();
+        }
+    }
 
 }

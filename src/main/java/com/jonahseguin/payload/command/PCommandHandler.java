@@ -43,41 +43,40 @@ public class PCommandHandler implements CommandExecutor {
                 } else {
                     args = new String[]{};
                 }
+            }
 
-                PayloadCommand command = null;
+            PayloadCommand command = null;
 
-                if (commands.containsKey(pCmd.toLowerCase())) {
-                    command = commands.get(pCmd.toLowerCase());
-                } else {
-                    for (PayloadCommand pcmds : commands.values()) {
-                        if (pcmds.name().equalsIgnoreCase(pCmd)) {
+            if (commands.containsKey(pCmd.toLowerCase())) {
+                command = commands.get(pCmd.toLowerCase());
+            } else {
+                for (PayloadCommand pcmds : commands.values()) {
+                    if (pcmds.name().equalsIgnoreCase(pCmd)) {
+                        command = pcmds;
+                        break;
+                    }
+                    for (String alias : pcmds.aliases()) {
+                        if (alias.equalsIgnoreCase(pCmd)) {
                             command = pcmds;
                             break;
                         }
-                        for (String alias : pcmds.aliases()) {
-                            if (alias.equalsIgnoreCase(pCmd)) {
-                                command = pcmds;
-                                break;
-                            }
-                        }
                     }
                 }
+            }
 
-                if (command != null) {
-                    if (command.playerOnly() && !(sender instanceof Player)) {
-                        sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_PLAYER_ONLY));
-                        return true;
-                    }
-                    if (!command.permission().has(sender)) {
-                        sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_NO_PERMISSION));
-                        return true;
-                    }
-                    CmdArgs cmdArgs = new CmdArgs(sender, pCmd, args);
-                    command.execute(cmdArgs);
-                } else {
-                    sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.UNKNOWN_COMMAND, pCmd));
+            if (command != null) {
+                if (command.playerOnly() && !(sender instanceof Player)) {
+                    sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_PLAYER_ONLY));
+                    return true;
                 }
-
+                if (!command.permission().has(sender)) {
+                    sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_NO_PERMISSION));
+                    return true;
+                }
+                CmdArgs cmdArgs = new CmdArgs(sender, pCmd, args);
+                command.execute(cmdArgs);
+            } else {
+                sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.UNKNOWN_COMMAND, pCmd));
             }
 
             return true;

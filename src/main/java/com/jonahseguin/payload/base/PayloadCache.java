@@ -158,7 +158,6 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
      */
     public abstract CacheSettings getSettings();
 
-
     /**
      * Starts up & initializes the cache.
      * Prepares everything for a fresh startup, ensures database connections, etc.
@@ -182,6 +181,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
 
     public abstract long cachedObjectCount();
 
+    public abstract boolean save(X payload);
 
     /**
      * Get the name of this cache (set by the end user, should be unique)

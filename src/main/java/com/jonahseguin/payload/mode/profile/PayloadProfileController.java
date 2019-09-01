@@ -39,6 +39,9 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     }
 
     private X cacheStandalone() {
+        boolean failure = false; // failure?
+
+        // Iterate each layer in order
         for (PayloadLayer<UUID, X, ProfileData> layer : this.cache.getLayerController().getLayers()) {
             if (layer.has(this.data)) {
                 try {
@@ -46,16 +49,25 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 } catch (PayloadLayerCannotProvideException ex) {
                     payload = null;
                     this.cache.getErrorHandler().exception(this.cache, ex, "Failed to load profile " + this.data.getUsername() + " from layer " + layer.layerName());
+                    failure = true;
                 }
-
             }
         }
 
         if (payload == null) {
-            // Failed to load from all layers - start failure handling
-            if (!this.cache.getFailureManager().hasFailure(data)) {
-                this.cache.getFailureManager().fail(data);
+            // Failed to load from all layers
+
+            // If there was a failure/error, start failure handling instead of making a new profile
+            if (failure || cache.getState().isLocked() || !cache.getPayloadDatabase().getState().canCacheFunction(cache)) {
+                // start failure handling
+                if (!this.cache.getFailureManager().hasFailure(data)) {
+                    this.cache.getFailureManager().fail(data);
+                }
             }
+
+            // Otherwise make a new profile
+            payload = cache.getInstantiator().instantiate(this.data);
+            cache.getPlugin().getServer().getScheduler().runTaskAsynchronously(cache.getPlugin(), () -> cache.save(payload));
         }
         return payload;
     }
