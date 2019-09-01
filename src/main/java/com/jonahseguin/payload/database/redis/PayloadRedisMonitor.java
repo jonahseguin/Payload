@@ -58,7 +58,7 @@ public class PayloadRedisMonitor implements Runnable {
         }
         catch (Exception ex) {
             // Failed, assume disconnected
-            database.getErrorHandler().exception("Database: " + database.getName(), ex, "Error while monitoring Redis connection");
+
             this.handleDisconnected();
         }
     }
@@ -72,7 +72,7 @@ public class PayloadRedisMonitor implements Runnable {
                 this.database.getState().setRedisInitConnect(true);
                 this.database.getHooks().forEach(PayloadCache::onRedisInitConnect);
             }
-            database.getErrorHandler().debug("Database: " + database.getName(), "Redis connected");
+            database.databaseDebug("Redis connected");
         }
     }
 
@@ -80,7 +80,7 @@ public class PayloadRedisMonitor implements Runnable {
         if (this.database.getState().isRedisConnected()) {
             this.database.getState().setRedisConnected(false);
             this.database.getHooks().forEach(PayloadCache::onRedisDisconnect);
-            database.getErrorHandler().debug("Database: " + database.getName(), "Redis connection lost");
+            database.databaseDebug("Redis connection lost");
         }
     }
 

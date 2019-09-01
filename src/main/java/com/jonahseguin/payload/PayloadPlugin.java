@@ -179,6 +179,16 @@ public class PayloadPlugin extends JavaPlugin {
         }
     }
 
+    public void alert(PayloadPermission required, String msg) {
+        msg = ChatColor.translateAlternateColorCodes('&', msg);
+        Bukkit.getLogger().info(msg);
+        for (Player pl : getServer().getOnlinePlayers()) {
+            if (required.has(pl)) {
+                pl.sendMessage(msg);
+            }
+        }
+    }
+
     /**
      * Is the Payload plugin globally in debug (used for default error handlers and similar)
      * @return True if debug is enabled

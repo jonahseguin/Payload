@@ -27,7 +27,7 @@ public class PayloadTaskExecutor<K, X extends Payload, D extends PayloadData> {
                         this.tasks.take().run().run();
                     }
                     catch (InterruptedException ex) {
-                        cache.getErrorHandler().exception(cache.getName(), ex, "Interruption in Payload Task Executor");
+                        cache.getErrorHandler().exception(cache, ex, "Interruption in Payload Task Executor");
                     }
                 }
             });

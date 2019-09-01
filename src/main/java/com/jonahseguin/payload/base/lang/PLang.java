@@ -11,7 +11,7 @@ package com.jonahseguin.payload.base.lang;
  */
 public enum PLang {
 
-    FAILED_TO_LOAD_PAYLOAD_FILE("&7[Payload] &4[Fatal] Couldn't load payload.yml file.  Aborting startup and locking server."),
+    ERROR_FAILED_TO_LOAD_PAYLOAD_FILE("&7[Payload] &4[Fatal] Couldn't load payload.yml file.  Aborting startup and locking server."),
     KICK_MESSAGE_LOCKED("&4The server is currently locked for maintenance.  We are working on resolving this problem as soon as possible.  Please try again soon."),
     KICK_MESSAGE_ADMIN_LOCKED("&7[Payload] &4[Fatal] &cThe server has been locked to players due to a fatal error during Payload startup.  Try restarting the server, and check the error logs for details."),
     CACHE_LOCKED("&7[Payload] The cache &b{0} &7has been &clocked&7. ({1})"), // argument is for the reason
@@ -26,7 +26,9 @@ public enum PLang {
     CACHE_FAILURE_PROFILE_ATTEMPT_FAILURE("&cProfile loading attempt failed.  Trying again in {0} seconds..."),
     CACHE_FAILURE_PROFILE_ATTEMPT("&7Attempting to load your profile..."),
     CACHE_FAILURE_PROFILE_NOTICE("&4Your profile failed to load.  We will automatically attempt to re-load it every {0} seconds."),
-    PLAYER_ONLINE_NO_PROFILE("&cYou appear to have no profile loaded.  Attempting to fix...")
+    PLAYER_ONLINE_NO_PROFILE("&cYou appear to have no profile loaded.  Attempting to fix..."),
+    DEBUG_DATABASE("&7[Payload][Debug][Database: {0}] {1}"),
+    ERROR_DATABASE("&7[Payload]&7[&cError&7][Database: {0}] {1} ({2})")
     ;
 
     private final String text;
