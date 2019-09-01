@@ -1,8 +1,12 @@
 package com.jonahseguin.payload.base.lang;
 
 import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.base.exception.runtime.PayloadRuntimeException;
 import org.apache.commons.lang.Validate;
+import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -79,6 +83,36 @@ public class PayloadLangController {
     public String get(PLang key, String... args) {
         Validate.notNull(key, "PLang must not be null");
         return PayloadPlugin.format(this.getRawDefinition(key), args);
+    }
+
+    public void loadFromFile(File file) {
+        if (!file.exists()) {
+            throw new PayloadRuntimeException("File " + file.getName() + " does not exist, cannot load language definitions from it");
+        }
+        YamlConfiguration yc = YamlConfiguration.loadConfiguration(file);
+        for (PLang key : PLang.values()) {
+            String yamlKey = key.toString().toLowerCase();
+            if (yc.contains(yamlKey)) {
+                this.injectDefinition(key, yc.getString(yamlKey, this.getRawDefinition(key)));
+            }
+        }
+    }
+
+    public void writeDefaultsToFile(File file) {
+        if (!file.exists()) {
+            try {
+                file.mkdirs();
+                file.createNewFile();
+
+                YamlConfiguration yc = YamlConfiguration.loadConfiguration(file);
+                for (PLang key : PLang.values()) {
+                    yc.set(key.toString(), key.get());
+                }
+                yc.save(file);
+            } catch (IOException ex) {
+                throw new PayloadRuntimeException("Could not create file to write default language definitions to: " + file.getName());
+            }
+        }
     }
 
 }
