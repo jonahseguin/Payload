@@ -19,7 +19,8 @@ public abstract class PayloadProfile implements Payload {
     @Id
     protected ObjectId objectId;
     protected String username;
-    protected UUID uniqueId;
+    protected String uniqueId;
+    protected transient UUID uuid = null;
     protected String loginIp = null;
     protected boolean online = false;
     protected String payloadId = null; // The ID of the Payload instance that currently holds this profile
@@ -36,7 +37,8 @@ public abstract class PayloadProfile implements Payload {
     public PayloadProfile(String username, UUID uniqueId, String loginIp) {
         this();
         this.username = username;
-        this.uniqueId = uniqueId;
+        this.uuid = uniqueId;
+        this.uniqueId = uniqueId.toString();
         this.loginIp = loginIp;
     }
 
@@ -48,6 +50,13 @@ public abstract class PayloadProfile implements Payload {
     public void initializePlayer(Player player) {
         Validate.notNull(player, "Player cannot be null for initializePlayer");
         this.player = player;
+    }
+
+    public UUID getUniqueId() {
+        if (this.uuid == null) {
+            this.uuid = UUID.fromString(this.uniqueId);
+        }
+        return this.uuid;
     }
 
     @Override

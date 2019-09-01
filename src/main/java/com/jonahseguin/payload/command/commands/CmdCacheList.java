@@ -45,4 +45,10 @@ public class CmdCacheList implements PayloadCommand {
     public boolean playerOnly() {
         return false;
     }
+
+    @Override
+    public int minArgs() {
+        return 0;
+    }
+
 }

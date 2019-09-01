@@ -18,6 +18,7 @@ public enum PLang {
     CACHE_UNLOCKED("&7[Payload] The cache &b{0} &7has been &aunlocked&7. ({1})"),  // argument is for the reason
     UNKNOWN_COMMAND("&cPayload: Sub-command '{0}' does not exist.  Type /payload help for a list of commands."),
     COMMAND_NO_PERMISSION("&cPayload: You do not have permission to use this command."),
+    COMMAND_INCORRECT_USAGE("&cPayload: At least {0} argument(s) required for this command.  Usage: {1}"),
     COMMAND_PLAYER_ONLY("&c:Payload: This is a player-only command."),
     ADMIN_ALERT_CACHE_DEBUG("&7[Payload] &a[Debug] &7{0}: &f{1}"),
     ADMIN_ALERT_CACHE_ERROR("&7[Payload] &c[Error] &7{0}: &f{1}"),

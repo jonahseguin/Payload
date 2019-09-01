@@ -18,4 +18,6 @@ public interface PayloadCommand {
 
     boolean playerOnly();
 
+    int minArgs();
+
 }

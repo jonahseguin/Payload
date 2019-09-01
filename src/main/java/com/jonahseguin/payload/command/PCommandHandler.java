@@ -1,11 +1,9 @@
 package com.jonahseguin.payload.command;
 
 import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.PLang;
-import com.jonahseguin.payload.command.commands.CmdCache;
-import com.jonahseguin.payload.command.commands.CmdCacheLayers;
-import com.jonahseguin.payload.command.commands.CmdCacheList;
-import com.jonahseguin.payload.command.commands.CmdHelp;
+import com.jonahseguin.payload.command.commands.*;
 import lombok.Getter;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -26,6 +24,7 @@ public class PCommandHandler implements CommandExecutor {
         register(new CmdCache());
         register(new CmdCacheList());
         register(new CmdCacheLayers());
+        register(new CmdDebug());
     }
 
     private void register(PayloadCommand cmd) {
@@ -39,7 +38,7 @@ public class PCommandHandler implements CommandExecutor {
             if (args.length > 0) {
                 pCmd = args[0];
                 if (args.length > 1) {
-                    args = Arrays.copyOfRange(args, 1, args.length - 1);
+                    args = Arrays.copyOfRange(args, 1, args.length);
                 } else {
                     args = new String[]{};
                 }
@@ -73,8 +72,27 @@ public class PCommandHandler implements CommandExecutor {
                     sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_NO_PERMISSION));
                     return true;
                 }
+                if (args.length < command.minArgs()) {
+                    sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_INCORRECT_USAGE, command.minArgs() + "", "/" + command.name() + " " + command.usage()));
+                    return true;
+                }
                 CmdArgs cmdArgs = new CmdArgs(sender, pCmd, args);
-                command.execute(cmdArgs);
+                try {
+                    StringBuffer buffer = new StringBuffer();
+                    for (String s : args) {
+                        buffer.append(s).append(" ");
+                    }
+                    sender.sendMessage("Command: " + command.name());
+                    sender.sendMessage("Args: " + buffer.toString() + " (" + args.length + ")");
+                    command.execute(cmdArgs);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    if (PayloadPermission.ADMIN.has(sender)) {
+                        cmdArgs.msg("&cPayload: Error executing command '{0}': {1}", label, ex.getMessage());
+                    } else {
+                        cmdArgs.msg("&cPayload: An error occurred while executing that command.  Please notify an administrator.");
+                    }
+                }
             } else {
                 sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.UNKNOWN_COMMAND, pCmd));
             }

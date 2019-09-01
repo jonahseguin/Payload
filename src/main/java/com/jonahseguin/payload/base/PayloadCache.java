@@ -46,7 +46,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     protected transient final PayloadLangController langController = new PayloadLangController();
     protected transient final CacheState<K, X, D> state;
     protected transient final LayerController<K, X, D> layerController = new LayerController<>();
-    protected final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
+    protected transient final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
     protected transient PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
 
     protected transient final Class<K> keyType;
@@ -88,10 +88,20 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         }
     }
 
+    /**
+     * Check if the cache is locked (joinable?)
+     *
+     * @return Boolean locked
+     */
     public final boolean isLocked() {
         return this.state.isLocked() || PayloadPlugin.get().isLocked();
     }
 
+    /**
+     * Start the Cache
+     * Should be called by the external plugin during startup after the cache has been created
+     * @return Boolean successful
+     */
     public final boolean start() {
         if (this.isRunning()) return true;
         if (this.instantiator instanceof NullPayloadInstantiator) {
@@ -105,29 +115,18 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         return true;
     }
 
+    /**
+     * Stop the Cache
+     * Should be called by the external plugin during shutdown
+     * @return Boolean successful
+     */
     public final boolean stop() {
         if (!this.isRunning()) return true;
         this.shutdown(); // Allow the implementing cache to do it's shutdown first
         this.pool.shutdown(); // Shutdown our thread pool
         this.running = false;
         this.failureManager.stop();
-        if (this.save()) {
-            return true;
-        } else {
-            // Failed to save
-            getErrorHandler().error(this, "Failed to save during shutdown");
-            return false;
-        }
-    }
-
-    protected final boolean save() {
-        try {
-            payloadDatabase.getDatastore().save(this);
-            return true;
-        } catch (Exception ex) {
-            this.getErrorHandler().exception(this, ex, "Failed to save cache");
-            return false;
-        }
+        return true;
     }
 
     /**
@@ -179,9 +178,26 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
      */
     protected abstract X get(K key);
 
+    /**
+     * Get a number of objects currently stored locally in this cache
+     * @return long number of objects cached
+     */
     public abstract long cachedObjectCount();
 
+    /**
+     * Save a Payload to all layers / in this cache
+     * @param payload Payload to save
+     * @return Boolean successful
+     */
     public abstract boolean save(X payload);
+
+    /**
+     * Cache a Payload locally ONLY
+     * I.e save to local layer
+     *
+     * @param payload Payload to cache (save locally)
+     */
+    public abstract void cache(X payload);
 
     /**
      * Get the name of this cache (set by the end user, should be unique)
@@ -275,15 +291,5 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
             // Both connected
             this.getState().unlock();
         }
-    }
-
-    @Override
-    public boolean requireRedis() {
-        return true;
-    }
-
-    @Override
-    public boolean requireMongoDb() {
-        return true;
     }
 }

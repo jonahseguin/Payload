@@ -1,6 +1,7 @@
 package com.jonahseguin.payload.mode.profile.listener;
 
 import com.jonahseguin.payload.PayloadAPI;
+import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.mode.profile.PayloadProfileController;
@@ -63,12 +64,16 @@ public class ProfileListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        // TODO: Save, remove their controller, clear their data
         PayloadAPI.get().getCaches().values().forEach(c -> {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
-                cache.removeData(player.getUniqueId());
-                cache.removeController(player.getUniqueId());
+                if (cache.getMode().equals(PayloadMode.STANDALONE)) {
+                    if (!cache.save(player)) {
+                        cache.getErrorHandler().debug(cache, "Player could not be saved on quit (not cached): " + player.getName());
+                    }
+                    cache.removeData(player.getUniqueId());
+                    cache.removeController(player.getUniqueId());
+                }
             }
         });
     }

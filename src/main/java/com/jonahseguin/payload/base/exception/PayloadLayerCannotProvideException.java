@@ -1,8 +1,9 @@
 package com.jonahseguin.payload.base.exception;
 
 import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.exception.runtime.PayloadRuntimeException;
 
-public class PayloadLayerCannotProvideException extends PayloadException {
+public class PayloadLayerCannotProvideException extends PayloadRuntimeException {
 
     public PayloadLayerCannotProvideException(PayloadCache cache) {
         super(cache);

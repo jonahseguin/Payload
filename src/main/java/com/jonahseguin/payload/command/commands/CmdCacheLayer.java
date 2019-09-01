@@ -6,7 +6,7 @@ import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
 import com.jonahseguin.payload.command.PayloadCommand;
 
-public class CmdCache implements PayloadCommand {
+public class CmdCacheLayer implements PayloadCommand {
 
     @Override
     public void execute(CmdArgs args) {
@@ -64,6 +64,6 @@ public class CmdCache implements PayloadCommand {
 
     @Override
     public int minArgs() {
-        return 1;
+        return 2;
     }
 }

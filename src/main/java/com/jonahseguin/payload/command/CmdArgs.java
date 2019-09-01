@@ -30,7 +30,6 @@ public class CmdArgs {
     }
 
     public String joinArgs(int start, int end) {
-        if (this.length() == 0) return "";
         String[] args = Arrays.copyOfRange(this.args, start, end);
         StringBuilder s = new StringBuilder();
         for (String arg : args) {
@@ -43,8 +42,7 @@ public class CmdArgs {
     }
 
     public String joinArgs() {
-        if (this.length() == 0) return "";
-        return this.joinArgs(0, this.length() - 1);
+        return this.joinArgs(0, this.length());
     }
 
     public boolean isPlayer() {
@@ -63,7 +61,7 @@ public class CmdArgs {
     }
 
     public void msg(String msg, String... args) {
-        PayloadPlugin.format(msg, args);
+        this.sender.sendMessage(PayloadPlugin.format(msg, args));
     }
 
 }

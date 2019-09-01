@@ -17,6 +17,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.java.JavaPluginLoader;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.UUID;
 
@@ -199,7 +200,16 @@ public class PayloadPlugin extends JavaPlugin {
     }
 
     public void setDebug(boolean debug) {
-
+        this.local.setDebug(true);
+        this.local.getConfig().set("debug", true);
+        try {
+            this.local.getConfig().save(this.local.getPayloadFile());
+        } catch (IOException ex) {
+            alert(PayloadPermission.DEBUG, "&cError setting debug mode to " + debug + ": while saving to payload.yml: " + ex.getMessage());
+            if (this.isDebug()) {
+                ex.printStackTrace();
+            }
+        }
     }
 
 

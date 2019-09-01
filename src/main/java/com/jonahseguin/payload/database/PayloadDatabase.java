@@ -19,6 +19,7 @@ import org.bukkit.plugin.Plugin;
 import org.mongodb.morphia.Datastore;
 import org.mongodb.morphia.Morphia;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 import java.io.*;
 import java.net.URI;
@@ -53,6 +54,7 @@ public class PayloadDatabase {
     private Datastore datastore = null;
 
     // Redis
+    private JedisPool jedisPool = null;
     private Jedis jedis = null;
     private PayloadRedisMonitor redisMonitor = null;
 
@@ -180,8 +182,8 @@ public class PayloadDatabase {
     }
 
     public boolean connectRedis() {
-        if (this.jedis != null) {
-            throw new IllegalStateException("Jedis instance already exists for database " + this.name);
+        if (this.jedisPool != null) {
+            throw new IllegalStateException("JedisPool instance already exists for database " + this.name);
         }
         this.redisMonitor = new PayloadRedisMonitor(this);
         this.redisMonitor.start();
@@ -189,10 +191,11 @@ public class PayloadDatabase {
             // Try connection
             PayloadRedis payloadRedis = this.redis;
             if (payloadRedis.useURI()) {
-                jedis = new Jedis(URI.create(payloadRedis.getUri()));
+                jedisPool = new JedisPool(URI.create(payloadRedis.getUri()));
             } else {
-                jedis = new Jedis(payloadRedis.getAddress(), payloadRedis.getPort());
+                jedisPool = new JedisPool(payloadRedis.getAddress(), payloadRedis.getPort());
             }
+            jedis = jedisPool.getResource();
             jedis.connect();
             if (payloadRedis.isAuth()) {
                 jedis.auth(payloadRedis.getPassword());
@@ -223,6 +226,7 @@ public class PayloadDatabase {
             this.jedis.disconnect();
         }
         this.jedis.close();
+        this.jedisPool.close();
         return true;
     }
 

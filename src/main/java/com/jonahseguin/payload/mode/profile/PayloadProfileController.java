@@ -68,7 +68,11 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             // Otherwise make a new profile
             payload = cache.getInstantiator().instantiate(this.data);
             cache.getPlugin().getServer().getScheduler().runTaskAsynchronously(cache.getPlugin(), () -> cache.save(payload));
+        } else {
+            // Cache the Payload if successful
+            this.cache.cache(payload);
         }
+
         return payload;
     }
 

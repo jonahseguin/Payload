@@ -1,6 +1,7 @@
 package com.jonahseguin.payload.mode.profile;
 
 import com.jonahseguin.payload.PayloadHook;
+import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
@@ -9,10 +10,13 @@ import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerLocal;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerMongo;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerRedis;
+import com.jonahseguin.payload.mode.profile.pubsub.HandshakeListener;
+import com.jonahseguin.payload.mode.profile.pubsub.HandshakeManager;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import redis.clients.jedis.Jedis;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,14 +27,21 @@ import java.util.concurrent.ConcurrentMap;
 @Getter
 public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X, ProfileData> {
 
-    private final ProfileCacheSettings settings = new ProfileCacheSettings();
-    private final ConcurrentMap<UUID, PayloadProfileController<X>> controllers = new ConcurrentHashMap<>();
+    private transient final ProfileCacheSettings settings = new ProfileCacheSettings();
+    private transient final ConcurrentMap<UUID, PayloadProfileController<X>> controllers = new ConcurrentHashMap<>();
 
-    private final ProfileLayerLocal<X> localLayer = new ProfileLayerLocal<>(this);
-    private final ProfileLayerRedis<X> redisLayer = new ProfileLayerRedis<>(this);
-    private final ProfileLayerMongo<X> mongoLayer = new ProfileLayerMongo<>(this);
+    // Handshaking for NETWORK_NODE mode
+    private transient final HandshakeManager<X> handshakeManager = new HandshakeManager<>(this);
+    private transient final HandshakeListener<X> handshakeListener = new HandshakeListener<>(this);
 
-    private final Map<UUID, ProfileData> data = new HashMap<>();
+    private transient final ProfileLayerLocal<X> localLayer = new ProfileLayerLocal<>(this);
+    private transient final ProfileLayerRedis<X> redisLayer = new ProfileLayerRedis<>(this);
+    private transient final ProfileLayerMongo<X> mongoLayer = new ProfileLayerMongo<>(this);
+
+    private transient final Map<UUID, ProfileData> data = new HashMap<>();
+
+    private transient Jedis publisherJedis = null;
+    private transient Jedis subscriberJedis = null;
 
     public ProfileCache(PayloadHook hook, String name, Class<X> type) {
         super(hook, name, UUID.class, type);
@@ -38,17 +49,31 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     @Override
     protected void init() {
+        if (this.mode.equals(PayloadMode.NETWORK_NODE)) {
+            // Allocate Jedis resources for Publishing and Subscribing
+            this.publisherJedis = this.payloadDatabase.getJedisPool().getResource();
+            this.subscriberJedis = this.payloadDatabase.getJedisPool().getResource();
+
+            this.subscriberJedis.subscribe(this.handshakeListener);
+        }
+
         this.layerController.register(this.localLayer);
         this.layerController.register(this.redisLayer);
         this.layerController.register(this.mongoLayer);
 
         this.layerController.init();
+
     }
 
     @Override
     protected void shutdown() {
         // close layers in order, save all objects, etc.
         this.layerController.shutdown();
+    }
+
+    @Override
+    public void cache(X payload) {
+        this.localLayer.save(payload);
     }
 
     public X getProfileByName(String username) {
@@ -123,6 +148,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         this.data.remove(uuid);
     }
 
+
     @Override
     public PayloadProfileController<X> controller(ProfileData data) {
         if (this.controllers.containsKey(data.getUniqueId())) {
@@ -142,6 +168,14 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             }
         }
         return x;
+    }
+
+    public boolean save(Player player) {
+        X x = getProfile(player);
+        if (x != null) {
+            return this.save(x);
+        }
+        return false;
     }
 
     public PayloadProfileController<X> getController(UUID uuid) {

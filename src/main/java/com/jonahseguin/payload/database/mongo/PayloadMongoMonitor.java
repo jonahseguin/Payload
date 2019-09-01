@@ -27,6 +27,7 @@ public class PayloadMongoMonitor implements ServerMonitorListener {
     @Override
     public void serverHeartbeatSucceeded(ServerHeartbeatSucceededEvent event) {
         // Connected
+        this.database.getState().setMongoConnected(true);
         if (!this.database.getState().isMongoInitConnect()) {
             this.database.getHooks().forEach(DatabaseDependent::onMongoDbInitConnect);
             this.database.getState().setMongoInitConnect(true);
@@ -44,6 +45,7 @@ public class PayloadMongoMonitor implements ServerMonitorListener {
     @Override
     public void serverHeartbeatFailed(ServerHeartbeatFailedEvent event) {
         // Lost connection or failed to connect
+        this.database.getState().setMongoConnected(false);
         if (this.connected) {
             this.database.getHooks().forEach(DatabaseDependent::onMongoDbDisconnect);
             this.database.databaseDebug("MongoDB disconnected");

@@ -6,6 +6,7 @@ import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
 import com.mongodb.MongoException;
+import org.bson.types.Binary;
 import org.bukkit.entity.Player;
 import org.mongodb.morphia.query.Query;
 
@@ -242,6 +243,25 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
         q.maxTime(10, TimeUnit.SECONDS);
         q.criteria("username").equalIgnoreCase(username);
         return q;
+    }
+
+    public static Binary toStandardBinaryUUID(java.util.UUID uuid) {
+        long msb = uuid.getMostSignificantBits();
+        long lsb = uuid.getLeastSignificantBits();
+
+        byte[] uuidBytes = new byte[16];
+
+        for (int i = 15; i >= 8; i--) {
+            uuidBytes[i] = (byte) (lsb & 0xFFL);
+            lsb >>= 8;
+        }
+
+        for (int i = 7; i >= 0; i--) {
+            uuidBytes[i] = (byte) (msb & 0xFFL);
+            msb >>= 8;
+        }
+
+        return new Binary((byte) 0x04, uuidBytes);
     }
 
 }

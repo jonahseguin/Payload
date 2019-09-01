@@ -4,6 +4,7 @@ import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.PLang;
 import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -19,11 +20,14 @@ import java.util.UUID;
  * different IDs, as mapped by the Payload plugin and stored locally in a .json file
  */
 @Getter
+@Setter
 public class PayloadLocal {
 
     private String payloadID = null;
     private boolean firstStartup = true;
     private boolean debug = true;
+    private YamlConfiguration config;
+    private File payloadFile;
 
     public String getPayloadID() {
         return payloadID;
@@ -34,7 +38,7 @@ public class PayloadLocal {
      * @return true if successful
      */
     public boolean loadPayloadID() {
-        File payloadFile = new File(PayloadPlugin.get().getDataFolder() + File.separator + "payload.yml");
+        payloadFile = new File(PayloadPlugin.get().getDataFolder() + File.separator + "payload.yml");
         if (!payloadFile.exists()) {
             try {
                 payloadFile.mkdirs();
@@ -47,7 +51,7 @@ public class PayloadLocal {
             }
         }
 
-        YamlConfiguration config = new YamlConfiguration();
+        config = new YamlConfiguration();
         try {
             config.load(payloadFile);
         }

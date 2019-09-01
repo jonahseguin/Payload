@@ -106,6 +106,7 @@ public class FailureManager<K, X extends Payload, D extends PayloadData> impleme
             X payload = cache.controller(failedPayload.getData()).cache();
 
             if (payload != null) {
+                cache.cache(payload);
                 // If success
                 if (failedPayload.getData() instanceof ProfileData) {
                     ProfileData profileData = (ProfileData) failedPayload.getData();
