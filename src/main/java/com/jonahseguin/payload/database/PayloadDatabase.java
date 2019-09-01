@@ -2,9 +2,9 @@ package com.jonahseguin.payload.database;
 
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.error.DefaultErrorHandler;
-import com.jonahseguin.payload.base.error.PayloadErrorHandler;
+import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.exception.runtime.PayloadConfigException;
+import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.database.mongo.PayloadMongo;
 import com.jonahseguin.payload.database.mongo.PayloadMongoMonitor;
 import com.jonahseguin.payload.database.redis.PayloadRedis;
@@ -41,7 +41,6 @@ public class PayloadDatabase {
     private final String name;
     private final String uuid = UUID.randomUUID().toString();
     private final Set<PayloadCache> hooks = new HashSet<>();
-    private PayloadErrorHandler errorHandler = new DefaultErrorHandler();
     private final DatabaseState state = new DatabaseState();
 
     private final PayloadMongo mongo;
@@ -267,6 +266,17 @@ public class PayloadDatabase {
      */
     public static PayloadDatabase fromConfigFile(Plugin plugin, String fileName, String name) throws PayloadConfigException {
         return fromConfigFile(new File(plugin.getDataFolder() + File.separator + fileName), name);
+    }
+
+    public void databaseError(Throwable ex, String msg) {
+        PayloadPlugin.get().alert(PayloadPermission.DEBUG, "&c[Payload][Database: " + this.database.getName() + "] " + msg + " - " + ex.getMessage());
+        if (PayloadPlugin.get().isDebug()) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void databaseDebug(String msg) {
+        PayloadPlugin.get().alert(PayloadPermission.DEBUG, PLang.DEBUG_DATABASE, this.database.getName(), msg);
     }
 
 }
