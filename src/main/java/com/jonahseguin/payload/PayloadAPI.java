@@ -56,16 +56,8 @@ public class PayloadAPI {
         return PayloadAPI.instance;
     }
 
-    /**
-     * Register a cache w/ a hook
-     * @param cache {@link PayloadCache}
-     * @param hook {@link PayloadHook}
-     */
-    public final void saveCache(PayloadCache cache, PayloadHook hook) {
-        if (!this.validateHook(hook.getPlugin(), hook)) {
-            throw new IllegalStateException("Hook is not valid for cache to save in PayloadAPI");
-        }
-        this.caches.put(cache.getName(), cache);
+    public static String convertCacheName(String name) {
+        return name.toLowerCase().replace(" ", "");
     }
 
     /**
@@ -127,15 +119,28 @@ public class PayloadAPI {
     }
 
     /**
+     * Register a cache w/ a hook
+     *
+     * @param cache {@link PayloadCache}
+     * @param hook  {@link PayloadHook}
+     */
+    public final void saveCache(PayloadCache cache, PayloadHook hook) {
+        if (!this.validateHook(hook.getPlugin(), hook)) {
+            throw new IllegalStateException("Hook is not valid for cache to save in PayloadAPI");
+        }
+        this.caches.put(convertCacheName(cache.getName()), cache);
+    }
+
+    /**
      * Get a cache by name
      * @param name Name of the cache
      * @param <K> Key type (i.e String for uuid)
      * @param <X> Value type (object to cache; i.e Profile)
      * @return The Cache
      */
-    @SuppressWarnings("unchecked") // bad
+    @SuppressWarnings("unchecked") // bad, oops
     public <K, X extends Payload, D extends PayloadData> PayloadCache<K, X, D> getCache(String name) {
-        return (PayloadCache<K, X, D>) this.caches.get(name);
+        return (PayloadCache<K, X, D>) this.caches.get(convertCacheName(name));
     }
 
 }

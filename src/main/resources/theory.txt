@@ -3,6 +3,10 @@ Player is logged into a node on a network
 
 Player begins to join another node
 
+If the player's profile isn't stored in redis, skip all of the below and load their profile from mongo and proceed their join
+^ This is assuming they are joining the network, not switching servers.
+^ Or have a bungee-plugin-based solution........ [i.e emit an event when joining bungee, store their uuid when receiving that event, when joining check if we have their uuid stored in the joiningNetwork uuid list, skip to loading from mongo or redis)
+
 The node that receives the login of the player will publish an event to Redis: JOIN_PROFILE (or similar)
 
 Other nodes receive it.  They will quickly (async) check their caches for a profile with that name, that is online
