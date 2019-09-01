@@ -24,10 +24,15 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public X get(ProfileData data) throws PayloadLayerCannotProvideException {
-        if (!this.has(data)) {
-            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in local layer for Profile username:" + data.getUsername(), this.cache);
+        return get(data.getUniqueId());
+    }
+
+    @Override
+    public X get(UUID uuid) throws PayloadLayerCannotProvideException {
+        if (!this.has(uuid)) {
+            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in local layer for Profile UUID:" + uuid, this.cache);
         }
-        X x = this.localCache.get(data.getUniqueId());
+        X x = this.localCache.get(uuid);
         x.interact();
         return x;
     }
@@ -37,6 +42,16 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
         payload.interact();
         this.localCache.put(payload.getUniqueId(), payload);
         return true;
+    }
+
+    @Override
+    public boolean has(UUID key) {
+        return this.localCache.containsKey(key);
+    }
+
+    @Override
+    public void remove(UUID key) {
+        this.localCache.remove(key);
     }
 
     @Override

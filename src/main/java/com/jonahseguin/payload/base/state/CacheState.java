@@ -15,7 +15,6 @@ public class CacheState<K, X extends Payload, D extends PayloadData> {
     private final PayloadCache<K, X, D> cache;
 
     private volatile boolean locked = false; // lock caching, tasks, etc.
-    private volatile boolean joinable = false; // can players join
 
     public CacheState(PayloadCache<K, X, D> cache) {
         this.cache = cache;

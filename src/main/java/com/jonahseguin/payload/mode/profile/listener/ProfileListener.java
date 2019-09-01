@@ -1,6 +1,8 @@
 package com.jonahseguin.payload.mode.profile.listener;
 
 import com.jonahseguin.payload.PayloadAPI;
+import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.mode.profile.PayloadProfileController;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
@@ -22,6 +24,15 @@ public class ProfileListener implements Listener {
         final UUID uniqueId = event.getUniqueId();
         final String ip = event.getAddress().getHostAddress();
 
+        for (PayloadCache c : PayloadAPI.get().getCaches().values()) {
+            if (c instanceof ProfileCache) {
+                if (c.getState().isLocked()) {
+                    event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, c.getLangController().get(PLang.KICK_MESSAGE_LOCKED));
+                    return; // Stop here
+                }
+            }
+        }
+
         PayloadAPI.get().getCaches().values().forEach(c -> {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
@@ -42,6 +53,9 @@ public class ProfileListener implements Listener {
                 if (controller != null) {
                     controller.initializeOnJoin(player);
                 }
+                if (cache.getFailureManager().hasFailure(player.getUniqueId())) {
+                    cache.getFailureManager().getFailedPayload(player.getUniqueId()).setPlayer(player);
+                }
             }
         });
     }
@@ -54,6 +68,7 @@ public class ProfileListener implements Listener {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
                 cache.removeData(player.getUniqueId());
+                cache.removeController(player.getUniqueId());
             }
         });
     }

@@ -1,12 +1,17 @@
 package com.jonahseguin.payload.mode.profile;
 
 import com.jonahseguin.payload.PayloadHook;
+import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
+import com.jonahseguin.payload.base.failsafe.FailedPayload;
+import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerLocal;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerMongo;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerRedis;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import lombok.Getter;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
@@ -16,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Getter
-public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String, X, ProfileData> {
+public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X, ProfileData> {
 
     private final ProfileCacheSettings settings = new ProfileCacheSettings();
     private final ConcurrentMap<UUID, PayloadProfileController<X>> controllers = new ConcurrentHashMap<>();
@@ -28,7 +33,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String,
     private final Map<UUID, ProfileData> data = new HashMap<>();
 
     public ProfileCache(PayloadHook hook, String name, Class<X> type) {
-        super(hook, name, String.class, type);
+        super(hook, name, UUID.class, type);
     }
 
     @Override
@@ -43,12 +48,53 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String,
         // close layers in order, save all objects, etc.
     }
 
+    public X getProfileByName(String username) {
+        UUID uuid = PayloadPlugin.get().getUUIDs().get(username);
+        if (uuid != null) {
+            return this.getProfile(uuid);
+        }
+        Player exact = Bukkit.getPlayerExact(username);
+        if (exact != null) {
+            return this.getProfile(exact);
+        } else {
+            // Manually get from MongoDB
+            return this.mongoLayer.getByUsername(username);
+        }
+    }
+
+    public X getProfile(UUID uuid) {
+        return this.get(uuid);
+    }
+
     public X getProfile(Player player) {
-        return this.get(player.getUniqueId().toString());
+        return this.get(player.getUniqueId());
     }
 
     @Override
-    protected X get(String key) {
+    protected X get(UUID uniqueId) {
+        if (this.getFailureManager().hasFailure(uniqueId)) {
+            // They are attempting to be cached
+            FailedPayload<X, ProfileData> failedPayload = this.getFailureManager().getFailedPayload(uniqueId);
+            if (failedPayload.getTemporaryPayload() == null) {
+                if (failedPayload.getPlayer() != null) {
+                    failedPayload.setTemporaryPayload(this.instantiator.instantiate(this.createData(failedPayload.getPlayer().getName(), uniqueId, failedPayload.getPlayer().getAddress().getAddress().getHostAddress())));
+                }
+            }
+            return failedPayload.getTemporaryPayload();
+        }
+
+        // Handle the getting of a Profile from the first available layer
+        for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
+            if (layer.has(uniqueId)) {
+                try {
+                    return layer.get(uniqueId);
+                } catch (PayloadLayerCannotProvideException e) {
+                    this.getErrorHandler().exception(this, e, "Error getting Profile by UUID: " + uniqueId.toString());
+                }
+            }
+        }
+
+        // No profile found for said UUID
         return null;
     }
 
@@ -86,6 +132,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<String,
 
     public PayloadProfileController<X> getController(UUID uuid) {
         return this.controllers.get(uuid);
+    }
+
+    public void removeController(UUID uuid) {
+        this.controllers.remove(uuid);
     }
 
     @Override

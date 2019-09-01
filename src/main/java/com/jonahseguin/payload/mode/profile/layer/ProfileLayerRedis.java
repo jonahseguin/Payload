@@ -10,6 +10,7 @@ import com.mongodb.util.JSONParseException;
 import redis.clients.jedis.Jedis;
 
 import java.util.Map;
+import java.util.UUID;
 
 public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLayer<X> {
 
@@ -20,8 +21,41 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     }
 
     @Override
+    public X get(UUID uuid) throws PayloadLayerCannotProvideException {
+        if (!this.has(uuid)) {
+            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in Redis layer for Profile username:" + uuid.toString(), this.cache);
+        }
+        try {
+            String json = jedis.hget(this.getCache().getName(), uuid.toString());
+            return mapProfile(json);
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error getting Profile from Redis Layer: " + uuid.toString());
+            return null;
+        }
+    }
+
+    @Override
+    public boolean has(UUID uuid) {
+        try {
+            return this.jedis.hexists(this.getCache().getName(), uuid.toString());
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error checking if Profile exists in Redis Layer: " + uuid.toString());
+            return false;
+        }
+    }
+
+    @Override
+    public void remove(UUID uuid) {
+        try {
+            this.jedis.hdel(this.getCache().getName(), uuid.toString());
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error removing Profile from Redis Layer: " + uuid);
+        }
+    }
+
+    @Override
     public X get(ProfileData data) throws PayloadLayerCannotProvideException {
-        if (!this.has(data)) {
+        if (!this.has(data.getUniqueId())) {
             throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in Redis layer for Profile username:" + data.getUsername(), this.cache);
         }
         try {
@@ -51,13 +85,7 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public boolean has(ProfileData data) {
-        try {
-            return this.jedis.hexists(this.getCache().getName(), data.getUniqueId().toString());
-        }
-        catch (Exception expected) {
-            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error checking if Profile exists in Redis Layer: " + data.getUsername());
-            return false;
-        }
+        return this.has(data.getUniqueId());
     }
 
     @Override

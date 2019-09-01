@@ -8,7 +8,6 @@ import com.jonahseguin.payload.mode.profile.ProfileData;
 import com.mongodb.MongoException;
 import org.bukkit.entity.Player;
 import org.mongodb.morphia.query.Query;
-import redis.clients.jedis.Jedis;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -17,10 +16,55 @@ import java.util.stream.Stream;
 
 public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLayer<X> {
 
-    private Jedis jedis = null;
-
     public ProfileLayerMongo(ProfileCache<X> cache) {
         super(cache);
+    }
+
+    @Override
+    public X get(UUID key) throws PayloadLayerCannotProvideException {
+        if (!this.has(key)) {
+            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in MongoDB layer for Profile UUID:" + key.toString(), this.cache);
+        }
+        try {
+            Query<X> q = getQuery(key);
+            Stream<X> stream = q.asList().stream();
+            Optional<X> xp = stream.findFirst();
+            return xp.orElse(null);
+        } catch (MongoException ex) {
+            this.getCache().getErrorHandler().exception(this.getCache(), ex, "MongoDB error getting Profile from MongoDB Layer: " + key.toString());
+            return null;
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error getting Profile from MongoDB Layer: " + key.toString());
+            return null;
+        }
+    }
+
+    @Override
+    public boolean has(UUID uuid) {
+        try {
+            Query<X> q = getQuery(uuid);
+            Stream<X> stream = q.asList().stream();
+            Optional<X> xp = stream.findFirst();
+            return xp.isPresent();
+        } catch (MongoException ex) {
+            this.getCache().getErrorHandler().exception(this.getCache(), ex, "MongoDB error check if Profile exists in MongoDB Layer: " + uuid.toString());
+            return false;
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error checking if Profile exists in MongoDB Layer: " + uuid.toString());
+            return false;
+        }
+    }
+
+    @Override
+    public void remove(UUID key) {
+        try {
+            Query<X> q = getQuery(key);
+            this.cache.getPayloadDatabase().getDatastore().findAndDelete(q);
+        } catch (MongoException ex) {
+            this.getCache().getErrorHandler().exception(this.getCache(), ex, "MongoDB error removing Profile from MongoDB Layer: " + key.toString());
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error removing Profile from MongoDB Layer: " + key.toString());
+        }
     }
 
     @Override
@@ -32,12 +76,27 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
             Query<X> q = getQuery(data.getUniqueId());
             Stream<X> stream = q.asList().stream();
             Optional<X> xp = stream.findFirst();
-            return xp.orElseThrow(() -> new PayloadLayerCannotProvideException("Failed to provide Profile from Mongo layer for username:" + data.getUsername(), this.cache));
+            return xp.orElse(null);
         } catch (MongoException ex) {
             this.getCache().getErrorHandler().exception(this.getCache(), ex, "MongoDB error getting Profile from MongoDB Layer: " + data.getUsername());
             return null;
         } catch (Exception expected) {
             this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error getting Profile from MongoDB Layer: " + data.getUsername());
+            return null;
+        }
+    }
+
+    public X getByUsername(String username) {
+        try {
+            Query<X> q = getQueryForUsername(username);
+            Stream<X> stream = q.asList().stream();
+            Optional<X> xp = stream.findFirst();
+            return xp.orElse(null);
+        } catch (MongoException ex) {
+            this.getCache().getErrorHandler().exception(this.getCache(), ex, "MongoDB error getting Profile from MongoDB Layer: " + username);
+            return null;
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error getting Profile from MongoDB Layer: " + username);
             return null;
         }
     }
@@ -145,9 +204,8 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public int clear() {
-        int size = this.jedis.hkeys(this.getCache().getName()).size();
-        this.jedis.del(this.getCache().getName());
-        return size;
+        // For safety reasons...
+        throw new UnsupportedOperationException("Cannot clear a MongoDB database from within Payload.");
     }
 
     @Override

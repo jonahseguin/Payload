@@ -5,6 +5,7 @@ import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.error.DefaultErrorHandler;
 import com.jonahseguin.payload.base.error.PayloadErrorHandler;
+import com.jonahseguin.payload.base.exception.runtime.PayloadRuntimeException;
 import com.jonahseguin.payload.base.failsafe.FailureManager;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.lang.PayloadLangController;
@@ -12,9 +13,7 @@ import com.jonahseguin.payload.base.layer.LayerController;
 import com.jonahseguin.payload.base.settings.CacheSettings;
 import com.jonahseguin.payload.base.state.CacheState;
 import com.jonahseguin.payload.base.state.PayloadTaskExecutor;
-import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadController;
-import com.jonahseguin.payload.base.type.PayloadData;
+import com.jonahseguin.payload.base.type.*;
 import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.PayloadDatabase;
 import lombok.Getter;
@@ -46,8 +45,9 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     protected transient final PayloadTaskExecutor<K, X, D> executor;
     protected transient final PayloadLangController langController = new PayloadLangController();
     protected transient final CacheState<K, X, D> state;
-    protected transient final LayerController<X, D> layerController = new LayerController<>();
+    protected transient final LayerController<K, X, D> layerController = new LayerController<>();
     protected final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
+    protected transient PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
 
     protected transient final Class<K> keyType;
     protected transient final Class<X> payloadClass;
@@ -75,6 +75,10 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         this.state = new CacheState<>(this);
     }
 
+    public void withInstantiator(PayloadInstantiator<X, D> instantiator) {
+        this.instantiator = instantiator;
+    }
+
     public void alert(PayloadPermission required, PLang lang, String... args) {
         Bukkit.getLogger().info(this.langController.get(lang, args));
         for (Player pl : this.plugin.getServer().getOnlinePlayers()) {
@@ -90,6 +94,10 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
 
     public final boolean start() {
         if (this.isRunning()) return true;
+        if (this.instantiator instanceof NullPayloadInstantiator) {
+            this.getState().lock();
+            throw new PayloadRuntimeException("Instantiator for cache " + this.getName() + " cannot be Null!  Call withInstantiator() before starting!");
+        }
         // What else should be implemented here?
         this.init();
         this.running = true;

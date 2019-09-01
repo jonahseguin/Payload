@@ -11,10 +11,7 @@ import lombok.Getter;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Getter
 public class FailureManager<K, X extends Payload, D extends PayloadData> implements Runnable {
@@ -52,6 +49,26 @@ public class FailureManager<K, X extends Payload, D extends PayloadData> impleme
 
     public boolean hasFailure(D data) {
         return this.failures.containsKey(data);
+    }
+
+    public boolean hasFailure(UUID uuid) {
+        return this.failures.values().stream().anyMatch(fp -> {
+            if (fp.getData() instanceof ProfileData) {
+                ProfileData data = (ProfileData) fp.getData();
+                return data.getUniqueId().equals(uuid);
+            }
+            return false;
+        });
+    }
+
+    public FailedPayload<X, D> getFailedPayload(UUID uuid) {
+        return this.failures.values().stream().filter(fp -> {
+            if (fp.getData() instanceof ProfileData) {
+                ProfileData data = (ProfileData) fp.getData();
+                return data.getUniqueId().equals(uuid);
+            }
+            return false;
+        }).findFirst().orElse(null);
     }
 
     public FailedPayload<X, D> getFailedPayload(D data) {

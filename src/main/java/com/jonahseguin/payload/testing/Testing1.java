@@ -18,10 +18,11 @@ public class Testing1 extends JavaPlugin {
         PayloadAPI.get().requestProvision(this).thenAccept(hook -> {
             getLogger().info("Provision received from Payload");
 
-            payloadDatabase = PayloadDatabase.fromConfigFile(this, "database.yml", "purifiedDatabase");
+            payloadDatabase = PayloadDatabase.fromConfigFile(this, "database.yml", "Purified Database");
             payloadDatabase.start();
 
-            this.cache = hook.createProfileCache(payloadDatabase,"purifiedProfiles", TestProfile.class);
+            this.cache = hook.createProfileCache(payloadDatabase, "Purified Profile", TestProfile.class);
+            this.cache.withInstantiator(TestProfile::new);
 
             if (cache.start()) {
                 // success

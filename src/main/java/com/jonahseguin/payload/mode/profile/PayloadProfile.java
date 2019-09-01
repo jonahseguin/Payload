@@ -33,14 +33,15 @@ public abstract class PayloadProfile implements Payload {
         this.payloadId = PayloadAPI.get().getPayloadID();
     }
 
-    public PayloadProfile(String username, UUID uniqueId) {
+    public PayloadProfile(String username, UUID uniqueId, String loginIp) {
         this();
         this.username = username;
         this.uniqueId = uniqueId;
+        this.loginIp = loginIp;
     }
 
     public PayloadProfile(ProfileData data) {
-        this(data.getUsername(), data.getUniqueId());
+        this(data.getUsername(), data.getUniqueId(), data.getIp());
         this.loginIp = data.getIp();
     }
 

@@ -15,15 +15,15 @@ import java.util.ArrayList;
  * @param <D> PayloadData
  */
 @Getter
-public class LayerController<X extends Payload, D extends PayloadData> {
+public class LayerController<K, X extends Payload, D extends PayloadData> {
 
-    private final ArrayList<PayloadLayer<X, D>> layers = new ArrayList<>();
+    private final ArrayList<PayloadLayer<K, X, D>> layers = new ArrayList<>();
 
     /**
      * Register a layer to be used within the caching process
      * @param layer the layer to register, in order
      */
-    public void register(PayloadLayer<X, D> layer) {
+    public void register(PayloadLayer<K, X, D> layer) {
         this.layers.add(layer);
     }
 
