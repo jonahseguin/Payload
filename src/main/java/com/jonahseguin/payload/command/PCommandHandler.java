@@ -2,6 +2,9 @@ package com.jonahseguin.payload.command;
 
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.lang.PLang;
+import com.jonahseguin.payload.command.commands.CmdCache;
+import com.jonahseguin.payload.command.commands.CmdCacheLayers;
+import com.jonahseguin.payload.command.commands.CmdCacheList;
 import com.jonahseguin.payload.command.commands.CmdHelp;
 import lombok.Getter;
 import org.bukkit.command.Command;
@@ -20,6 +23,9 @@ public class PCommandHandler implements CommandExecutor {
 
     public PCommandHandler() {
         register(new CmdHelp());
+        register(new CmdCache());
+        register(new CmdCacheList());
+        register(new CmdCacheLayers());
     }
 
     private void register(PayloadCommand cmd) {
