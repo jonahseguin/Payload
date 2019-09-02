@@ -4,8 +4,9 @@ import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadController;
 import com.jonahseguin.payload.base.type.PayloadData;
-import com.jonahseguin.payload.mode.profile.PayloadProfile;
+import com.jonahseguin.payload.mode.profile.PayloadProfileController;
 import com.jonahseguin.payload.mode.profile.ProfileData;
 import lombok.Getter;
 import org.bukkit.entity.Player;
@@ -103,7 +104,8 @@ public class FailureManager<K, X extends Payload, D extends PayloadData> impleme
             }
 
             // Attempt cache
-            X payload = cache.controller(failedPayload.getData()).cache();
+            PayloadController<X> controller = cache.controller(failedPayload.getData());
+            X payload = controller.cache();
 
             if (payload != null) {
                 cache.cache(payload);
@@ -117,9 +119,9 @@ public class FailureManager<K, X extends Payload, D extends PayloadData> impleme
                         continue;
                     }
 
-                    if (payload instanceof PayloadProfile) {
-                        PayloadProfile profile = (PayloadProfile) payload;
-                        profile.initializePlayer(player);
+                    if (controller instanceof PayloadProfileController) {
+                        PayloadProfileController profileController = (PayloadProfileController) controller;
+                        profileController.initializeOnJoin(player);
                     }
                     player.sendMessage(cache.getLangController().get(PLang.CACHE_FAILURE_PROFILE_ATTEMPT_SUCCESS, cache.getName()));
                 }

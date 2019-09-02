@@ -15,3 +15,21 @@ That node will send PROCEED_PROFILE (or similar) with that player's name/UUID AF
 
 The node the player is connecting to will handle this process during AsyncPlayerPreLogin to allow the join process to wait
 until their data has been saved before going through with the connection.
+
+
+--------------------
+Better implementation
+
+When a player logs in, check their lastSeenServer field (in redis)
+If it's null, proceed and create them a new profile
+
+If it's not null, send a REQUEST_PAYLOAD_SAVE(uuid, targetServer, cacheName) event to the target server (which is the server that is their lastSeenServer field)
+
+Start a timeout for that Profile (unless serverFound = true)
+
+The server will then respond with a SAVING_PAYLOAD(uuid, targetServer, cacheName) event, once this happens stop the timeout (set serverFound = true)
+
+Once the payload is saved, the server will send a SAVED_PAYLOAD(uuid, targetServer, cacheName) event
+
+The server the player is logging in from will then proceed to cache the player as if they were cached in STANDALONE mode,
+i.e load normally from Redis/Mongo.

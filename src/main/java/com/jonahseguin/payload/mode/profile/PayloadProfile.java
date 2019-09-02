@@ -22,6 +22,8 @@ public abstract class PayloadProfile implements Payload {
     protected String uniqueId;
     protected transient UUID uuid = null;
     protected String loginIp = null;
+
+    protected String lastSeenServer = null; // The Payload ID of the server they last joined
     protected boolean online = false;
     protected String payloadId = null; // The ID of the Payload instance that currently holds this profile
     protected long cachedTimestamp = System.currentTimeMillis();

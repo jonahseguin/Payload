@@ -2,9 +2,9 @@ package com.jonahseguin.payload.mode.profile.pubsub;
 
 public enum HandshakeEvent {
 
-    JOIN_INIT, // player begins to join another server
-    PROFILE_SERVER_FOUND, // sent when the server is found
-    PROFILE_JOIN_PROCEED // sent after the server they are leaving has saved their data to redis
+    REQUEST_PAYLOAD_SAVE, // player begins to join another server
+    SAVING_PAYLOAD, // sent when the server is found
+    SAVED_PAYLOAD // sent after the server they are leaving has saved their data to redis
 
     ;
 

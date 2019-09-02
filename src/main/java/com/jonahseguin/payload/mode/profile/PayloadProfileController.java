@@ -1,10 +1,11 @@
 package com.jonahseguin.payload.mode.profile;
 
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
-import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.base.type.PayloadController;
+import com.jonahseguin.payload.mode.profile.pubsub.HandshakingPayload;
 import lombok.Getter;
 import org.bukkit.entity.Player;
 
@@ -18,6 +19,9 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
 
     private X payload = null;
     private Player player = null;
+
+    private HandshakingPayload handshakingPayload = null;
+    private boolean handshakeDone = false;
 
     public PayloadProfileController(ProfileCache<X> cache, ProfileData data) {
         this.cache = cache;
@@ -43,14 +47,14 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
 
         // Iterate each layer in order
         for (PayloadLayer<UUID, X, ProfileData> layer : this.cache.getLayerController().getLayers()) {
-            if (layer.has(this.data)) {
-                try {
+            try {
+                if (layer.has(this.data)) {
                     payload = layer.get(this.data);
-                } catch (PayloadLayerCannotProvideException ex) {
-                    payload = null;
-                    this.cache.getErrorHandler().exception(this.cache, ex, "Failed to load profile " + this.data.getUsername() + " from layer " + layer.layerName());
-                    failure = true;
                 }
+            } catch (Exception ex) {
+                payload = null;
+                this.cache.getErrorHandler().exception(this.cache, ex, "Failed to load profile " + this.data.getUsername() + " from layer " + layer.layerName());
+                failure = true;
             }
         }
 
@@ -77,14 +81,40 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     }
 
     private X cacheNetworkNode() {
-        // TODO handle the entire caching process here with external help from the pub/sub system (HANDSHAKE)
-        return null;
+        this.handshakingPayload = this.cache.getHandshakeManager().beginHandshake(this.data);
+        if (this.cache.getHandshakeManager().waitForHandshake(this.handshakingPayload)) {
+            if (this.handshakingPayload.isTimedOut()) {
+                // Timed out.  Wasn't successful
+                // No servers responded in time with the data for this Payload
+
+            } else {
+                // Handshake completed successfully
+                this.handshakeDone = true;
+                this.handshakingPayload.setHandshakeComplete(true);
+                this.cache.getHandshakeManager().removeHandshake(this.handshakingPayload.getUuid());
+                return this.cacheStandalone();
+            }
+        }
+        // If the handshake didn't complete successfully, the error would've been handled in that method (waitForHandshake())
+        return payload;
     }
 
     public void initializeOnJoin(Player player) {
         this.player = player;
         if (this.payload != null) {
             this.payload.initializePlayer(player);
+        }
+        this.updatePayloadAfterJoin();
+    }
+
+    private void updatePayloadAfterJoin() {
+        if (this.payload != null) {
+            payload.setLastSeenServer(PayloadAPI.get().getPayloadID());
+            payload.setOnline(true);
+            payload.setCachedTimestamp(System.currentTimeMillis());
+            this.cache.getPool().submit(() -> {
+                this.cache.save(payload);
+            });
         }
     }
 

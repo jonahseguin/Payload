@@ -49,12 +49,14 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     @Override
     protected void init() {
+        // Startup!
         if (this.mode.equals(PayloadMode.NETWORK_NODE)) {
             // Allocate Jedis resources for Publishing and Subscribing
             this.publisherJedis = this.payloadDatabase.getJedisPool().getResource();
             this.subscriberJedis = this.payloadDatabase.getJedisPool().getResource();
 
             this.subscriberJedis.subscribe(this.handshakeListener);
+            this.handshakeManager.getTimeoutTask().start();
         }
 
         this.layerController.register(this.localLayer);
@@ -62,13 +64,17 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         this.layerController.register(this.mongoLayer);
 
         this.layerController.init();
-
     }
 
     @Override
     protected void shutdown() {
         // close layers in order, save all objects, etc.
+        if (this.mode.equals(PayloadMode.NETWORK_NODE)) {
+            this.handshakeManager.getTimeoutTask().stop();
+        }
         this.layerController.shutdown();
+        this.publisherJedis.close();
+        this.subscriberJedis.close();
     }
 
     @Override
@@ -147,7 +153,6 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     public void removeData(UUID uuid) {
         this.data.remove(uuid);
     }
-
 
     @Override
     public PayloadProfileController<X> controller(ProfileData data) {

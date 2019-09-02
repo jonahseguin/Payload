@@ -68,11 +68,13 @@ public class ProfileListener implements Listener {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
                 if (cache.getMode().equals(PayloadMode.STANDALONE)) {
-                    if (!cache.save(player)) {
-                        cache.getErrorHandler().debug(cache, "Player could not be saved on quit (not cached): " + player.getName());
-                    }
-                    cache.removeData(player.getUniqueId());
-                    cache.removeController(player.getUniqueId());
+                    cache.getPool().submit(() -> {
+                        if (!cache.save(player)) {
+                            cache.getErrorHandler().debug(cache, "Player could not be saved on quit (not cached): " + player.getName());
+                        }
+                        cache.removeData(player.getUniqueId());
+                        cache.removeController(player.getUniqueId());
+                    });
                 }
             }
         });

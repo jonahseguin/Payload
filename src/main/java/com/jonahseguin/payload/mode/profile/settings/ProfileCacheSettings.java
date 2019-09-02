@@ -10,5 +10,6 @@ public class ProfileCacheSettings extends CacheSettings {
 
     private int localExpiryTimeSeconds = 7200;
     private int redisExpiryTimeSeconds = 14400;
+    private int handshakeTimeoutSeconds = 5;
 
 }
