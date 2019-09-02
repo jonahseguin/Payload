@@ -28,12 +28,4 @@ public interface Payload {
      */
     void interact();
 
-    /**
-     * Send a message to this Payload object (i.e a Player) from the cache
-     * Usually used for debugging or information (i.e when attempting to cache them after failure, etc.)
-     *
-     * @param msg String message
-     */
-    void sendMessage(String msg);
-
 }
