@@ -132,7 +132,9 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 this.cache.getHandshakeManager().beginHandshake(this, prePayload.getLastSeenServer());
 
                 // Wait for the handshake to complete
-                this.cache.getHandshakeManager().waitForHandshake(this);
+                if (!this.cache.getHandshakeManager().waitForHandshake(this)) {
+                    this.timedOut = true;
+                }
 
                 // Once we get here, the handshake will be complete (or timed out)
 
