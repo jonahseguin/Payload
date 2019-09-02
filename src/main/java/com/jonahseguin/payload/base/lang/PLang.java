@@ -29,7 +29,9 @@ public enum PLang {
     CACHE_FAILURE_PROFILE_NOTICE("&7[&6{0}&7] &4Your profile failed to load.  We will automatically attempt to re-load it every {0} seconds."),
     PLAYER_ONLINE_NO_PROFILE("&cYou appear to have no profile loaded.  Attempting to fix..."),
     DEBUG_DATABASE("&7[Payload][Debug][Database: {0}] {1}"),
-    ERROR_DATABASE("&7[Payload]&7[&cError&7][Database: {0}] {1} ({2})")
+    ERROR_DATABASE("&7[Payload]&7[&cError&7][Database: {0}] {1} ({2})"),
+    DENY_JOIN_HANDSHAKE_TIMEOUT("[&6{0}&7] &cConnection timed out.  Your profile didn't load from your connecting server in time.  Please try again.  If this problem persists, notify an administrator."),
+    DENY_JOIN_HANDSHAKE_DATABASE_DOWN("[&6{0}&7] &cYour profile couldn't be loaded because the database is down.  Please try again soon.  If this problem persists, notify an administrator.")
     ;
 
     private final String text;

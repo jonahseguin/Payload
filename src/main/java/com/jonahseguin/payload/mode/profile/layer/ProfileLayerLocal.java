@@ -119,4 +119,9 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
     public String layerName() {
         return "Profile Local";
     }
+
+    @Override
+    public boolean isDatabase() {
+        return false;
+    }
 }

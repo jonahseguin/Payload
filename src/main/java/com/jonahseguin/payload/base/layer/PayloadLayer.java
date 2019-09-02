@@ -36,4 +36,6 @@ public interface PayloadLayer<K, X extends Payload, D extends PayloadData> {
 
     long size();
 
+    boolean isDatabase();
+
 }

@@ -75,7 +75,6 @@ public abstract class PayloadProfile implements Payload {
         return this.uniqueId.toString();
     }
 
-    @Override
     public void sendMessage(String msg) {
         if (this.isInitialized()) {
             this.player.sendMessage(msg);

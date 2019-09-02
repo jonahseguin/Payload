@@ -211,4 +211,10 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     public String layerName() {
         return "Profile Redis";
     }
+
+    @Override
+    public boolean isDatabase() {
+        return true;
+    }
+
 }

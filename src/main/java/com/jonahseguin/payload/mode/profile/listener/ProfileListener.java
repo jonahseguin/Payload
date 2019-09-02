@@ -40,6 +40,10 @@ public class ProfileListener implements Listener {
                 ProfileData data = cache.createData(username, uniqueId, ip);
                 PayloadProfileController controller = cache.controller(data);
                 controller.cache();
+
+                if (controller.isDenyJoin()) {
+                    event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, controller.getJoinDenyReason());
+                }
             }
         });
     }
@@ -67,14 +71,23 @@ public class ProfileListener implements Listener {
         PayloadAPI.get().getCaches().values().forEach(c -> {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
+
+                cache.removeData(player.getUniqueId());
+                cache.removeController(player.getUniqueId());
+
                 if (cache.getMode().equals(PayloadMode.STANDALONE)) {
+                    // save on quit in standalone mode
                     cache.getPool().submit(() -> {
                         if (!cache.save(player)) {
                             cache.getErrorHandler().debug(cache, "Player could not be saved on quit (not cached): " + player.getName());
                         }
-                        cache.removeData(player.getUniqueId());
-                        cache.removeController(player.getUniqueId());
                     });
+                } else if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
+                    // In network node mode, join is handled before quit when switching servers
+                    // so we don't want to save on quit
+                    // but we do want to remove their locally cached profile because the data will be outdated
+                    // and we want to prevent accidental data rollbacks
+                    cache.getLocalLayer().remove(player.getUniqueId());
                 }
             }
         });

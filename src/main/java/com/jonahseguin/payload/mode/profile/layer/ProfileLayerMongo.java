@@ -264,4 +264,9 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
         return new Binary((byte) 0x04, uuidBytes);
     }
 
+    @Override
+    public boolean isDatabase() {
+        return true;
+    }
+
 }
