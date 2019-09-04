@@ -21,14 +21,19 @@ public abstract class PayloadProfile implements Payload {
     protected String username;
     protected String uniqueId;
     protected transient UUID uuid = null;
-    protected String loginIp = null;
+    protected String loginIp = null; // IP the profile logged in with
 
     protected String lastSeenServer = null; // The Payload ID of the server they last joined
-    protected boolean online = false;
-    protected String payloadId = null; // The ID of the Payload instance that currently holds this profile
+    protected boolean online = false; // is the profile online anywhere in the network, can be true even if they aren't online on this server instance
+    protected String payloadId; // The ID of the Payload instance that currently holds this profile
     protected long cachedTimestamp = System.currentTimeMillis();
     protected long lastInteractionTimestamp = System.currentTimeMillis();
     protected long redisCacheTimestamp = System.currentTimeMillis();
+
+    protected transient boolean switchingServers = false; // set to true when an incoming handshake requests their profile be saved
+    protected transient boolean saveFailed = false; // If the player's profile saved to auto-save/save on shutdown,
+    // This will be set to true, and we will notify the player once their
+    // Profile has been saved successfully
 
     protected transient Player player = null;
 
@@ -72,7 +77,7 @@ public abstract class PayloadProfile implements Payload {
 
     @Override
     public String getIdentifier() {
-        return this.uniqueId.toString();
+        return this.uniqueId;
     }
 
     public void sendMessage(String msg) {

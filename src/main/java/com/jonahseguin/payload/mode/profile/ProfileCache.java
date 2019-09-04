@@ -4,12 +4,15 @@ import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
 import com.jonahseguin.payload.base.failsafe.FailedPayload;
+import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerLocal;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerMongo;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerRedis;
+import com.jonahseguin.payload.mode.profile.pubsub.HandshakeEvent;
 import com.jonahseguin.payload.mode.profile.pubsub.HandshakeListener;
 import com.jonahseguin.payload.mode.profile.pubsub.HandshakeManager;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
@@ -51,11 +54,6 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     protected void init() {
         // Startup!
         if (this.mode.equals(PayloadMode.NETWORK_NODE)) {
-            // Allocate Jedis resources for Publishing and Subscribing
-            this.publisherJedis = this.payloadDatabase.getJedisPool().getResource();
-            this.subscriberJedis = this.payloadDatabase.getJedisPool().getResource();
-
-            this.subscriberJedis.subscribe(this.handshakeListener);
             this.handshakeManager.getTimeoutTask().start();
         }
 
@@ -172,6 +170,20 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
                 x = false;
             }
         }
+        if (!x) {
+            payload.setSaveFailed(true); // save failed
+            payload.sendMessage(this.getLangController().get(PLang.SAVE_FAILED_NOTIFY_PLAYER, this.getName()));
+            this.alert(PayloadPermission.ADMIN, PLang.SAVE_FAILED_NOTIFY_ADMIN, this.getName(), payload.getUsername());
+        } else {
+            if (payload.isSaveFailed()) {
+                // They previously had failed to save
+                // but now we are successful.
+                // let them know that they are free to switch servers / logout / etc. without data loss now.
+                payload.sendMessage(this.getLangController().get(PLang.SAVE_SUCCESS_NOTIFY_PLAYER, this.getName()));
+                this.alert(PayloadPermission.ADMIN, PLang.SAVE_SUCCESS_NOTIFY_ADMIN, this.getName(), payload.getUsername());
+            }
+            payload.setSaveFailed(false);
+        }
         return x;
     }
 
@@ -181,6 +193,22 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             return this.save(x);
         }
         return false;
+    }
+
+    @Override
+    public int saveAll() {
+        int failures = 0;
+        for (Player p : this.getPlugin().getServer().getOnlinePlayers()) {
+            X payload = this.getLocalProfile(p);
+            if (payload != null) {
+                if (!this.save(payload)) {
+                    failures++;
+                }
+            } else {
+                failures++;
+            }
+        }
+        return failures;
     }
 
     public PayloadProfileController<X> getController(UUID uuid) {
@@ -210,4 +238,20 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     public long cachedObjectCount() {
         return this.localLayer.size();
     }
+
+    @Override
+    public void onRedisInitConnect() {
+        super.onRedisInitConnect();
+        // Allocate Jedis resources for Publishing and Subscribing
+        this.publisherJedis = this.payloadDatabase.getJedisPool().getResource();
+        this.subscriberJedis = this.payloadDatabase.getJedisPool().getResource();
+
+        this.subscriberJedis.subscribe(this.handshakeListener,
+                HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(),
+                HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(),
+                HandshakeEvent.SAVED_PAYLOAD.getName(),
+                HandshakeEvent.SAVING_PAYLOAD.getName());
+    }
+
+
 }

@@ -18,7 +18,7 @@ public class PayloadRedisMonitor implements Runnable {
     public void start() {
         if (this.task == null) {
             this.task = PayloadPlugin.get().getServer().getScheduler()
-                    .runTaskTimerAsynchronously(PayloadPlugin.get(), this, 5L, 5L);
+                    .runTaskTimerAsynchronously(PayloadPlugin.get(), this, 60L, 60L);
         }
         else {
             throw new IllegalStateException("Redis Monitor is already running for database ID '" + database.getUuid() + "'; cannot start");
@@ -44,6 +44,8 @@ public class PayloadRedisMonitor implements Runnable {
         Jedis jedis = database.getJedis();
         if (jedis == null) {
             // Jedis hasn't been initialized yet; ignore
+            this.handleDisconnected();
+            this.database.connectRedis();
             return;
         }
         try {
@@ -54,11 +56,16 @@ public class PayloadRedisMonitor implements Runnable {
             else {
                 // Disconnected
                 this.handleDisconnected();
+
+                this.database.connectRedis();
             }
         }
         catch (Exception ex) {
             // Failed, assume disconnected
-
+            this.database.databaseError(ex, "Error in Redis Monitor task: " + ex.getMessage());
+            if (PayloadPlugin.get().isDebug()) {
+                ex.printStackTrace();
+            }
             this.handleDisconnected();
         }
     }

@@ -182,28 +182,36 @@ public class PayloadDatabase {
     }
 
     public boolean connectRedis() {
-        if (this.jedisPool != null) {
-            throw new IllegalStateException("JedisPool instance already exists for database " + this.name);
-        }
-        this.redisMonitor = new PayloadRedisMonitor(this);
-        this.redisMonitor.start();
         try {
+            this.state.setLastRedisConnectionAttempt(System.currentTimeMillis());
             // Try connection
             PayloadRedis payloadRedis = this.redis;
-            if (payloadRedis.useURI()) {
-                jedisPool = new JedisPool(URI.create(payloadRedis.getUri()));
-            } else {
-                jedisPool = new JedisPool(payloadRedis.getAddress(), payloadRedis.getPort());
+            if (this.jedisPool == null) {
+                if (payloadRedis.useURI()) {
+                    jedisPool = new JedisPool(URI.create(payloadRedis.getUri()));
+                } else {
+                    jedisPool = new JedisPool(payloadRedis.getAddress(), payloadRedis.getPort());
+                }
             }
-            jedis = jedisPool.getResource();
+            if (this.jedis == null) {
+                jedis = jedisPool.getResource();
+            }
             jedis.connect();
             if (payloadRedis.isAuth()) {
                 jedis.auth(payloadRedis.getPassword());
             }
             return true; // No errors if we got here; success
         } catch (Exception ex) {
+            this.databaseError(ex, "Failed Redis connection attempt: " + ex.getMessage());
             // Generic exception catch
             return false; // Failed to connect
+        } finally {
+            if (this.redisMonitor == null) {
+                this.redisMonitor = new PayloadRedisMonitor(this);
+            }
+            if (!this.redisMonitor.isRunning()) {
+                this.redisMonitor.start();
+            }
         }
     }
 

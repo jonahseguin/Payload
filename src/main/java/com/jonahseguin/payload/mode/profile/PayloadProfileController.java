@@ -48,9 +48,9 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         // Map their UUID to Username
         PayloadPlugin.get().getUUIDs().put(this.data.getUsername(), this.data.getUniqueId());
 
-        if (cache.getMode() == PayloadMode.STANDALONE) {
+        if (cache.getMode().equals(PayloadMode.STANDALONE)) {
             return this.cacheStandalone();
-        } else if (cache.getMode() == PayloadMode.NETWORK_NODE) {
+        } else if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
             return this.cacheNetworkNode();
         } else {
             throw new UnsupportedOperationException("Unknown cache mode: " + cache.getMode().toString());
@@ -78,6 +78,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             failure = true;
             this.cache.getErrorHandler().debug(this.cache, "Failing caching profile " + this.data.getUsername() + " because the database is not connected");
         }
+
         return prePayload;
     }
 
@@ -101,6 +102,9 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             payload = cache.getInstantiator().instantiate(this.data);
             cache.getPool().submit(() -> cache.save(payload));
         } else {
+            // Update their login ip
+            payload.setLoginIp(this.data.getIp());
+
             // Cache the Payload if successful
             this.cache.cache(payload);
         }
@@ -123,10 +127,12 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         X prePayload = attemptCache(true);
 
         if (prePayload != null) {
-            if (prePayload.getLastSeenServer() != null) {
+            if (prePayload.getLastSeenServer() != null && !prePayload.getLastSeenServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
                 // begin a handshake to get the server they were last seen on to save their profile before we continue to load their data
 
                 this.handshaking = true;
+
+                this.cache.getErrorHandler().debug(this.cache, "Beginning handshake for " + this.data.getUsername() + " from server " + prePayload.getLastSeenServer());
 
                 // Publish our event to request that the lastSeenServer saves the profile
                 this.cache.getHandshakeManager().beginHandshake(this, prePayload.getLastSeenServer());
@@ -147,11 +153,14 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                         // just cache the prePayload we already loaded
                         this.cache.cache(prePayload);
                         payload = prePayload;
-                        return payload;
+                    } else {
+                        // Handshake completed, cache normally
+                        payload = cacheStandalone();
                     }
+                    this.cache.getErrorHandler().debug(this.cache, "Handshake completed & cached for Payload " + this.data.getUsername());
 
-                    return cacheStandalone();
                 } else {
+                    this.cache.getErrorHandler().debug(this.cache, "Handshake timed out for Payload " + this.data.getUsername());
                     if (!this.cache.getSettings().isDenyJoinOnHandshakeTimeout()) {
                         // Allow join, start failure handling
                         if (!this.cache.getFailureManager().hasFailure(this.data)) {
@@ -169,30 +178,38 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             } else {
                 // They haven't been seen on a server recently (aren't switching servers on a network)
                 // Just use the object we loaded from the database as it's up to date.
+                this.cache.getErrorHandler().debug(this.cache, "No recent server found for Payload " + this.data.getUsername() + ", using Payload from database");
                 payload = prePayload;
-                return payload;
+                this.cache.cache(payload);
             }
         } else {
             // They don't have any object stored in any database (Redis or MongoDB)
             if (failure) {
                 // The reason they don't have an object is that the database couldn't be reached or another error occurred.
-                if (this.cache.getSettings().isDenyJoinOnHandshakeFailDatabase()) {
+                if (!this.cache.getSettings().isDenyJoinOnHandshakeFailDatabase()) {
+                    this.cache.getErrorHandler().debug(this.cache, "No Payload stored in database (with failure), failure handling for " + this.data.getUsername());
                     // Start failure handling them to re-attempt to check for their lastSeenServer to avoid data loss due to database being down
                     if (!this.cache.getFailureManager().hasFailure(this.data)) {
                         this.cache.getFailureManager().fail(data);
                     }
                 } else {
+                    this.cache.getErrorHandler().debug(this.cache, "No Payload stored in database (with failure), denying join for " + this.data.getUsername());
                     this.denyJoin = true;
                     this.joinDenyReason = this.cache.getLangController().get(PLang.DENY_JOIN_HANDSHAKE_DATABASE_DOWN, this.cache.getName());
-                    return null;
                 }
+
+                return null;
             } else {
+                this.cache.getErrorHandler().debug(this.cache, "New profile created for " + this.data.getUsername());
                 // There were no errors - they just don't have an object stored in the database
                 // Just create them a new one and call it a day.
                 payload = cache.getInstantiator().instantiate(this.data);
                 cache.getPool().submit(() -> cache.save(payload));
-                return payload;
             }
+        }
+
+        if (payload != null) {
+            payload.setLoginIp(this.data.getIp());
         }
 
         return payload;

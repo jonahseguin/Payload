@@ -4,6 +4,7 @@ import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.lang.PLang;
+import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.PayloadProfileController;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
@@ -72,9 +73,6 @@ public class ProfileListener implements Listener {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
 
-                cache.removeData(player.getUniqueId());
-                cache.removeController(player.getUniqueId());
-
                 if (cache.getMode().equals(PayloadMode.STANDALONE)) {
                     // save on quit in standalone mode
                     cache.getPool().submit(() -> {
@@ -83,12 +81,32 @@ public class ProfileListener implements Listener {
                         }
                     });
                 } else if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
+                    PayloadProfile profile = cache.getLocalProfile(player);
+                    if (profile != null) {
+                        if (!profile.isSwitchingServers()) {
+                            // Not switching servers (no incoming handshake) -- we can assume they are actually
+                            // Logging out, and not switching servers
+                            profile.setOnline(false);
+                            cache.save(player); // Save
+                            // It's safe to save here because they aren't switching servers, but they are logging out entirely
+                        }
+                    } else {
+                        // This shouldn't happen
+                        cache.getErrorHandler().debug(cache, "Profile null during logout for Payload '" + player.getName() + "': could not set online=false");
+                    }
+
                     // In network node mode, join is handled before quit when switching servers
                     // so we don't want to save on quit
                     // but we do want to remove their locally cached profile because the data will be outdated
                     // and we want to prevent accidental data rollbacks
                     cache.getLocalLayer().remove(player.getUniqueId());
+
                 }
+
+                // Remove their data after they leave so that its reset for their next login
+                cache.removeData(player.getUniqueId());
+                cache.removeController(player.getUniqueId());
+
             }
         });
     }

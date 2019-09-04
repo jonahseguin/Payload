@@ -86,7 +86,9 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
 
                             if (target != null && target.getPlayer() != null && target.getPlayer().isOnline()) {
                                 // Save
+
                                 final X finalTarget = target;
+                                finalTarget.setSwitchingServers(true);
                                 this.cache.getPublisherJedis().publish(HandshakeEvent.SAVING_PAYLOAD.getName(), dataOutJson);
                                 this.cache.getPool().submit(() -> {
                                     this.cache.save(finalTarget);

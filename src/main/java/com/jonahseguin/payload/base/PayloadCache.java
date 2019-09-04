@@ -13,11 +13,13 @@ import com.jonahseguin.payload.base.layer.LayerController;
 import com.jonahseguin.payload.base.settings.CacheSettings;
 import com.jonahseguin.payload.base.state.CacheState;
 import com.jonahseguin.payload.base.state.PayloadTaskExecutor;
+import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
 import com.jonahseguin.payload.base.type.*;
 import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.PayloadDatabase;
 import lombok.Getter;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -47,6 +49,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     protected transient final CacheState<K, X, D> state;
     protected transient final LayerController<K, X, D> layerController = new LayerController<>();
     protected transient final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
+    protected transient final PayloadAutoSaveTask<K, X, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
     protected transient PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
 
     protected transient final Class<K> keyType;
@@ -79,15 +82,6 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         this.instantiator = instantiator;
     }
 
-    public void alert(PayloadPermission required, PLang lang, String... args) {
-        Bukkit.getLogger().info(this.langController.get(lang, args));
-        for (Player pl : this.plugin.getServer().getOnlinePlayers()) {
-            if (required.has(pl)) {
-                pl.sendMessage(this.langController.get(lang, args));
-            }
-        }
-    }
-
     /**
      * Check if the cache is locked (joinable?)
      *
@@ -112,6 +106,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         this.init();
         this.running = true;
         this.failureManager.start();
+        this.autoSaveTask.start();
         return true;
     }
 
@@ -122,6 +117,11 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
      */
     public final boolean stop() {
         if (!this.isRunning()) return true;
+        this.autoSaveTask.stop();
+        int failedSaves = this.saveAll();
+        if (failedSaves > 0) {
+            this.getErrorHandler().error(this, failedSaves + " Payload objects failed to save");
+        }
         this.shutdown(); // Allow the implementing cache to do it's shutdown first
         this.pool.shutdown(); // Shutdown our thread pool
         this.running = false;
@@ -198,6 +198,8 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
      * @param payload Payload to cache (save locally)
      */
     public abstract void cache(X payload);
+
+    public abstract int saveAll();
 
     /**
      * Get the name of this cache (set by the end user, should be unique)
@@ -278,6 +280,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     @Override
     public void onMongoDbInitConnect() {
         this.getPayloadDatabase().getState().setMongoConnected(true);
+        this.getPayloadDatabase().getState().setMongoInitConnect(true);
         if (this.getPayloadDatabase().getState().isDatabaseConnected()) {
             // Both connected
             this.getState().unlock();
@@ -287,9 +290,30 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     @Override
     public void onRedisInitConnect() {
         this.getPayloadDatabase().getState().setRedisConnected(true);
+        this.getPayloadDatabase().getState().setRedisInitConnect(true);
         if (this.getPayloadDatabase().getState().isDatabaseConnected()) {
             // Both connected
             this.getState().unlock();
         }
     }
+
+    public void alert(PayloadPermission required, PLang lang, String... args) {
+        Bukkit.getLogger().info(this.langController.get(lang, args));
+        for (Player pl : this.plugin.getServer().getOnlinePlayers()) {
+            if (required.has(pl)) {
+                pl.sendMessage(this.langController.get(lang, args));
+            }
+        }
+    }
+
+    public void alert(PayloadPermission required, String msg) {
+        msg = ChatColor.translateAlternateColorCodes('&', msg);
+        Bukkit.getLogger().info(msg);
+        for (Player pl : this.plugin.getServer().getOnlinePlayers()) {
+            if (required.has(pl)) {
+                pl.sendMessage(msg);
+            }
+        }
+    }
+
 }

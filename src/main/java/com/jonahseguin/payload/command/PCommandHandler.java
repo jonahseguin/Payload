@@ -25,6 +25,8 @@ public class PCommandHandler implements CommandExecutor {
         register(new CmdCacheList());
         register(new CmdCacheLayers());
         register(new CmdDebug());
+        register(new CmdProfile());
+        register(new CmdSaveall());
     }
 
     private void register(PayloadCommand cmd) {
@@ -78,12 +80,6 @@ public class PCommandHandler implements CommandExecutor {
                 }
                 CmdArgs cmdArgs = new CmdArgs(sender, pCmd, args);
                 try {
-                    StringBuffer buffer = new StringBuffer();
-                    for (String s : args) {
-                        buffer.append(s).append(" ");
-                    }
-                    sender.sendMessage("Command: " + command.name());
-                    sender.sendMessage("Args: " + buffer.toString() + " (" + args.length + ")");
                     command.execute(cmdArgs);
                 } catch (Exception ex) {
                     ex.printStackTrace();
