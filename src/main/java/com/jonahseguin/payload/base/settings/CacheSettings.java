@@ -7,7 +7,7 @@ import lombok.Setter;
 @Setter
 public abstract class CacheSettings {
 
-    private final int failureRetryIntervalSeconds = 30;
-    private final int autoSaveIntervalSeconds = 600; // 10 minutes
+    private int failureRetryIntervalSeconds = 30;
+    private int autoSaveIntervalSeconds = 600; // 10 minutes
 
 }
