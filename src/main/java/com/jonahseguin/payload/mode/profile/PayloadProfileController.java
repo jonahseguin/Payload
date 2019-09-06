@@ -48,6 +48,14 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         // Map their UUID to Username
         PayloadPlugin.get().getUUIDs().put(this.data.getUsername(), this.data.getUniqueId());
 
+        if (this.cache.getSettings().isDenyJoinDatabaseDown()) {
+            if (!this.cache.getPayloadDatabase().getState().canCacheFunction(this.cache)) {
+                this.denyJoin = true;
+                this.joinDenyReason = this.cache.getLangController().get(PLang.DENY_JOIN_DATABASE_DOWN, this.cache.getName());
+                return null;
+            }
+        }
+
         if (cache.getMode().equals(PayloadMode.STANDALONE)) {
             return this.cacheStandalone();
         } else if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
@@ -203,7 +211,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 } else {
                     this.cache.getErrorHandler().debug(this.cache, "No Payload stored in database (with failure), denying join for " + this.data.getUsername());
                     this.denyJoin = true;
-                    this.joinDenyReason = this.cache.getLangController().get(PLang.DENY_JOIN_HANDSHAKE_DATABASE_DOWN, this.cache.getName());
+                    this.joinDenyReason = this.cache.getLangController().get(PLang.DENY_JOIN_DATABASE_DOWN, this.cache.getName());
                 }
 
                 return null;

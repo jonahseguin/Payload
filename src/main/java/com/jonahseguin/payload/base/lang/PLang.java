@@ -31,7 +31,7 @@ public enum PLang {
     DEBUG_DATABASE("&7[Payload][Debug][Database: {0}] {1}"),
     ERROR_DATABASE("&7[Payload]&7[&cError&7][Database: {0}] {1} ({2})"),
     DENY_JOIN_HANDSHAKE_TIMEOUT("&7[&6{0}&7] &cConnection timed out.  Your profile didn't load from your connecting server in time.  Please try again.  If this problem persists, notify an administrator."),
-    DENY_JOIN_HANDSHAKE_DATABASE_DOWN("&7[&6{0}&7] &cYour profile couldn't be loaded because the database is down.  Please try again soon.  If this problem persists, notify an administrator."),
+    DENY_JOIN_DATABASE_DOWN("&7[&6{0}&7] &cYour profile couldn't be loaded because the database is down.  Please try again soon.  If this problem persists, notify an administrator."),
     SAVE_FAILED_NOTIFY_PLAYER("&7[&6{0}&7] &cYour profile failed to save.  Administrators have been notified and this incident has been logged.  Please temporarily avoid logging out or switching servers to prevent potential data loss until this issue is resolved."),
     SAVE_FAILED_NOTIFY_ADMIN("&7[&6{0}&7] &cProfile for player '{1}' failed to save."),
     SAVE_SUCCESS_NOTIFY_PLAYER("&7[&6{0}&7] &aYour profile saved successfully.  Thank you for your patience.  You may now log-out or switch servers as usual."),
