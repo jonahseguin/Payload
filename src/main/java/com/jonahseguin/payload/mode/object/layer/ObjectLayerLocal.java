@@ -1,16 +1,16 @@
 package com.jonahseguin.payload.mode.object.layer;
 
 import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
-import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.ObjectData;
+import com.jonahseguin.payload.mode.object.PayloadObject;
 import lombok.Getter;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Getter
-public class ObjectLayerLocal<X extends Payload> extends ObjectCacheLayer<X> {
+public class ObjectLayerLocal<X extends PayloadObject> extends ObjectCacheLayer<X> {
 
     private final ConcurrentMap<String, X> localCache = new ConcurrentHashMap<>();
 

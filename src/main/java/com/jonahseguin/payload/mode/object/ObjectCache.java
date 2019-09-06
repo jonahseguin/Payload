@@ -2,8 +2,11 @@ package com.jonahseguin.payload.mode.object;
 
 import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
+import com.jonahseguin.payload.base.failsafe.FailedPayload;
+import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.mode.object.layer.ObjectLayerLocal;
+import com.jonahseguin.payload.mode.object.layer.ObjectLayerMongo;
 import com.jonahseguin.payload.mode.object.layer.ObjectLayerRedis;
 import com.jonahseguin.payload.mode.object.settings.ObjectCacheSettings;
 import lombok.Getter;
@@ -12,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Getter
-public class ObjectCache<X extends Payload> extends PayloadCache<String, X, ObjectData> {
+public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X, ObjectData> {
 
     private transient final ObjectCacheSettings settings = new ObjectCacheSettings();
     private transient final ConcurrentMap<String, PayloadObjectController<X>> controllers = new ConcurrentHashMap<>();
@@ -22,6 +25,7 @@ public class ObjectCache<X extends Payload> extends PayloadCache<String, X, Obje
     // Layers
     private final ObjectLayerLocal<X> localLayer = new ObjectLayerLocal<>(this);
     private final ObjectLayerRedis<X> redisLayer = new ObjectLayerRedis<>(this);
+    private final ObjectLayerMongo<X> mongoLayer = new ObjectLayerMongo<>(this);
 
 
     public ObjectCache(PayloadHook hook, String name, Class<X> payloadClass) {
@@ -47,7 +51,7 @@ public class ObjectCache<X extends Payload> extends PayloadCache<String, X, Obje
     protected void init() {
         this.layerController.register(this.localLayer);
         this.layerController.register(this.redisLayer);
-
+        this.layerController.register(this.mongoLayer);
 
         this.layerController.init();
     }
@@ -58,8 +62,30 @@ public class ObjectCache<X extends Payload> extends PayloadCache<String, X, Obje
         this.layerController.shutdown();
     }
 
+    public X getLocalObject(String key) {
+        return this.localLayer.get(key);
+    }
+
     @Override
     protected X get(String key) {
+        ObjectData data = this.createData(key);
+        if (this.failureManager.hasFailure(data)) {
+            FailedPayload<X, ObjectData> failedPayload = this.failureManager.getFailedPayload(data);
+            if (failedPayload.getTemporaryPayload() == null) {
+                failedPayload.setTemporaryPayload(this.instantiator.instantiate(data));
+            }
+            return failedPayload.getTemporaryPayload();
+        }
+
+        for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
+            if (layer.has(data)) {
+                try {
+                    return layer.get(data);
+                } catch (PayloadLayerCannotProvideException ex) {
+                    this.getErrorHandler().exception(this, ex, "Error getting Object with identifier: " + key);
+                }
+            }
+        }
         return null;
     }
 
@@ -94,9 +120,16 @@ public class ObjectCache<X extends Payload> extends PayloadCache<String, X, Obje
     }
 
     public ObjectData createData(String identifier) {
+        if (this.data.containsKey(identifier)) {
+            return this.data.get(identifier);
+        }
         ObjectData data = new ObjectData(identifier);
         this.data.put(identifier, data);
         return data;
+    }
+
+    public ObjectData getData(String identifier) {
+        return this.data.getOrDefault(identifier, null);
     }
 
 }

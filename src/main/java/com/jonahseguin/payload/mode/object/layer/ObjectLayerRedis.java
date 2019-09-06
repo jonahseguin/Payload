@@ -2,16 +2,16 @@ package com.jonahseguin.payload.mode.object.layer;
 
 import com.jonahseguin.payload.base.exception.PayloadException;
 import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
-import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.ObjectData;
+import com.jonahseguin.payload.mode.object.PayloadObject;
 import com.mongodb.BasicDBObject;
 import com.mongodb.util.JSONParseException;
 import lombok.Getter;
 import redis.clients.jedis.Jedis;
 
 @Getter
-public class ObjectLayerRedis<X extends Payload> extends ObjectCacheLayer<X> {
+public class ObjectLayerRedis<X extends PayloadObject> extends ObjectCacheLayer<X> {
 
     public ObjectLayerRedis(ObjectCache<X> cache) {
         super(cache);

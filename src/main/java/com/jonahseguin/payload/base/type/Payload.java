@@ -16,6 +16,14 @@ public interface Payload {
     String getIdentifier();
 
     /**
+     * The field name that {@link #getIdentifier()} returns from
+     * The name of the field for the identifier (i.e for MongoDB lookup)
+     *
+     * @return String: identifier field name
+     */
+    String identifierFieldName();
+
+    /**
      * Internal method to get the cache associated with this Payload object.
      * Every Payload object must have their matching cache stored in their object locally (non-persistent / transient)
      * @return PayloadCache
@@ -23,7 +31,15 @@ public interface Payload {
     PayloadCache getCache();
 
     /**
-     * Called internally when this profile is accessed, used for updating last-access times to handle cache expiry/object
+     * Get a timestamp of when this object was cached
+     * (i.e or last interaction with this object)
+     *
+     * @return Timestamp of cache
+     */
+    long cachedTimestamp();
+
+    /**
+     * Called internally when this profile/payload/object is accessed.  Used for updating last-access times to handle cache expiry/object
      * cleanup internally.
      */
     void interact();
