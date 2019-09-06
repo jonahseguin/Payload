@@ -2,8 +2,6 @@ package com.jonahseguin.payload.mode.object;
 
 import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
-import com.jonahseguin.payload.base.failsafe.FailedPayload;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.mode.object.layer.ObjectLayerLocal;
 import com.jonahseguin.payload.mode.object.layer.ObjectLayerMongo;
@@ -50,15 +48,20 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
     @Override
     protected void init() {
         this.layerController.register(this.localLayer);
-        this.layerController.register(this.redisLayer);
-        this.layerController.register(this.mongoLayer);
+        if (this.settings.isUseRedis()) {
+            this.layerController.register(this.redisLayer);
+        }
+        if (this.settings.isUseMongo()) {
+            this.layerController.register(this.mongoLayer);
+        }
 
         this.layerController.init();
     }
 
     @Override
     protected void shutdown() {
-
+        this.data.clear();
+        this.controllers.clear();
         this.layerController.shutdown();
     }
 
@@ -66,27 +69,29 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
         return this.localLayer.get(key);
     }
 
+    public X getObject(String key) {
+        return this.get(key);
+    }
+
+    public boolean hasObjectLocal(String key) {
+        return this.localLayer.has(key);
+    }
+
+    public void removeObjectLocal(String key) {
+        this.localLayer.remove(key);
+    }
+
+    public void removeObject(String key) {
+        for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
+            layer.remove(key);
+        }
+    }
+
     @Override
     protected X get(String key) {
         ObjectData data = this.createData(key);
-        if (this.failureManager.hasFailure(data)) {
-            FailedPayload<X, ObjectData> failedPayload = this.failureManager.getFailedPayload(data);
-            if (failedPayload.getTemporaryPayload() == null) {
-                failedPayload.setTemporaryPayload(this.instantiator.instantiate(data));
-            }
-            return failedPayload.getTemporaryPayload();
-        }
-
-        for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
-            if (layer.has(data)) {
-                try {
-                    return layer.get(data);
-                } catch (PayloadLayerCannotProvideException ex) {
-                    this.getErrorHandler().exception(this, ex, "Error getting Object with identifier: " + key);
-                }
-            }
-        }
-        return null;
+        PayloadObjectController<X> controller = this.controller(data);
+        return controller.cache();
     }
 
     @Override
@@ -96,7 +101,13 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
 
     @Override
     public boolean save(X payload) {
-        return false;
+        boolean success = true;
+        for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
+            if (!layer.save(payload)) {
+                success = false;
+            }
+        }
+        return success;
     }
 
     @Override
@@ -106,7 +117,13 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
 
     @Override
     public int saveAll() {
-        return 0;
+        int failures = 0;
+        for (X object : this.localLayer.getLocalCache().values()) {
+            if (!this.save(object)) {
+                failures++;
+            }
+        }
+        return failures;
     }
 
     @Override

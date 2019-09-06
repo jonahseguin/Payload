@@ -71,6 +71,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         this.layerController.shutdown();
         this.publisherJedis.close();
         this.subscriberJedis.close();
+        this.publisherJedis = null;
+        this.subscriberJedis = null;
+        this.data.clear();
+        this.controllers.clear();
     }
 
     @Override
@@ -98,6 +102,14 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     public X getProfile(Player player) {
         return this.get(player.getUniqueId());
+    }
+
+    public boolean hasProfileLocal(UUID uuid) {
+        return this.localLayer.has(uuid);
+    }
+
+    public boolean hasProfileLocal(Player player) {
+        return this.hasProfileLocal(player.getUniqueId());
     }
 
     @Override
@@ -241,14 +253,18 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     public void onRedisInitConnect() {
         super.onRedisInitConnect();
         // Allocate Jedis resources for Publishing and Subscribing
-        this.publisherJedis = this.payloadDatabase.getJedisPool().getResource();
-        this.subscriberJedis = this.payloadDatabase.getJedisPool().getResource();
+        if (this.publisherJedis == null) {
+            this.publisherJedis = this.payloadDatabase.getJedisPool().getResource();
+        }
+        if (this.subscriberJedis == null) {
+            this.subscriberJedis = this.payloadDatabase.getJedisPool().getResource();
 
-        this.subscriberJedis.subscribe(this.handshakeListener,
-                HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(),
-                HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(),
-                HandshakeEvent.SAVED_PAYLOAD.getName(),
-                HandshakeEvent.SAVING_PAYLOAD.getName());
+            this.subscriberJedis.subscribe(this.handshakeListener,
+                    HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(),
+                    HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(),
+                    HandshakeEvent.SAVED_PAYLOAD.getName(),
+                    HandshakeEvent.SAVING_PAYLOAD.getName());
+        }
     }
 
 
