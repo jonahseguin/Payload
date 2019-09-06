@@ -14,6 +14,7 @@ import com.jonahseguin.payload.base.settings.CacheSettings;
 import com.jonahseguin.payload.base.state.CacheState;
 import com.jonahseguin.payload.base.state.PayloadTaskExecutor;
 import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
+import com.jonahseguin.payload.base.task.PayloadCleanupTask;
 import com.jonahseguin.payload.base.type.*;
 import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.PayloadDatabase;
@@ -50,6 +51,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     protected transient final LayerController<K, X, D> layerController = new LayerController<>();
     protected transient final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
     protected transient final PayloadAutoSaveTask<K, X, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
+    protected transient final PayloadCleanupTask<K, X, D> cleanupTask = new PayloadCleanupTask<>(this);
     protected transient PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
 
     protected transient final Class<K> keyType;
@@ -107,6 +109,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         this.running = true;
         this.failureManager.start();
         this.autoSaveTask.start();
+        this.cleanupTask.start();
         return true;
     }
 
@@ -118,9 +121,10 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     public final boolean stop() {
         if (!this.isRunning()) return true;
         this.autoSaveTask.stop();
+        this.cleanupTask.stop();
         int failedSaves = this.saveAll();
         if (failedSaves > 0) {
-            this.getErrorHandler().error(this, failedSaves + " Payload objects failed to save");
+            this.getErrorHandler().error(this, failedSaves + " Payload objects failed to save during shutdown");
         }
         this.shutdown(); // Allow the implementing cache to do it's shutdown first
         this.pool.shutdown(); // Shutdown our thread pool
@@ -250,31 +254,21 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     @Override
     public void onMongoDbDisconnect() {
         this.getPayloadDatabase().getState().setMongoConnected(false);
-        this.getState().lock();
     }
 
     @Override
     public void onRedisDisconnect() {
         this.getPayloadDatabase().getState().setRedisConnected(false);
-        this.getState().lock();
     }
 
     @Override
     public void onMongoDbReconnect() {
         this.getPayloadDatabase().getState().setMongoConnected(true);
-        if (this.getPayloadDatabase().getState().isDatabaseConnected()) {
-            // Both connected
-            this.getState().unlock();
-        }
     }
 
     @Override
     public void onRedisReconnect() {
         this.getPayloadDatabase().getState().setRedisConnected(true);
-        if (this.getPayloadDatabase().getState().isDatabaseConnected()) {
-            // Both connected
-            this.getState().unlock();
-        }
     }
 
     @Override
@@ -291,10 +285,6 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     public void onRedisInitConnect() {
         this.getPayloadDatabase().getState().setRedisConnected(true);
         this.getPayloadDatabase().getState().setRedisInitConnect(true);
-        if (this.getPayloadDatabase().getState().isDatabaseConnected()) {
-            // Both connected
-            this.getState().unlock();
-        }
     }
 
     public void alert(PayloadPermission required, PLang lang, String... args) {

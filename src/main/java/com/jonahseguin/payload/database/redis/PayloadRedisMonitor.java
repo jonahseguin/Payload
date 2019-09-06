@@ -45,11 +45,11 @@ public class PayloadRedisMonitor implements Runnable {
         if (jedis == null) {
             // Jedis hasn't been initialized yet; ignore
             this.handleDisconnected();
-            this.database.connectRedis();
             return;
         }
         try {
             if (jedis.isConnected()) {
+                jedis.ping();
                 // Connected
                 this.handleConnected();
             }
@@ -62,11 +62,11 @@ public class PayloadRedisMonitor implements Runnable {
         }
         catch (Exception ex) {
             // Failed, assume disconnected
+            this.handleDisconnected();
             this.database.databaseError(ex, "Error in Redis Monitor task: " + ex.getMessage());
             if (PayloadPlugin.get().isDebug()) {
                 ex.printStackTrace();
             }
-            this.handleDisconnected();
         }
     }
 
@@ -89,6 +89,7 @@ public class PayloadRedisMonitor implements Runnable {
             this.database.getHooks().forEach(PayloadCache::onRedisDisconnect);
             database.databaseDebug("Redis connection lost");
         }
+        this.database.connectRedis();
     }
 
 }

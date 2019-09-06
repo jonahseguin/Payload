@@ -28,7 +28,7 @@ public class CacheState<K, X extends Payload, D extends PayloadData> {
     public final void lock() {
         if (!this.locked) {
             this.locked = true;
-            this.cache.alert(PayloadPermission.ADMIN, PLang.CACHE_LOCKED);
+            this.cache.alert(PayloadPermission.ADMIN, PLang.CACHE_LOCKED, cache.getName());
         }
     }
 
@@ -39,7 +39,7 @@ public class CacheState<K, X extends Payload, D extends PayloadData> {
     public final void unlock() {
         if (this.locked) {
             this.locked = false;
-            this.cache.alert(PayloadPermission.ADMIN, PLang.CACHE_UNLOCKED);
+            this.cache.alert(PayloadPermission.ADMIN, PLang.CACHE_UNLOCKED, cache.getName());
         }
     }
 

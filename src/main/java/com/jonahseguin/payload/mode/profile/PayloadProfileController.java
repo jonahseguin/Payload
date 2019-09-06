@@ -127,54 +127,62 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         X prePayload = attemptCache(true);
 
         if (prePayload != null) {
-            if (prePayload.getLastSeenServer() != null && !prePayload.getLastSeenServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
+            if (prePayload.getLastSeenServer() != null) {
                 // begin a handshake to get the server they were last seen on to save their profile before we continue to load their data
 
-                this.handshaking = true;
-
-                this.cache.getErrorHandler().debug(this.cache, "Beginning handshake for " + this.data.getUsername() + " from server " + prePayload.getLastSeenServer());
-
-                // Publish our event to request that the lastSeenServer saves the profile
-                this.cache.getHandshakeManager().beginHandshake(this, prePayload.getLastSeenServer());
-
-                // Wait for the handshake to complete
-                if (!this.cache.getHandshakeManager().waitForHandshake(this)) {
-                    this.timedOut = true;
-                }
-
-                // Once we get here, the handshake will be complete (or timed out)
-
-                if (!this.timedOut) {
-                    // Didn't timeout, the handshake completed successfully.
-                    // We can now load their Profile data as per usual.
-
-                    if (this.isAbortHandshakeNotCached()) {
-                        // the payload wasn't on the target server
-                        // just cache the prePayload we already loaded
-                        this.cache.cache(prePayload);
-                        payload = prePayload;
-                    } else {
-                        // Handshake completed, cache normally
-                        payload = cacheStandalone();
-                    }
-                    this.cache.getErrorHandler().debug(this.cache, "Handshake completed & cached for Payload " + this.data.getUsername());
-
+                if (prePayload.getLastSeenServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
+                    // They were last seen on this server
+                    // Use the payload we already loaded
+                    payload = prePayload;
+                    this.cache.cache(payload);
+                    this.cache.getErrorHandler().debug(this.cache, "Recent server for Payload " + this.data.getUsername() + " is this server, using Payload from database");
                 } else {
-                    this.cache.getErrorHandler().debug(this.cache, "Handshake timed out for Payload " + this.data.getUsername());
-                    if (!this.cache.getSettings().isDenyJoinOnHandshakeTimeout()) {
-                        // Allow join, start failure handling
-                        if (!this.cache.getFailureManager().hasFailure(this.data)) {
-                            this.cache.getFailureManager().fail(this.data);
+
+                    this.handshaking = true;
+
+                    this.cache.getErrorHandler().debug(this.cache, "Beginning handshake for " + this.data.getUsername() + " from server " + prePayload.getLastSeenServer());
+
+                    // Publish our event to request that the lastSeenServer saves the profile
+                    this.cache.getHandshakeManager().beginHandshake(this, prePayload.getLastSeenServer());
+
+                    // Wait for the handshake to complete
+                    if (!this.cache.getHandshakeManager().waitForHandshake(this)) {
+                        this.timedOut = true;
+                    }
+
+                    // Once we get here, the handshake will be complete (or timed out)
+
+                    if (!this.timedOut) {
+                        // Didn't timeout, the handshake completed successfully.
+                        // We can now load their Profile data as per usual.
+
+                        if (this.isAbortHandshakeNotCached()) {
+                            // the payload wasn't on the target server
+                            // just cache the prePayload we already loaded
+                            this.cache.cache(prePayload);
+                            payload = prePayload;
+                        } else {
+                            // Handshake completed, cache normally
+                            payload = cacheStandalone();
                         }
-                        return null;
+                        this.cache.getErrorHandler().debug(this.cache, "Handshake completed & cached for Payload " + this.data.getUsername());
+
                     } else {
-                        // Deny the join
-                        this.denyJoin = true;
-                        this.joinDenyReason = this.cache.getLangController().get(PLang.DENY_JOIN_HANDSHAKE_TIMEOUT, this.cache.getName());
-                        return null;
+                        this.cache.getErrorHandler().debug(this.cache, "Handshake timed out for Payload " + this.data.getUsername());
+                        if (!this.cache.getSettings().isDenyJoinOnHandshakeTimeout()) {
+                            // Allow join, start failure handling
+                            if (!this.cache.getFailureManager().hasFailure(this.data)) {
+                                this.cache.getFailureManager().fail(this.data);
+                            }
+                            return null;
+                        } else {
+                            // Deny the join
+                            this.denyJoin = true;
+                            this.joinDenyReason = this.cache.getLangController().get(PLang.DENY_JOIN_HANDSHAKE_TIMEOUT, this.cache.getName());
+                            return null;
+                        }
                     }
                 }
-
             } else {
                 // They haven't been seen on a server recently (aren't switching servers on a network)
                 // Just use the object we loaded from the database as it's up to date.

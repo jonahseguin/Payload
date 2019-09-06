@@ -14,8 +14,8 @@ public enum PLang {
     ERROR_FAILED_TO_LOAD_PAYLOAD_FILE("&7[Payload] &4[Fatal] Couldn't load payload.yml file.  Aborting startup and locking server."),
     KICK_MESSAGE_LOCKED("&7[{0}] &4The server is currently locked for maintenance.  We are working on resolving this problem as soon as possible.  Please try again soon."),
     KICK_MESSAGE_ADMIN_LOCKED("&7[Payload] &4[Fatal] &cThe server has been locked to players due to a fatal error during Payload startup.  Try restarting the server, and check the error logs for details."),
-    CACHE_LOCKED("&7[Payload] The cache &b{0} &7has been &clocked&7. ({1})"), // argument is for the reason
-    CACHE_UNLOCKED("&7[Payload] The cache &b{0} &7has been &aunlocked&7. ({1})"),  // argument is for the reason
+    CACHE_LOCKED("&7[Payload] The cache &b{0} &7has been &clocked&7."), // argument is for the reason
+    CACHE_UNLOCKED("&7[Payload] The cache &b{0} &7has been &aunlocked&7."),  // argument is for the reason
     UNKNOWN_COMMAND("&cPayload: Sub-command '{0}' does not exist.  Type /payload help for a list of commands."),
     COMMAND_NO_PERMISSION("&cPayload: You do not have permission to use this command."),
     COMMAND_INCORRECT_USAGE("&cPayload: At least {0} argument(s) required for this command.  Usage: {1}"),

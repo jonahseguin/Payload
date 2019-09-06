@@ -202,7 +202,7 @@ public class PayloadDatabase {
             }
             return true; // No errors if we got here; success
         } catch (Exception ex) {
-            this.databaseError(ex, "Failed Redis connection attempt: " + ex.getMessage());
+            this.databaseError(ex, "Failed Redis connection attempt");
             // Generic exception catch
             return false; // Failed to connect
         } finally {
@@ -273,8 +273,16 @@ public class PayloadDatabase {
         for (PayloadCache cache : this.getHooks()) {
             if (cache.isRunning()) {
                 // Still running... don't just close the DB connection w/o proper shutdown
-                PayloadPlugin.get().getLogger().info("[Payload] Database '" + this.name + "' stopped, stopping dependent cache: " + cache.getName());
+                this.databaseDebug("Database '" + this.name + "' stopped, stopping dependent cache: " + cache.getName());
+                if (cache.stop()) {
+                    this.databaseDebug("Stopped cache '" + cache.getName() + "' successfully.");
+                } else {
+                    this.databaseDebug("Failed to properly stop cache '" + cache.getName() + "', proceeding anyways.");
+                }
             }
+        }
+        if (this.redisMonitor != null) {
+            this.redisMonitor.stop();
         }
         boolean mongo = this.disconnectMongo();
         boolean redis = this.disconnectRedis();
@@ -283,7 +291,8 @@ public class PayloadDatabase {
     }
 
     public void databaseError(Throwable ex, String msg) {
-        PayloadPlugin.get().alert(PayloadPermission.DEBUG, "&c[Payload][Database: " + this.getName() + "] " + msg + " - " + ex.getMessage());
+        PayloadPlugin.get().getLogger().severe("[Database: " + this.getName() + "] " + msg + " - " + ex.getMessage());
+        //PayloadPlugin.get().alert(PayloadPermission.DEBUG, "&c[Payload][Database: " + this.getName() + "] " + msg + " - " + ex.getMessage());
         if (PayloadPlugin.get().isDebug()) {
             ex.printStackTrace();
         }

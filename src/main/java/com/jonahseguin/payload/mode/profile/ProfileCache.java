@@ -21,8 +21,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import redis.clients.jedis.Jedis;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -41,7 +39,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     private transient final ProfileLayerRedis<X> redisLayer = new ProfileLayerRedis<>(this);
     private transient final ProfileLayerMongo<X> mongoLayer = new ProfileLayerMongo<>(this);
 
-    private transient final Map<UUID, ProfileData> data = new HashMap<>();
+    private transient final ConcurrentMap<UUID, ProfileData> data = new ConcurrentHashMap<>();
 
     private transient Jedis publisherJedis = null;
     private transient Jedis subscriberJedis = null;
@@ -108,7 +106,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             // They are attempting to be cached
             FailedPayload<X, ProfileData> failedPayload = this.getFailureManager().getFailedPayload(uniqueId);
             if (failedPayload.getTemporaryPayload() == null) {
-                if (failedPayload.getPlayer() != null) {
+                if (failedPayload.getPlayer() != null && failedPayload.getPlayer().isOnline()) {
                     failedPayload.setTemporaryPayload(this.instantiator.instantiate(this.createData(failedPayload.getPlayer().getName(), uniqueId, failedPayload.getPlayer().getAddress().getAddress().getHostAddress())));
                 }
             }
