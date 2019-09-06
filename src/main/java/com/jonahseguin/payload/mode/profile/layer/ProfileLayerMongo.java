@@ -2,6 +2,7 @@ package com.jonahseguin.payload.mode.profile.layer;
 
 import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
 import com.jonahseguin.payload.base.lang.PLang;
+import com.jonahseguin.payload.base.type.PayloadQueryModifier;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
@@ -10,12 +11,16 @@ import org.bson.types.Binary;
 import org.bukkit.entity.Player;
 import org.mongodb.morphia.query.Query;
 
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLayer<X> {
+
+    private final Set<PayloadQueryModifier<X>> queryModifiers = new HashSet<>();
 
     public ProfileLayerMongo(ProfileCache<X> cache) {
         super(cache);
@@ -231,15 +236,35 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
         return "Profile MongoDB";
     }
 
-    public Query<X> getQuery(UUID uniqueId) {
+    public void addCriteriaModifier(PayloadQueryModifier<X> modifier) {
+        this.queryModifiers.add(modifier);
+    }
+
+    public void removeCriteriaModifier(PayloadQueryModifier<X> modifier) {
+        this.queryModifiers.remove(modifier);
+    }
+
+    public void applyQueryModifiers(Query<X> query) {
+        for (PayloadQueryModifier<X> modifier : this.queryModifiers) {
+            modifier.apply(query);
+        }
+    }
+
+    public Query<X> createQuery() {
         Query<X> q = this.cache.getPayloadDatabase().getDatastore().createQuery(this.cache.getPayloadClass());
+        this.applyQueryModifiers(q);
+        return q;
+    }
+
+    public Query<X> getQuery(UUID uniqueId) {
+        Query<X> q = this.createQuery();
         q.maxTime(10, TimeUnit.SECONDS);
         q.criteria("uniqueId").equalIgnoreCase(uniqueId.toString());
         return q;
     }
 
     public Query<X> getQueryForUsername(String username) {
-        Query<X> q = this.cache.getPayloadDatabase().getDatastore().createQuery(this.cache.getPayloadClass());
+        Query<X> q = this.createQuery();
         q.maxTime(10, TimeUnit.SECONDS);
         q.criteria("username").equalIgnoreCase(username);
         return q;
