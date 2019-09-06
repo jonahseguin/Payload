@@ -20,9 +20,6 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public X get(UUID uuid) throws PayloadLayerCannotProvideException {
-        if (!this.has(uuid)) {
-            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in Redis layer for Profile username:" + uuid.toString(), this.cache);
-        }
         try {
             String json = this.jedis().hget(this.getCache().getName(), uuid.toString());
             return mapProfile(json);

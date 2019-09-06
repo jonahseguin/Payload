@@ -10,8 +10,6 @@ import com.mongodb.util.JSONParseException;
 import lombok.Getter;
 import redis.clients.jedis.Jedis;
 
-import java.util.Map;
-
 @Getter
 public class ObjectLayerRedis<X extends Payload> extends ObjectCacheLayer<X> {
 
@@ -21,10 +19,13 @@ public class ObjectLayerRedis<X extends Payload> extends ObjectCacheLayer<X> {
 
     @Override
     public X get(String key) throws PayloadLayerCannotProvideException {
-        if (!this.has(key)) {
-            throw new PayloadLayerCannotProvideException("Cannot provide in local layer for object identifier: " + key, this.cache);
+        try {
+            String json = this.jedis().hget(this.getCache().getName(), key);
+            return mapObject(json);
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error getting Object from Redis Layer: " + key);
+            return null;
         }
-        return this.localCache.get(key);
     }
 
     @Override
@@ -34,13 +35,24 @@ public class ObjectLayerRedis<X extends Payload> extends ObjectCacheLayer<X> {
 
     @Override
     public boolean save(X payload) {
-        this.localCache.put(payload.getIdentifier(), payload);
-        return true;
+        String json = jsonifyObject(payload);
+        try {
+            this.jedis().hset(this.getCache().getName(), payload.getIdentifier(), json);
+            return true;
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error saving Object to Redis Layer: " + payload.getIdentifier());
+            return false;
+        }
     }
 
     @Override
     public boolean has(String key) {
-        return this.localCache.containsKey(key);
+        try {
+            return this.jedis().hexists(this.getCache().getName(), key);
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error checking if Object exists in Redis Layer: " + key);
+            return false;
+        }
     }
 
     @Override
@@ -55,7 +67,11 @@ public class ObjectLayerRedis<X extends Payload> extends ObjectCacheLayer<X> {
 
     @Override
     public void remove(String key) {
-        this.localCache.remove(key);
+        try {
+            this.jedis().hdel(this.getCache().getName(), key);
+        } catch (Exception expected) {
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error removing Object from Redis Layer: " + key);
+        }
     }
 
     @Override
@@ -70,29 +86,6 @@ public class ObjectLayerRedis<X extends Payload> extends ObjectCacheLayer<X> {
 
     @Override
     public int cleanup() {
-        if (this.cache.getSettings().getRedisExpiryTimeSeconds() > 0) {
-            final long expiredTimestamp = System.currentTimeMillis() - (1000 * this.cache.getSettings().getRedisExpiryTimeSeconds());
-            Map<String, String> objectsString = this.jedis().hgetAll(this.cache.getName());
-            int cleaned = 0;
-            for (Map.Entry<String, String> entry : objectsString.entrySet()) {
-                try {
-                    X object = mapObject(entry.getValue());
-                    if (object != null) {
-                        if (object.getRedisCacheTimestamp() <= expiredTimestamp) {
-                            // Object is expired, remove it from Redis
-                            this.jedis().hdel(this.cache.getName(), entry.getKey());
-                        }
-                    } else {
-                        // If the object is null, let's remove it from Redis (if it couldn't map or is just null)
-                        this.jedis().hdel(this.cache.getName(), entry.getKey());
-                    }
-                } catch (Exception ex) {
-                    // If we get an error [are unable to map the profile], let's remove it from Redis.
-                    this.jedis().hdel(this.cache.getName(), entry.getKey());
-                }
-            }
-            return cleaned;
-        }
         return 0;
     }
 

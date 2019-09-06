@@ -4,6 +4,7 @@ import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.mode.object.layer.ObjectLayerLocal;
+import com.jonahseguin.payload.mode.object.layer.ObjectLayerRedis;
 import com.jonahseguin.payload.mode.object.settings.ObjectCacheSettings;
 import lombok.Getter;
 
@@ -20,6 +21,8 @@ public class ObjectCache<X extends Payload> extends PayloadCache<String, X, Obje
 
     // Layers
     private final ObjectLayerLocal<X> localLayer = new ObjectLayerLocal<>(this);
+    private final ObjectLayerRedis<X> redisLayer = new ObjectLayerRedis<>(this);
+
 
     public ObjectCache(PayloadHook hook, String name, Class<X> payloadClass) {
         super(hook, name, String.class, payloadClass);
@@ -43,6 +46,7 @@ public class ObjectCache<X extends Payload> extends PayloadCache<String, X, Obje
     @Override
     protected void init() {
         this.layerController.register(this.localLayer);
+        this.layerController.register(this.redisLayer);
 
 
         this.layerController.init();
