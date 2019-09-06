@@ -25,6 +25,9 @@ public class PayloadHook {
         ProfileCache<X> cache = new ProfileCache<>(this, name, type);
         database.hookCache(cache);
         PayloadAPI.get().saveCache(cache, this);
+
+        database.getMorphia().map(type);
+
         return cache;
     }
 
@@ -32,6 +35,9 @@ public class PayloadHook {
         ObjectCache<X> cache = new ObjectCache<>(this, name, type);
         database.hookCache(cache);
         PayloadAPI.get().saveCache(cache, this);
+
+        database.getMorphia().map(type);
+
         return cache;
     }
 
