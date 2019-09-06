@@ -90,4 +90,13 @@ public abstract class PayloadProfile implements Payload {
         return this.player != null;
     }
 
+    @Override
+    public String identifierFieldName() {
+        return "uniqueId";
+    }
+
+    @Override
+    public long cachedTimestamp() {
+        return this.lastInteractionTimestamp;
+    }
 }
