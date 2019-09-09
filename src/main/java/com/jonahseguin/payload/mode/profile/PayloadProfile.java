@@ -1,11 +1,16 @@
 package com.jonahseguin.payload.mode.profile;
 
 import com.jonahseguin.payload.PayloadAPI;
+import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
 import lombok.Getter;
 import lombok.Setter;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
 import org.apache.commons.lang3.Validate;
 import org.bson.types.ObjectId;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.mongodb.morphia.annotations.Id;
 
@@ -31,7 +36,7 @@ public abstract class PayloadProfile implements Payload {
     protected long redisCacheTimestamp = System.currentTimeMillis();
 
     protected transient boolean switchingServers = false; // set to true when an incoming handshake requests their profile be saved
-    protected transient boolean saveFailed = false; // If the player's profile saved to auto-save/save on shutdown,
+    protected transient boolean saveFailed = false; // If the player's profile failed to auto-save/save on shutdown,
     // This will be set to true, and we will notify the player once their
     // Profile has been saved successfully
 
@@ -57,6 +62,23 @@ public abstract class PayloadProfile implements Payload {
     public void initializePlayer(Player player) {
         Validate.notNull(player, "Player cannot be null for initializePlayer");
         this.player = player;
+    }
+
+    public boolean isPlayerOnline() {
+        if (this.player == null) {
+            Player player = Bukkit.getPlayerExact(this.username);
+            if (player != null) {
+                this.player = player;
+            }
+        }
+        return this.player != null && this.player.isOnline();
+    }
+
+    public String getCurrentIP() {
+        if (player != null && player.isOnline()) {
+            return player.getAddress().getAddress().getHostAddress();
+        }
+        return this.getLoginIp();
     }
 
     public UUID getUniqueId() {
@@ -99,4 +121,35 @@ public abstract class PayloadProfile implements Payload {
     public long cachedTimestamp() {
         return this.lastInteractionTimestamp;
     }
+
+    public void msg(String msg) {
+        if (player != null && player.isOnline()) {
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', msg));
+        }
+    }
+
+    public void msg(String msg, String... args) {
+        this.msg(PayloadPlugin.format(msg, args));
+    }
+
+    public void msg(BaseComponent component) {
+        if (player != null && player.isOnline()) {
+            player.spigot().sendMessage(component);
+        }
+    }
+
+    public void msg(BaseComponent[] components) {
+        if (player != null && player.isOnline()) {
+            player.spigot().sendMessage(components);
+        }
+    }
+
+    public void msgBuilder(String msg, MsgBuilder builder) {
+        this.msg(builder.build(new ComponentBuilder(msg)));
+    }
+
+    public ComponentBuilder msgBuilder(String msg) {
+        return new ComponentBuilder(msg);
+    }
+
 }

@@ -85,10 +85,28 @@ public class PayloadLangController {
         return PayloadPlugin.format(this.getRawDefinition(key), args);
     }
 
+    public void loadFromFile(String fileName) {
+        File folder = PayloadPlugin.get().getDataFolder();
+        File file;
+        try {
+            if (!folder.exists()) {
+                folder.mkdirs();
+            }
+            file = new File(folder, fileName);
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+        } catch (IOException ex) {
+            throw new PayloadRuntimeException("Could not load language file from file " + fileName);
+        }
+        loadFromFile(file);
+    }
+
     public void loadFromFile(File file) {
         if (!file.exists()) {
             throw new PayloadRuntimeException("File " + file.getName() + " does not exist, cannot load language definitions from it");
         }
+        writeDefaultsToFile(file);
         YamlConfiguration yc = YamlConfiguration.loadConfiguration(file);
         for (PLang key : PLang.values()) {
             String yamlKey = key.toString().toLowerCase();
@@ -106,7 +124,9 @@ public class PayloadLangController {
 
                 YamlConfiguration yc = YamlConfiguration.loadConfiguration(file);
                 for (PLang key : PLang.values()) {
-                    yc.set(key.toString(), key.get());
+                    if (!yc.contains(key.toString())) {
+                        yc.set(key.toString(), key.get());
+                    }
                 }
                 yc.save(file);
             } catch (IOException ex) {

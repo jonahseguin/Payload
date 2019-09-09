@@ -78,6 +78,8 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         this.name = name;
         this.executor = new PayloadTaskExecutor<>(this);
         this.state = new CacheState<>(this);
+
+        this.langController.loadFromFile(name.toLowerCase().replaceAll(" ", "_") + ".yml");
     }
 
     public void withInstantiator(PayloadInstantiator<X, D> instantiator) {

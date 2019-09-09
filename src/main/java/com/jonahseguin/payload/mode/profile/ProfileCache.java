@@ -21,9 +21,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import redis.clients.jedis.Jedis;
 
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 @Getter
 public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X, ProfileData> {
@@ -142,6 +144,12 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     public X getLocalProfile(Player player) {
         return this.localLayer.getLocalCache().get(player.getUniqueId());
+    }
+
+    public Set<X> getOnlineProfiles() {
+        return this.localLayer.getLocalCache().values().stream()
+                .filter(PayloadProfile::isPlayerOnline)
+                .collect(Collectors.toSet());
     }
 
     public ProfileData createData(String username, UUID uniqueId, String ip) {
