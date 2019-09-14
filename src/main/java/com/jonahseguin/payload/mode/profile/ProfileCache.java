@@ -195,6 +195,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             payload.sendMessage(this.getLangController().get(PLang.SAVE_FAILED_NOTIFY_PLAYER, this.getName()));
             this.alert(PayloadPermission.ADMIN, PLang.SAVE_FAILED_NOTIFY_ADMIN, this.getName(), payload.getUsername());
         } else {
+            payload.setLastSaveTimestamp(System.currentTimeMillis());
             if (payload.isSaveFailed()) {
                 // They previously had failed to save
                 // but now we are successful.
@@ -286,6 +287,9 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     public void updatePayloadID() {
         for (X x : this.getCachedObjects()) {
             x.setPayloadId(PayloadAPI.get().getPayloadID());
+            if (x.isPlayerOnline()) {
+                x.setLastSeenServer(PayloadAPI.get().getPayloadID());
+            }
         }
         this.pool.submit(this::saveAll);
     }

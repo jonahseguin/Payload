@@ -31,10 +31,11 @@ public abstract class PayloadProfile implements Payload {
     protected String lastSeenServer = null; // The Payload ID of the server they last joined
     protected boolean online = false; // is the profile online anywhere in the network, can be true even if they aren't online on this server instance
     protected String payloadId; // The ID of the Payload instance that currently holds this profile
-    protected long cachedTimestamp = System.currentTimeMillis();
-    protected long lastInteractionTimestamp = System.currentTimeMillis();
-    protected long redisCacheTimestamp = System.currentTimeMillis();
 
+    protected transient long cachedTimestamp = System.currentTimeMillis();
+    protected transient long lastInteractionTimestamp = System.currentTimeMillis();
+    protected transient long redisCacheTimestamp = System.currentTimeMillis();
+    protected transient long lastSaveTimestamp = 0;
     protected transient boolean switchingServers = false; // set to true when an incoming handshake requests their profile be saved
     protected transient boolean saveFailed = false; // If the player's profile failed to auto-save/save on shutdown,
     // This will be set to true, and we will notify the player once their
