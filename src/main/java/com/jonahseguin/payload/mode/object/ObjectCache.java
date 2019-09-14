@@ -9,6 +9,7 @@ import com.jonahseguin.payload.mode.object.layer.ObjectLayerRedis;
 import com.jonahseguin.payload.mode.object.settings.ObjectCacheSettings;
 import lombok.Getter;
 
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -149,4 +150,13 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
         return this.data.getOrDefault(identifier, null);
     }
 
+    @Override
+    public Collection<X> getCachedObjects() {
+        return this.localLayer.getLocalCache().values();
+    }
+
+    @Override
+    public void updatePayloadID() {
+
+    }
 }

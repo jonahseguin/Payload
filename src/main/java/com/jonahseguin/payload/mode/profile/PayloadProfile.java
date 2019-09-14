@@ -119,7 +119,7 @@ public abstract class PayloadProfile implements Payload {
 
     @Override
     public long cachedTimestamp() {
-        return this.lastInteractionTimestamp;
+        return this.cachedTimestamp;
     }
 
     public void msg(String msg) {

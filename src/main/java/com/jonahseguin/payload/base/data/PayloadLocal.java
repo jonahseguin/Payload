@@ -33,6 +33,19 @@ public class PayloadLocal {
         return payloadID;
     }
 
+    public void savePayloadID(String payloadID) {
+        this.payloadID = payloadID;
+        this.config.set("payload-id", this.payloadID);
+        try {
+            config.save(payloadFile);
+        } catch (IOException ex) {
+            Bukkit.getLogger().warning("[Payload] Failed to save payload-id to payload.yml");
+            if (PayloadPlugin.get().isDebug()) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
     /**
      * Load the payload id for this server instance from payload.yml
      * @return true if successful

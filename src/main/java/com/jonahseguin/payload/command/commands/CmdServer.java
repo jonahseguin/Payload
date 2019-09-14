@@ -12,6 +12,7 @@ public class CmdServer implements PayloadCommand {
         args.msg("&7***** &6Payload &7*****");
         args.msg("&7Unique Payload-ID for this server:");
         args.msg("&6{0}", PayloadAPI.get().getPayloadID());
+        args.msg("&7To set the server name/Payload-ID for this server, use /payload setid <name>");
     }
 
     @Override

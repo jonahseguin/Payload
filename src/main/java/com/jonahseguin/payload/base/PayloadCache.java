@@ -24,6 +24,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
+import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -207,6 +208,8 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
 
     public abstract int saveAll();
 
+    public abstract Collection<X> getCachedObjects();
+
     /**
      * Get the name of this cache (set by the end user, should be unique)
      * A {@link com.jonahseguin.payload.base.exception.DuplicateCacheException} error will be thrown if another cache
@@ -307,5 +310,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
             }
         }
     }
+
+    public abstract void updatePayloadID();
 
 }

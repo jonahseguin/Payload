@@ -1,5 +1,6 @@
 package com.jonahseguin.payload.mode.profile;
 
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
@@ -21,6 +22,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import redis.clients.jedis.Jedis;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -275,5 +277,16 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         }
     }
 
+    @Override
+    public Collection<X> getCachedObjects() {
+        return this.localLayer.getLocalCache().values();
+    }
 
+    @Override
+    public void updatePayloadID() {
+        for (X x : this.getCachedObjects()) {
+            x.setPayloadId(PayloadAPI.get().getPayloadID());
+        }
+        this.pool.submit(this::saveAll);
+    }
 }

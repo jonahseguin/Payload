@@ -106,7 +106,6 @@ public class ProfileListener implements Listener {
                 // Remove their data after they leave so that its reset for their next login
                 cache.removeData(player.getUniqueId());
                 cache.removeController(player.getUniqueId());
-
             }
         });
     }
