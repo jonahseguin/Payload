@@ -26,7 +26,7 @@ public class ProfileListener implements Listener {
         final UUID uniqueId = event.getUniqueId();
         final String ip = event.getAddress().getHostAddress();
 
-        for (PayloadCache c : PayloadAPI.get().getCaches().values()) {
+        for (PayloadCache c : PayloadAPI.get().getSortedCachesByDepends()) {
             if (c instanceof ProfileCache) {
                 if (c.getState().isLocked()) {
                     event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, c.getLangController().get(PLang.KICK_MESSAGE_LOCKED, c.getName()));
@@ -35,7 +35,7 @@ public class ProfileListener implements Listener {
             }
         }
 
-        PayloadAPI.get().getCaches().values().forEach(c -> {
+        PayloadAPI.get().getSortedCachesByDepends().forEach(c -> {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
                 ProfileData data = cache.createData(username, uniqueId, ip);
@@ -52,7 +52,7 @@ public class ProfileListener implements Listener {
     @EventHandler(priority = EventPriority.LOW)
     public void onCachingInit(PlayerLoginEvent event) {
         Player player = event.getPlayer();
-        PayloadAPI.get().getCaches().values().forEach(c -> {
+        PayloadAPI.get().getSortedCachesByDepends().forEach(c -> {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
                 PayloadProfileController controller = cache.getController(player.getUniqueId());
@@ -69,7 +69,7 @@ public class ProfileListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        PayloadAPI.get().getCaches().values().forEach(c -> {
+        PayloadAPI.get().getSortedCachesByDepends().forEach(c -> {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
 

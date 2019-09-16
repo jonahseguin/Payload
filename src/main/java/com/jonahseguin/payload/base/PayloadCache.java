@@ -25,6 +25,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -33,7 +35,7 @@ import java.util.concurrent.Executors;
  * All Caching modes (profile, object, simple) extend this class.
  */
 @Getter
-public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> implements DatabaseDependent {
+public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> implements DatabaseDependent, Comparable<PayloadCache> {
 
     protected final transient Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
 
@@ -41,6 +43,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
 
     protected transient boolean debug = false; // Debug for this cache
 
+    protected transient Set<String> dependingCaches = new HashSet<>();
     protected transient PayloadErrorHandler errorHandler = new DefaultErrorHandler();
     protected transient PayloadDatabase payloadDatabase = null;
     protected transient PayloadMode mode = PayloadMode.STANDALONE; // Payload Mode for this cache
@@ -313,4 +316,22 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
 
     public abstract void updatePayloadID();
 
+    public void addDepend(PayloadCache cache) {
+        this.dependingCaches.add(cache.getName());
+    }
+
+    public boolean isDependentOn(PayloadCache cache) {
+        return this.dependingCaches.contains(cache.getName());
+    }
+
+    @Override
+    public int compareTo(PayloadCache o) {
+        if (this.isDependentOn(o)) {
+            return -1;
+        } else if (o.isDependentOn(this)) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
 }

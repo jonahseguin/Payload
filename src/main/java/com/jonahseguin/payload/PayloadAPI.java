@@ -9,6 +9,7 @@ import org.bukkit.plugin.Plugin;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -21,6 +22,8 @@ public class PayloadAPI {
     private final ConcurrentMap<String, PayloadHook> hooks = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, PayloadCache> caches = new ConcurrentHashMap<>();
     private final Set<String> requested = new HashSet<>();
+
+    private TreeSet<PayloadCache> _sortedCaches = null;
 
     protected PayloadAPI(PayloadPlugin plugin) throws IllegalAccessException {
         this.plugin = plugin;
@@ -141,6 +144,20 @@ public class PayloadAPI {
     @SuppressWarnings("unchecked") // bad, oops
     public <K, X extends Payload, D extends PayloadData> PayloadCache<K, X, D> getCache(String name) {
         return (PayloadCache<K, X, D>) this.caches.get(convertCacheName(name));
+    }
+
+    public TreeSet<PayloadCache> getSortedCachesByDepends() {
+        if (this._sortedCaches != null) {
+            if (!this.hasBeenModified()) {
+                return this._sortedCaches;
+            }
+        }
+        this._sortedCaches = new TreeSet<>(this.caches.values());
+        return this._sortedCaches;
+    }
+
+    private boolean hasBeenModified() {
+        return this.caches.size() != this._sortedCaches.size();
     }
 
 }
