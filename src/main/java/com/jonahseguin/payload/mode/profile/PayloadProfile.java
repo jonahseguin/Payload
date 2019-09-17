@@ -75,6 +75,14 @@ public abstract class PayloadProfile implements Payload {
         return this.player != null && this.player.isOnline();
     }
 
+    public boolean isOnlineThisServer() {
+        return this.isPlayerOnline();
+    }
+
+    public boolean isOnlineOtherServer() {
+        return !this.isPlayerOnline() && this.online;
+    }
+
     public String getCurrentIP() {
         if (player != null && player.isOnline()) {
             return player.getAddress().getAddress().getHostAddress();
