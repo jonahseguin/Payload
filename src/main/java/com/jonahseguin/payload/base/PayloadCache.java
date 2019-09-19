@@ -90,6 +90,10 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         this.instantiator = instantiator;
     }
 
+    public void setErrorHandler(PayloadErrorHandler errorHandler) {
+        this.errorHandler = errorHandler;
+    }
+
     /**
      * Check if the cache is locked (joinable?)
      *
