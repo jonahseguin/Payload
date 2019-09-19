@@ -6,6 +6,7 @@ import com.jonahseguin.payload.mode.object.ObjectData;
 import com.jonahseguin.payload.mode.object.PayloadObject;
 import lombok.Getter;
 
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -65,6 +66,11 @@ public class ObjectLayerLocal<X extends PayloadObject> extends ObjectCacheLayer<
     @Override
     public void remove(X payload) {
         this.remove(payload.getIdentifier());
+    }
+
+    @Override
+    public Collection<X> getAll() {
+        return this.localCache.values();
     }
 
     @Override

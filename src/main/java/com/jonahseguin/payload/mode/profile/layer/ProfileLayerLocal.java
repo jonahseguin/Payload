@@ -6,10 +6,7 @@ import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
 import lombok.Getter;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -98,6 +95,11 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
         long i = this.localCache.size();
         this.localCache.clear();
         return i;
+    }
+
+    @Override
+    public Collection<X> getAll() {
+        return this.localCache.values();
     }
 
     @Override

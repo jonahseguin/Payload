@@ -10,6 +10,11 @@ import com.mongodb.util.JSONParseException;
 import lombok.Getter;
 import redis.clients.jedis.Jedis;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 @Getter
 public class ObjectLayerRedis<X extends PayloadObject> extends ObjectCacheLayer<X> {
 
@@ -94,6 +99,21 @@ public class ObjectLayerRedis<X extends PayloadObject> extends ObjectCacheLayer<
         long size = this.jedis().hlen(this.cache.getName());
         this.jedis().del(this.cache.getName());
         return size;
+    }
+
+    @Override
+    public Collection<X> getAll() {
+        try {
+            Map<String, String> entrySet = this.jedis().hgetAll(this.cache.getName());
+            Set<X> objects = new HashSet<>();
+            for (String json : entrySet.values()) {
+                objects.add(mapObject(json));
+            }
+            return objects;
+        } catch (Exception ex) {
+            this.getCache().getErrorHandler().exception(this.getCache(), ex, "Error getting all objects from Redis Layer");
+            return null;
+        }
     }
 
     @Override

@@ -88,6 +88,10 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
         }
     }
 
+    public void cacheAll() {
+        this.mongoLayer.getAll().forEach(this::cache);
+    }
+
     @Override
     protected X get(String key) {
         ObjectData data = this.createData(key);

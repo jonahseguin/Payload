@@ -11,11 +11,9 @@ import org.bson.types.Binary;
 import org.bukkit.entity.Player;
 import org.mongodb.morphia.query.Query;
 
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLayer<X> {
@@ -206,6 +204,13 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
         }
 
         return cleaned;
+    }
+
+    @Override
+    public Collection<X> getAll() {
+        Query<X> q = this.createQuery();
+        Stream<X> stream = q.asList().stream();
+        return stream.collect(Collectors.toSet());
     }
 
     @Override

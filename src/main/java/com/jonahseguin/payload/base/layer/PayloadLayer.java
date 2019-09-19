@@ -4,6 +4,8 @@ import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
 
+import java.util.Collection;
+
 public interface PayloadLayer<K, X extends Payload, D extends PayloadData> {
 
     X get(K key) throws PayloadLayerCannotProvideException;
@@ -23,6 +25,8 @@ public interface PayloadLayer<K, X extends Payload, D extends PayloadData> {
     void remove(D data);
 
     void remove(X payload);
+
+    Collection<X> getAll();
 
     int cleanup();
 

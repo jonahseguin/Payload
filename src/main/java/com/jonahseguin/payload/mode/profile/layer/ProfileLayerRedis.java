@@ -9,8 +9,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.util.JSONParseException;
 import redis.clients.jedis.Jedis;
 
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLayer<X> {
 
@@ -147,6 +146,21 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
         long size = this.jedis().hlen(this.getCache().getName());
         this.jedis().del(this.getCache().getName());
         return size;
+    }
+
+    @Override
+    public Collection<X> getAll() {
+        try {
+            Map<String, String> entrySet = this.jedis().hgetAll(this.cache.getName());
+            Set<X> profiles = new HashSet<>();
+            for (String json : entrySet.values()) {
+                profiles.add(mapProfile(json));
+            }
+            return profiles;
+        } catch (Exception ex) {
+            this.getCache().getErrorHandler().exception(this.getCache(), ex, "Error getting all Profiles from Redis Layer");
+            return null;
+        }
     }
 
     private Jedis jedis() {

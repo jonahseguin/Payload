@@ -8,10 +8,12 @@ import com.jonahseguin.payload.mode.object.PayloadObject;
 import com.mongodb.MongoException;
 import org.mongodb.morphia.query.Query;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<X> {
@@ -198,6 +200,13 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
     @Override
     public String layerName() {
         return "Object MongoDB";
+    }
+
+    @Override
+    public Collection<X> getAll() {
+        Query<X> q = this.createQuery();
+        Stream<X> stream = q.asList().stream();
+        return stream.collect(Collectors.toSet());
     }
 
     public void addCriteriaModifier(PayloadQueryModifier<X> modifier) {
