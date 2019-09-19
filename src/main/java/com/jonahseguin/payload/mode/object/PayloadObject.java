@@ -22,6 +22,11 @@ public abstract class PayloadObject implements Payload {
         this.payloadId = PayloadAPI.get().getPayloadID();
     }
 
+    public PayloadObject(ObjectId objectId) {
+        this();
+        this.objectId = objectId;
+    }
+
     @Override
     public long cachedTimestamp() {
         return this.cachedTimestamp;
