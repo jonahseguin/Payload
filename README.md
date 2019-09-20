@@ -1,4 +1,4 @@
-# Payload
+# Payload [![Actions Status](https://github.com/jonahseguin/Payload/workflows/Java%20CI/badge.svg)](https://github.com/{owner}/{repo}/actions)
 *Fail-safe asynchronous profile caching via Redis &amp; MongoDB in Java for Spigot*
 
 **This README and the wiki documentation is currently out of date and needs to be re-written to reflect the new 2.0 re-write.**
@@ -15,5 +15,7 @@ It features *error handling*, *verbose debugging*, *an API with asynchronous eve
 - Failure handling
 - User configurable settings
 - Custom error & debug handling
-- Multiple types of caches for Unique Player Profiles (persistant), Objects (persistant or non-persistant), and Simple Players (non-persistant)
+- Two types of caches for Unique Player Profiles & Persistent or Non-Persistent Objects
 - Fast & easy to use across multiple services, plugins, and servers
+- Seamless integration into networks or standalone servers
+- Bungee/LilyPad/etc. (any network suite) support via use of a custom handshaking protocol & Redis pub/sub
