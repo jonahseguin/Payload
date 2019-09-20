@@ -14,7 +14,7 @@ public abstract class PayloadObject implements Payload {
     private String payloadId;
 
     @Id
-    private ObjectId objectId;
+    private ObjectId objectId = new ObjectId();
 
     private long cachedTimestamp = System.currentTimeMillis();
 

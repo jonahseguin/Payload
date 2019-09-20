@@ -22,7 +22,7 @@ import java.util.UUID;
 public abstract class PayloadProfile implements Payload {
 
     @Id
-    protected ObjectId objectId;
+    protected ObjectId objectId = new ObjectId();
     protected String username;
     protected String uniqueId;
     protected transient UUID uuid = null;
