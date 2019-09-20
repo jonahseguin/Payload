@@ -14,4 +14,8 @@ jobs:
       with:
         java-version: 1.8
     - name: Build with Maven
-      run: mvn package deploy --file pom.xml -Dregistry=https://maven.pkg.github.com/jonahseguin -Dtoken=${{ secrets.DEPLOY }}
+      run: mvn package --file pom.xml
+    - name: Deploy with Maven
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: mvn deploy -Dserver.username=jonahseguin -Dserver.password=${{ secrets.GITHUB_TOKEN }}
