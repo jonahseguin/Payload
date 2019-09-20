@@ -18,4 +18,4 @@ jobs:
     - name: Deploy with Maven
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: mvn deploy -Dserver.username=jonahseguin -Dserver.password=${{ secrets.GITHUB_TOKEN }}
+      run: mvn deploy -Dregistry=https://maven.pkg.github.com/jonahseguin -Dtoken=$GITHUB_TOKEN
