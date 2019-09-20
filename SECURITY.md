@@ -2,8 +2,8 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+At this time we are supporting versions 2.0.0 and up.
+The legacy versions 0.5.x and 1.0.x are no longer supported since version 2.0.0+ is an entirely new codebase.
 
 | Version | Supported          |
 | ------- | ------------------ |
