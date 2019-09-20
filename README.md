@@ -1,4 +1,4 @@
-# Payload [![Actions Status](https://github.com/jonahseguin/Payload/workflows/Java%20CI/badge.svg)](https://github.com/{owner}/{repo}/actions)
+# Payload [![Actions Status](https://github.com/jonahseguin/Payload/workflows/Java%20CI/badge.svg)](https://github.com/jonahseguin/Payload/actions)
 *Fail-safe asynchronous profile caching via Redis &amp; MongoDB in Java for Spigot*
 
 **This README and the wiki documentation is currently out of date and needs to be re-written to reflect the new 2.0 re-write.**
