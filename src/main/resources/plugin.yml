@@ -1,6 +1,22 @@
+####
+#### Payload
+#### by Jonah Seguin
+####
 name: Payload
-main: com.jonahseguin.payload.Payload
+main: com.jonahseguin.payload.PayloadPlugin
 version: ${project.version}
 author: Jonah Seguin
-website: jonahseguin.com
+website: jonahseguin.com & github.com/jonahseguin/Payload
 description: fail-safe asynchronous profile & object caching for spigot servers
+api-version: 1.12.2
+
+commands:
+  payload:
+    usage: '/payload'
+    description: 'Main payload command.  See /payload help for sub-commands.'
+
+permissions:
+  payload.debug:
+    default: op
+  payload.admin:
+    default: op

@@ -1,0 +1,43 @@
+#
+# Payload: A caching solution by Jonah Seguin
+#
+# This is an example database.yml file to handle MongoDB and Redis connection information.  Payload uses this YAML file
+# structure, and must be followed for your plugins; or implement your instance of PayloadDatabase manually
+#
+# Valid MongoDB and Redis connections are *required* for Payload to run.
+# Even when using non-persistent caching (i.e 'simple' mode)
+# Because cache information is stored in the database.
+#
+mongodb:
+  # For MongoDB, you can either provide all of these details, or just provide the MongoDB connection URI via the 'uri' field below
+
+  # MongoDB URI Format: ' mongodb://[username:password@]host1[:port1][,...hostN[:portN]]][/[database][?options]] '
+  uri: null # ***If you provide a uri field, it will override all other parameters in this section below!***
+  # A URI field is useful if you want to use a sharded/cluster database, ex. from MongoDB Atlas
+
+  # Fields if you are NOT using the uri field:
+  address: '127.0.0.1' # Address
+  port: 27017 # Port for your MongoDB shard or cluster
+  database: 'minecraft' # The name of the database you want to use on your MongoDB instance
+
+  # Authentication information (IF NOT USING URI FIELD)
+  auth:
+    enabled: false # Change to true if you are using authentication, which will then use the following fields to authenticate:
+    authDatabase: 'admin' # The name of the database to authenticate on
+    username: 'username'
+    password: 'password'
+
+redis:
+  # For Redis, you can either provide credentials, or just provide the Redis connection URI via the 'uri' field below
+
+  # Redis URI Format: ' redis://[USER]:[PASSWORD]@[CLUSTER-PUBLIC-IP]:[PORT] '
+  uri: null # ***If you provide a uri field, it will override all other parameters in this section below!***
+
+  # Or, provide the information below instead of the uri field:
+  address: '127.0.0.1' # IP Address to your redis server
+  port: 6379 # This is the default Redis port
+  retryTimeout: 5 # Seconds between re-connection attempts in the event the connection fails
+
+  # If using authentication (recommended) **only if NOT using URI field**
+  auth:
+    password: 'password' # Your password: will be used with redis.auth(password)
