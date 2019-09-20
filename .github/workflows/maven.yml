@@ -19,3 +19,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: mvn deploy --settings DeploySettings.xml
+    - name: GitHub Release
+      uses: softprops/action-gh-release@v0.1.0
+
