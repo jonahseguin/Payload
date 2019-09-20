@@ -16,4 +16,4 @@ jobs:
     - name: Build with Maven
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: mvn package deploy --file pom.xml -Dregistry=https://maven.pkg.github.com/jonahseguin -Dtoken=GITHUB_TOKEN
+      run: mvn package deploy --file pom.xml -Dregistry=https://maven.pkg.github.com/jonahseguin -Dtoken=${{ GITHUB_TOKEN }}
