@@ -1,10 +1,17 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload;
 
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.exception.runtime.PayloadProvisionException;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
+import com.jonahseguin.payload.database.PayloadDatabase;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.plugin.Plugin;
 
 import java.util.*;
@@ -20,6 +27,7 @@ public class PayloadAPI {
     private final PayloadPlugin plugin;
     private final ConcurrentMap<String, PayloadHook> hooks = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, PayloadCache> caches = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, PayloadDatabase> databases = new ConcurrentHashMap<>();
     private final Set<String> requested = new HashSet<>();
 
     private List<PayloadCache> _sortedCaches = null;
@@ -130,7 +138,23 @@ public class PayloadAPI {
         if (!this.validateHook(hook.getPlugin(), hook)) {
             throw new IllegalStateException("Hook is not valid for cache to save in PayloadAPI");
         }
-        this.caches.put(convertCacheName(cache.getName()), cache);
+        this.caches.putIfAbsent(convertCacheName(cache.getName()), cache);
+    }
+
+    public void registerDatabase(PayloadDatabase database) {
+        if (!isDatabaseRegistered(database.getName())) {
+            this.databases.putIfAbsent(database.getName().toLowerCase(), database);
+        } else {
+            throw new IllegalArgumentException("A Payload database with the name '" + database.getName() + "' has already been registered.  Choose a different name.");
+        }
+    }
+
+    public PayloadDatabase getDatabase(String name) {
+        return this.databases.get(name.toLowerCase());
+    }
+
+    public boolean isDatabaseRegistered(String name) {
+        return this.databases.containsKey(name.toLowerCase());
     }
 
     /**
@@ -158,6 +182,21 @@ public class PayloadAPI {
 
     private boolean hasBeenModified() {
         return this.caches.size() != this._sortedCaches.size();
+    }
+
+    public void setPayloadID(String name) {
+        if (StringUtils.isAlphanumeric(name)) {
+            final String oldName = PayloadPlugin.get().getLocal().getPayloadID();
+            PayloadPlugin.get().getLocal().savePayloadID(name);
+            for (PayloadCache cache : getCaches().values()) {
+                cache.updatePayloadID();
+            }
+            for (PayloadDatabase database : getDatabases().values()) {
+                database.getServerManager().getPublisher().publishUpdateName(oldName, name);
+            }
+        } else {
+            throw new IllegalArgumentException("Payload ID must be alphanumeric, '" + name + "' is not valid.");
+        }
     }
 
 }

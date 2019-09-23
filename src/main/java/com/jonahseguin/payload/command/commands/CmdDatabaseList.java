@@ -9,35 +9,31 @@ import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
 import com.jonahseguin.payload.command.PayloadCommand;
-import org.apache.commons.lang3.StringUtils;
-import org.bukkit.ChatColor;
+import com.jonahseguin.payload.database.PayloadDatabase;
 
-public class CmdSetID implements PayloadCommand {
+public class CmdDatabaseList implements PayloadCommand {
 
     @Override
     public void execute(CmdArgs args) {
-        String name = args.arg(0);
-        if (StringUtils.isAlphanumeric(name)) {
-            PayloadAPI.get().setPayloadID(name);
-            args.msg("&7[Payload] &aPayload-ID set to: " + PayloadAPI.get().getPayloadID() + ".  A restart may be required for changes to completely take effect.");
-        } else {
-            args.msg(ChatColor.RED + "Payload-ID must be alphanumeric");
+        args.msg("&7***** &6Payload Databases &7*****");
+        for (PayloadDatabase database : PayloadAPI.get().getDatabases().values()) {
+            args.msg("&7" + database.getName() + " - " + (database.getState().isDatabaseConnected() ? "&aConnected" : "&cDisconnected"));
         }
     }
 
     @Override
     public String name() {
-        return "setid";
+        return "databases";
     }
 
     @Override
     public String[] aliases() {
-        return new String[]{"setname", "set"};
+        return new String[]{"dbs", "dblist", "databaselist"};
     }
 
     @Override
     public String desc() {
-        return "Set the server name/Payload-ID for this server";
+        return "View registered databases";
     }
 
     @Override
@@ -47,7 +43,7 @@ public class CmdSetID implements PayloadCommand {
 
     @Override
     public String usage() {
-        return "<name>";
+        return "";
     }
 
     @Override
@@ -57,7 +53,7 @@ public class CmdSetID implements PayloadCommand {
 
     @Override
     public int minArgs() {
-        return 1;
+        return 0;
     }
 
 }

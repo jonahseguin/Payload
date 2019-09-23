@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.command.commands;
 
 import com.jonahseguin.payload.PayloadAPI;
@@ -9,6 +14,9 @@ import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class CmdProfile implements PayloadCommand {
 
@@ -35,7 +43,8 @@ public class CmdProfile implements PayloadCommand {
                 args.msg("&7***** &6Payload Profile: {0} &7*****", playerName);
                 args.msg("&7UUID: &6{0}", profile.getUniqueId().toString());
                 args.msg("&7Online: {0}", (profile.isOnline() ? "&aYes" : "&cNo"));
-                args.msg("&7Last Seen: {0}", (profile.getLastSeenServer() != null ? "&6" + profile.getLastSeenServer() : "&cN/A"));
+                args.msg("&7Last Seen On: {0}", (profile.getLastSeenServer() != null ? "&6" + profile.getLastSeenServer() : "&cN/A"));
+                args.msg("&7Last Seen At: {0}", (profile.isOnline() ? "&aNow" : "&6" + formatDateTime(profile.getLastSeenTimestamp())));
                 args.msg("&7Login IP: {0}", (profile.getLoginIp() != null ? "&6" + profile.getLoginIp() : "&cN/A"));
             } else {
                 args.msg("&cPayload: A profile with username '{0}' does not exist in cache '{1}'.", playerName);
@@ -44,6 +53,12 @@ public class CmdProfile implements PayloadCommand {
             args.msg("&cPayload: The '{0}' cache is not a profile cache.", cache.getName());
         }
 
+    }
+
+    public String formatDateTime(long time) {
+        Date date = new Date(time);
+        SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd @ hh:mm:ss a");
+        return format.format(date);
     }
 
     @Override

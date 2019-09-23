@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.database.redis;
 
 import com.jonahseguin.payload.PayloadPlugin;
@@ -41,32 +46,24 @@ public class PayloadRedisMonitor implements Runnable {
     @Override
     public void run() {
         // Check if connection is alive
-        Jedis jedis = database.getJedis();
-        if (jedis == null) {
-            // Jedis hasn't been initialized yet; ignore
-            this.handleDisconnected();
-            return;
-        }
+        if (database.getJedisPool() == null) return;
         try {
-            if (jedis.isConnected()) {
-                jedis.ping();
-                // Connected
-                this.handleConnected();
-            }
-            else {
-                // Disconnected
-                this.handleDisconnected();
-
-                this.database.connectRedis();
+            Jedis jedis = database.getMonitorJedis();
+            if (jedis != null) {
+                if (jedis.isConnected()) {
+                    jedis.ping();
+                    // Connected
+                    this.handleConnected();
+                } else {
+                    // Disconnected
+                    this.handleDisconnected();
+                }
             }
         }
         catch (Exception ex) {
             // Failed, assume disconnected
             this.handleDisconnected();
             this.database.databaseError(ex, "Error in Redis Monitor task: " + ex.getMessage());
-            if (PayloadPlugin.get().isDebug()) {
-                ex.printStackTrace();
-            }
         }
     }
 

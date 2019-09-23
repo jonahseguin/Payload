@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.profile;
 
 import com.jonahseguin.payload.PayloadAPI;
@@ -202,6 +207,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     @Override
     public boolean save(X payload) {
         boolean x = true;
+        payload.setLastInteractionTimestamp(System.currentTimeMillis());
         for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
             if (!layer.save(payload)) {
                 x = false;
@@ -241,6 +247,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         for (Player p : this.getPlugin().getServer().getOnlinePlayers()) {
             X payload = this.getLocalProfile(p);
             if (payload != null) {
+                payload.setLastSeenTimestamp(System.currentTimeMillis());
+                payload.setLastSeenServer(PayloadAPI.get().getPayloadID());
+                payload.setOnline(true);
+                payload.setLastInteractionTimestamp(System.currentTimeMillis());
                 if (!this.save(payload)) {
                     failures++;
                 }
@@ -281,23 +291,25 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     @Override
     public void onRedisInitConnect() {
-        super.onRedisInitConnect();
         // Allocate Jedis resources for Publishing and Subscribing
         if (this.payloadDatabase != null && this.payloadDatabase.getJedisPool() != null) {
             if (this.publisherJedis == null) {
+                this.getErrorHandler().debug(this, "Initializing publisher Jedis");
                 this.publisherJedis = this.payloadDatabase.getResource();
             }
             if (this.subscriberJedis == null) {
-                this.subscriberJedis = this.payloadDatabase.getResource();
-
-                this.pool.submit(() ->
-                        this.subscriberJedis.subscribe(this.handshakeListener,
-                                HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(),
-                                HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(),
-                                HandshakeEvent.SAVED_PAYLOAD.getName(),
-                                HandshakeEvent.SAVING_PAYLOAD.getName()));
+                this.getErrorHandler().debug(this, "Subscribing to pub/sub events");
+                this.plugin.getServer().getScheduler().runTaskAsynchronously(this.plugin, () -> {
+                    this.subscriberJedis = this.payloadDatabase.getResource();
+                    this.subscriberJedis.subscribe(this.handshakeListener,
+                            HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(),
+                            HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(),
+                            HandshakeEvent.SAVED_PAYLOAD.getName(),
+                            HandshakeEvent.SAVING_PAYLOAD.getName());
+                });
             }
         }
+        super.onRedisInitConnect();
     }
 
     @Override

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.profile.pubsub;
 
 import com.jonahseguin.payload.PayloadPlugin;
@@ -48,7 +53,7 @@ public class HandshakeManager<X extends PayloadProfile> {
         data.append(SOURCE_PAYLOAD_ID, thisPayloadId);
         data.append(CACHE_NAME, this.cache.getName());
         data.append(TARGET_PAYLOAD_ID, targetServerPayloadID);
-        data.append(PLAYER_UUID, controller.getData().getUniqueId());
+        data.append(PLAYER_UUID, controller.getData().getUniqueId().toString());
 
         controller.setHandshakeStartTime(System.currentTimeMillis());
 

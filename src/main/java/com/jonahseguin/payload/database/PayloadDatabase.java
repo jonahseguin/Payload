@@ -1,5 +1,11 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.database;
 
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.PayloadPermission;
@@ -9,12 +15,13 @@ import com.jonahseguin.payload.database.mongo.PayloadMongo;
 import com.jonahseguin.payload.database.mongo.PayloadMongoMonitor;
 import com.jonahseguin.payload.database.redis.PayloadRedis;
 import com.jonahseguin.payload.database.redis.PayloadRedisMonitor;
-import com.jonahseguin.payload.database.redis.SafeRedisHook;
+import com.jonahseguin.payload.server.ServerManager;
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
 import dev.morphia.Morphia;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -36,7 +43,8 @@ import java.util.UUID;
  * The {@link PayloadDatabase} class provides the information required for connecting to the databases.
  * MongoDB and Redis information, which can be loaded from configurations or files.
  */
-@Data
+@Getter
+@Setter
 public class PayloadDatabase {
 
     private boolean started = false;
@@ -45,6 +53,7 @@ public class PayloadDatabase {
     private final String uuid = UUID.randomUUID().toString();
     private final Set<PayloadCache> hooks = new HashSet<>();
     private final DatabaseState state = new DatabaseState();
+    private final ServerManager serverManager;
 
     private final PayloadMongo mongo;
     private final PayloadRedis redis;
@@ -57,9 +66,16 @@ public class PayloadDatabase {
 
     // Redis
     private JedisPool jedisPool = null;
-    private Jedis jedis = null;
+    private Jedis monitorJedis = null;
     private PayloadRedisMonitor redisMonitor = null;
-    private final Set<SafeRedisHook> redisHooks = new HashSet<>();
+
+    public PayloadDatabase(String name, PayloadMongo mongo, PayloadRedis redis) {
+        this.name = name;
+        this.mongo = mongo;
+        this.redis = redis;
+        PayloadAPI.get().registerDatabase(this);
+        this.serverManager = new ServerManager(this);
+    }
 
     public void hookCache(PayloadCache cache) {
         if (!this.hooks.contains(cache)) {
@@ -190,29 +206,29 @@ public class PayloadDatabase {
             // Try connection
             PayloadRedis payloadRedis = this.redis;
 
-            if (this.jedis != null) {
-                this.jedis.close();
-                this.jedis = null;
-            }
+            if (this.jedisPool == null) {
 
-            if (this.jedisPool != null) {
-                this.jedisPool.close();
-                this.jedisPool = null;
-            }
+                GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+                poolConfig.setMaxTotal(256);
+                poolConfig.setMaxIdle(32);
+                poolConfig.setMinIdle(2);
 
-            if (payloadRedis.useURI()) {
-                jedisPool = new JedisPool(URI.create(payloadRedis.getUri()));
-            } else {
-                if (payloadRedis.isAuth()) {
-                    jedisPool = new JedisPool(new GenericObjectPoolConfig(), payloadRedis.getAddress(), payloadRedis.getPort(), 2000, payloadRedis.getPassword(), payloadRedis.isSsl());
+                if (payloadRedis.useURI()) {
+                    jedisPool = new JedisPool(poolConfig, URI.create(payloadRedis.getUri()));
                 } else {
-                    jedisPool = new JedisPool(payloadRedis.getAddress(), payloadRedis.getPort());
+                    if (payloadRedis.isAuth()) {
+                        jedisPool = new JedisPool(poolConfig, payloadRedis.getAddress(), payloadRedis.getPort(), 2000, payloadRedis.getPassword(), payloadRedis.isSsl());
+                    } else {
+                        jedisPool = new JedisPool(poolConfig, payloadRedis.getAddress(), payloadRedis.getPort());
+                    }
                 }
             }
 
-            if (this.jedis == null) {
-                jedis = this.getResource();
+            if (this.monitorJedis == null) {
+                this.monitorJedis = this.jedisPool.getResource();
+                this.monitorJedis.ping();
             }
+
             return true; // No errors if we got here; success
         } catch (Exception ex) {
             this.databaseError(ex, "Failed Redis connection attempt");
@@ -228,22 +244,8 @@ public class PayloadDatabase {
         }
     }
 
-    public void registerRedisHook(SafeRedisHook hook) {
-        this.redisHooks.add(hook);
-    }
-
-    public void requestResource(SafeRedisHook hook) {
-        Jedis jedis = this.getResource();
-        hook.withResource(jedis);
-    }
-
     public Jedis getResource() {
-        Jedis jedis = this.jedisPool.getResource();
-        jedis.connect();
-        if (this.redis.isAuth()) {
-            jedis.auth(this.redis.getPassword());
-        }
-        return jedis;
+        return this.jedisPool.getResource();
     }
 
     public boolean disconnectMongo() {
@@ -257,14 +259,6 @@ public class PayloadDatabase {
         if (this.redisMonitor != null) {
             this.redisMonitor.stop();
         }
-        if (this.jedis == null) {
-            // Was never initialized so we'll just stop here
-            return true;
-        }
-        if (this.jedis.isConnected()) {
-            this.jedis.disconnect();
-        }
-        this.jedis.close();
         this.jedisPool.close();
         return true;
     }
@@ -272,6 +266,7 @@ public class PayloadDatabase {
     public boolean start() {
         boolean mongo = this.connectMongo();
         boolean redis = this.connectRedis();
+        this.serverManager.startup();
         this.started = true;
         return mongo && redis;
     }
@@ -301,6 +296,7 @@ public class PayloadDatabase {
     }
 
     public boolean stop() {
+        this.serverManager.shutdown();
         for (PayloadCache cache : this.getHooks()) {
             if (cache.isRunning()) {
                 // Still running... don't just close the DB connection w/o proper shutdown
