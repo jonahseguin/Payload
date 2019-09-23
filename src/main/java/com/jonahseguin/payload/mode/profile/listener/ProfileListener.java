@@ -46,12 +46,13 @@ public class ProfileListener implements Listener {
                 ProfileData data = cache.createData(username, uniqueId, ip);
                 PayloadProfileController controller = cache.controller(data);
                 controller.cache();
-                c.getErrorHandler().debug(c, "Cached " + username);
 
                 if (controller.isDenyJoin()) {
                     event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, controller.getJoinDenyReason());
                     c.getErrorHandler().debug(c, "Denied join for " + username);
                     cache.removeData(uniqueId);
+                } else {
+                    c.getErrorHandler().debug(c, "Cached " + username);
                 }
             }
         });

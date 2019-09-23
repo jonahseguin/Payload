@@ -9,6 +9,7 @@ import com.jonahseguin.payload.database.mongo.PayloadMongo;
 import com.jonahseguin.payload.database.mongo.PayloadMongoMonitor;
 import com.jonahseguin.payload.database.redis.PayloadRedis;
 import com.jonahseguin.payload.database.redis.PayloadRedisMonitor;
+import com.jonahseguin.payload.database.redis.SafeRedisHook;
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
@@ -58,6 +59,7 @@ public class PayloadDatabase {
     private JedisPool jedisPool = null;
     private Jedis jedis = null;
     private PayloadRedisMonitor redisMonitor = null;
+    private final Set<SafeRedisHook> redisHooks = new HashSet<>();
 
     public void hookCache(PayloadCache cache) {
         if (!this.hooks.contains(cache)) {
@@ -187,17 +189,27 @@ public class PayloadDatabase {
             this.state.setLastRedisConnectionAttempt(System.currentTimeMillis());
             // Try connection
             PayloadRedis payloadRedis = this.redis;
-            if (this.jedisPool == null) {
-                if (payloadRedis.useURI()) {
-                    jedisPool = new JedisPool(URI.create(payloadRedis.getUri()));
+
+            if (this.jedis != null) {
+                this.jedis.close();
+                this.jedis = null;
+            }
+
+            if (this.jedisPool != null) {
+                this.jedisPool.close();
+                this.jedisPool = null;
+            }
+
+            if (payloadRedis.useURI()) {
+                jedisPool = new JedisPool(URI.create(payloadRedis.getUri()));
+            } else {
+                if (payloadRedis.isAuth()) {
+                    jedisPool = new JedisPool(new GenericObjectPoolConfig(), payloadRedis.getAddress(), payloadRedis.getPort(), 2000, payloadRedis.getPassword(), payloadRedis.isSsl());
                 } else {
-                    if (payloadRedis.isAuth()) {
-                        jedisPool = new JedisPool(new GenericObjectPoolConfig(), payloadRedis.getAddress(), payloadRedis.getPort(), 2000, payloadRedis.getPassword(), payloadRedis.isSsl());
-                    } else {
-                        jedisPool = new JedisPool(payloadRedis.getAddress(), payloadRedis.getPort());
-                    }
+                    jedisPool = new JedisPool(payloadRedis.getAddress(), payloadRedis.getPort());
                 }
             }
+
             if (this.jedis == null) {
                 jedis = this.getResource();
             }
@@ -214,6 +226,15 @@ public class PayloadDatabase {
                 this.redisMonitor.start();
             }
         }
+    }
+
+    public void registerRedisHook(SafeRedisHook hook) {
+        this.redisHooks.add(hook);
+    }
+
+    public void requestResource(SafeRedisHook hook) {
+        Jedis jedis = this.getResource();
+        hook.withResource(jedis);
     }
 
     public Jedis getResource() {

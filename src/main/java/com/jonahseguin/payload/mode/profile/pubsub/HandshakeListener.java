@@ -76,6 +76,7 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
                         final String dataOutJson = dataOut.toJson();
 
                         if (event.equals(HandshakeEvent.REQUEST_PAYLOAD_SAVE)) {
+                            this.cache.getErrorHandler().debug(this.cache, "Received REQUEST_PAYLOAD_SAVE for Payload " + uuid.toString());
 
                             // The sourcePayloadId server is requesting that this server save a profile for the uuid profile
                             // Check if we have them cached/if they are online
@@ -84,7 +85,7 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
                                 target = this.cache.getLocalLayer().get(uuid);
                             }
 
-                            if (target != null && target.getPlayer() != null && target.getPlayer().isOnline()) {
+                            if (target != null && target.isOnlineThisServer()) {
                                 // Save
 
                                 final X finalTarget = target;
@@ -100,6 +101,7 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
                             }
 
                         } else if (event.equals(HandshakeEvent.SAVING_PAYLOAD)) {
+                            this.cache.getErrorHandler().debug(this.cache, "Received SAVING_PAYLOAD for Payload " + uuid.toString());
 
                             // The sourcePayloadId server is saving our payload that we requested to be saved.
                             // Stop the timeout
@@ -112,6 +114,7 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
                             }
 
                         } else if (event.equals(HandshakeEvent.SAVED_PAYLOAD)) {
+                            this.cache.getErrorHandler().debug(this.cache, "Received SAVED_PAYLOAD for Payload " + uuid.toString());
 
                             // The sourcePayloadId server has finished saving our payload that we requested to be saved
                             // Continue with our caching process
@@ -123,6 +126,7 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
                             }
 
                         } else if (event.equals(HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE)) {
+                            this.cache.getErrorHandler().debug(this.cache, "Received PAYLOAD_NOT_CACHED_CONTINUE for Payload " + uuid.toString());
 
                             // The sourcePayloadId server doesn't have the profile we requested they save
                             // Continue with our caching process
