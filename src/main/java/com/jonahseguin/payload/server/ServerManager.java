@@ -26,11 +26,11 @@ public class ServerManager {
     }
 
     public void startup() {
-        this.jedisPublisher = this.database.getJedisPool().getResource();
+        this.jedisPublisher = this.database.getResource();
         this.publisher = new ServerPublisher(this);
 
         PayloadPlugin.runASync(PayloadPlugin.get(), () -> {
-            this.jedisSubscriber = this.database.getJedisPool().getResource();
+            this.jedisSubscriber = this.database.getResource();
             this.subscriber = new ServerSubscriber(this);
             this.jedisSubscriber.subscribe(this.subscriber,
                     "server-join", "server-ping", "server-quit", "server-update-name");

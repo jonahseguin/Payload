@@ -275,10 +275,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         // Allocate Jedis resources for Publishing and Subscribing
         if (this.payloadDatabase != null && this.payloadDatabase.getJedisPool() != null) {
             if (this.publisherJedis == null) {
-                this.publisherJedis = this.payloadDatabase.getJedisPool().getResource();
+                this.publisherJedis = this.payloadDatabase.getResource();
             }
             if (this.subscriberJedis == null) {
-                this.subscriberJedis = this.payloadDatabase.getJedisPool().getResource();
+                this.subscriberJedis = this.payloadDatabase.getResource();
 
                 this.pool.submit(() ->
                         this.subscriberJedis.subscribe(this.handshakeListener,
