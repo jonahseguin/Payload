@@ -18,7 +18,7 @@ public class PayloadRedisMonitor implements Runnable {
     public void start() {
         if (this.task == null) {
             this.task = PayloadPlugin.get().getServer().getScheduler()
-                    .runTaskTimerAsynchronously(PayloadPlugin.get(), this, 60L, 60L);
+                    .runTaskTimerAsynchronously(PayloadPlugin.get(), this, 0L, 20L);
         }
         else {
             throw new IllegalStateException("Redis Monitor is already running for database ID '" + database.getUuid() + "'; cannot start");

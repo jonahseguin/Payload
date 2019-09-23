@@ -2,10 +2,10 @@ package com.jonahseguin.payload.mode.object;
 
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.type.Payload;
+import dev.morphia.annotations.Id;
 import lombok.Getter;
 import lombok.Setter;
 import org.bson.types.ObjectId;
-import org.mongodb.morphia.annotations.Id;
 
 @Getter
 @Setter

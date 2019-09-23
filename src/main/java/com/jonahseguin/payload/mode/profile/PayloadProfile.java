@@ -3,6 +3,7 @@ package com.jonahseguin.payload.mode.profile;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
+import dev.morphia.annotations.Id;
 import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -12,7 +13,6 @@ import org.bson.types.ObjectId;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
-import org.mongodb.morphia.annotations.Id;
 
 import java.util.UUID;
 

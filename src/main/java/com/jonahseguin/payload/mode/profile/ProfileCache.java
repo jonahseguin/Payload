@@ -73,8 +73,15 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             this.handshakeManager.getTimeoutTask().stop();
         }
         this.layerController.shutdown();
-        this.publisherJedis.close();
-        this.subscriberJedis.close();
+        if (this.handshakeListener.isSubscribed()) {
+            this.handshakeListener.unsubscribe();
+        }
+        if (this.publisherJedis != null) {
+            this.publisherJedis.close();
+        }
+        if (this.subscriberJedis != null) {
+            this.subscriberJedis.close();
+        }
         this.publisherJedis = null;
         this.subscriberJedis = null;
         this.data.clear();

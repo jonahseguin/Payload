@@ -11,13 +11,13 @@ import com.jonahseguin.payload.database.redis.PayloadRedis;
 import com.jonahseguin.payload.database.redis.PayloadRedisMonitor;
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
+import dev.morphia.Datastore;
+import dev.morphia.Morphia;
 import lombok.Data;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
-import org.mongodb.morphia.Datastore;
-import org.mongodb.morphia.Morphia;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 

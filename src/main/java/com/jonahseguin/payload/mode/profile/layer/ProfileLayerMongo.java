@@ -7,9 +7,9 @@ import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
 import com.mongodb.MongoException;
+import dev.morphia.query.Query;
 import org.bson.types.Binary;
 import org.bukkit.entity.Player;
-import org.mongodb.morphia.query.Query;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +31,7 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
         }
         try {
             Query<X> q = getQuery(key);
-            Stream<X> stream = q.asList().stream();
+            Stream<X> stream = q.find().toList().stream();
             Optional<X> xp = stream.findFirst();
             return xp.orElse(null);
         } catch (MongoException ex) {

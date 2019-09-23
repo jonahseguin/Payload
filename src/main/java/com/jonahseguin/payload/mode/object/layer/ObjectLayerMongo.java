@@ -6,7 +6,7 @@ import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.ObjectData;
 import com.jonahseguin.payload.mode.object.PayloadObject;
 import com.mongodb.MongoException;
-import org.mongodb.morphia.query.Query;
+import dev.morphia.query.Query;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -33,7 +33,7 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
         }
         try {
             Query<X> q = getQuery(key);
-            Stream<X> stream = q.asList().stream();
+            Stream<X> stream = q.find().toList().stream();
             Optional<X> xp = stream.findFirst();
             X x = xp.orElse(null);
             if (x != null) {
@@ -53,7 +53,7 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
     public boolean has(String String) {
         try {
             Query<X> q = getQuery(String);
-            Stream<X> stream = q.asList().stream();
+            Stream<X> stream = q.find().toList().stream();
             Optional<X> xp = stream.findFirst();
             return xp.isPresent();
         } catch (MongoException ex) {
@@ -84,7 +84,7 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
         }
         try {
             Query<X> q = getQuery(data.getIdentifier());
-            Stream<X> stream = q.asList().stream();
+            Stream<X> stream = q.find().toList().stream();
             Optional<X> xp = stream.findFirst();
             return xp.orElse(null);
         } catch (MongoException ex) {
@@ -115,7 +115,7 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
     public boolean has(ObjectData data) {
         try {
             Query<X> q = getQuery(data.getIdentifier());
-            Stream<X> stream = q.asList().stream();
+            Stream<X> stream = q.find().toList().stream();
             Optional<X> xp = stream.findFirst();
             return xp.isPresent();
         } catch (MongoException ex) {
@@ -132,7 +132,7 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
         payload.interact();
         try {
             Query<X> q = getQuery(payload.getIdentifier());
-            Stream<X> stream = q.asList().stream();
+            Stream<X> stream = q.find().toList().stream();
             Optional<X> xp = stream.findFirst();
             return xp.isPresent();
         } catch (MongoException ex) {

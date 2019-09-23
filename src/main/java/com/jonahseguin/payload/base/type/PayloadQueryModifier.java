@@ -1,6 +1,7 @@
 package com.jonahseguin.payload.base.type;
 
-import org.mongodb.morphia.query.Query;
+
+import dev.morphia.query.Query;
 
 public interface PayloadQueryModifier<X extends Payload> {
 
