@@ -51,8 +51,6 @@ public class ProfileListener implements Listener {
                 if (controller.isDenyJoin()) {
                     event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, controller.getJoinDenyReason());
                     c.getErrorHandler().debug(c, "Denied join for " + username);
-                    // We need to reset their controller
-                    cache.removeController(uniqueId);
                     cache.removeData(uniqueId);
                 }
             }

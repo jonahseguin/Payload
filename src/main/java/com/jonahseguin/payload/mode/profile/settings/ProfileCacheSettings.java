@@ -14,4 +14,6 @@ public class ProfileCacheSettings extends CacheSettings {
     private boolean denyJoinOnHandshakeTimeout = false; // will allow for failure handling
     private boolean denyJoinOnHandshakeFailDatabase = false; // deny join if database is down during handshake?
     private boolean denyJoinDatabaseDown = false;
+    private int handshakeTimeOutAttemptsAllowJoin = 3;
+
 }

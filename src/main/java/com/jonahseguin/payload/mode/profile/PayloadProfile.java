@@ -29,6 +29,7 @@ public abstract class PayloadProfile implements Payload {
     protected String loginIp = null; // IP the profile logged in with
 
     protected String lastSeenServer = null; // The Payload ID of the server they last joined
+    protected long lastSeenTimestamp = 0;
     protected boolean online = false; // is the profile online anywhere in the network, can be true even if they aren't online on this server instance
     protected String payloadId; // The ID of the Payload instance that currently holds this profile
 

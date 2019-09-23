@@ -35,6 +35,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     private volatile boolean timedOut = false;
     private volatile boolean abortHandshakeNotCached = false; // Set to true by handshakeManager if the requesting server didn't have the profile anymore
     private long handshakeStartTime = -1L;
+    private int handshakeTimeoutAttempts = 0;
     // --                                             --
 
 
@@ -43,8 +44,25 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         this.data = data;
     }
 
+
+    public void reset() {
+        this.denyJoin = false;
+        this.payload = null;
+        this.failure = false;
+
+        this.handshaking = false;
+        this.loadFromServer = null;
+        this.serverFound = false;
+        this.handshakeComplete = false;
+        this.timedOut = false;
+        this.abortHandshakeNotCached = false;
+        this.handshakeStartTime = -1L;
+    }
+
     @Override
     public X cache() {
+        this.reset();
+
         // Map their UUID to Username
         PayloadPlugin.get().getUUIDs().put(this.data.getUsername(), this.data.getUniqueId());
 
@@ -135,7 +153,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         X prePayload = attemptCache(true);
 
         if (prePayload != null) {
-            if (prePayload.getLastSeenServer() != null) {
+            if (prePayload.getLastSeenServer() != null && prePayload.isOnline()) {
                 // begin a handshake to get the server they were last seen on to save their profile before we continue to load their data
 
                 if (prePayload.getLastSeenServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
@@ -176,18 +194,33 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                         this.cache.getErrorHandler().debug(this.cache, "Handshake completed & cached for Payload " + this.data.getUsername());
 
                     } else {
-                        this.cache.getErrorHandler().debug(this.cache, "Handshake timed out for Payload " + this.data.getUsername());
-                        if (!this.cache.getSettings().isDenyJoinOnHandshakeTimeout()) {
-                            // Allow join, start failure handling
-                            if (!this.cache.getFailureManager().hasFailure(this.data)) {
-                                this.cache.getFailureManager().fail(this.data);
-                            }
-                            return null;
+                        // They timed out
+                        // The connecting server could be unresponsive, offline, or the player might not be connecting from
+                        // another server at all and their data has simply glitched.
+                        // we need to add a safety, so that after X retries after timeout (config. in settings), we just
+                        // load using the prePayload from the database.
+
+                        this.handshakeTimeoutAttempts++;
+
+                        if (this.handshakeTimeoutAttempts >= this.cache.getSettings().getHandshakeTimeOutAttemptsAllowJoin()) {
+                            // They attempted enough times, just cache using the prePayload
+                            this.cache.getErrorHandler().debug(this.cache, "Max handshake timeout attempts exceeded for Payload " + this.data.getUsername() + ", using Payload from database");
+                            payload = prePayload;
+                            this.cache.cache(payload);
                         } else {
-                            // Deny the join
-                            this.denyJoin = true;
-                            this.joinDenyReason = this.cache.getLangController().get(PLang.DENY_JOIN_HANDSHAKE_TIMEOUT, this.cache.getName());
-                            return null;
+                            this.cache.getErrorHandler().debug(this.cache, "Handshake timed out for Payload " + this.data.getUsername());
+                            if (!this.cache.getSettings().isDenyJoinOnHandshakeTimeout()) {
+                                // Allow join, start failure handling
+                                if (!this.cache.getFailureManager().hasFailure(this.data)) {
+                                    this.cache.getFailureManager().fail(this.data);
+                                }
+                                return null;
+                            } else {
+                                // Deny the join
+                                this.denyJoin = true;
+                                this.joinDenyReason = this.cache.getLangController().get(PLang.DENY_JOIN_HANDSHAKE_TIMEOUT, this.cache.getName());
+                                return null;
+                            }
                         }
                     }
                 }
@@ -251,6 +284,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             payload.setLastSeenServer(PayloadAPI.get().getPayloadID());
             payload.setOnline(true);
             payload.setCachedTimestamp(System.currentTimeMillis());
+            payload.setLastSeenTimestamp(System.currentTimeMillis());
             this.cache.getPool().submit(() -> {
                 this.cache.save(payload);
             });
