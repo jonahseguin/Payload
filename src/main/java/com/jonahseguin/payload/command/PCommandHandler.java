@@ -29,6 +29,7 @@ public class PCommandHandler implements CommandExecutor {
         register(new CmdSaveall());
         register(new CmdServer());
         register(new CmdSetID());
+        register(new CmdResetHandshake());
     }
 
     private void register(PayloadCommand cmd) {

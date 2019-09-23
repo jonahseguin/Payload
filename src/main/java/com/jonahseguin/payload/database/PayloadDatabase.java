@@ -14,6 +14,7 @@ import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
 import dev.morphia.Morphia;
 import lombok.Data;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -190,15 +191,15 @@ public class PayloadDatabase {
                 if (payloadRedis.useURI()) {
                     jedisPool = new JedisPool(URI.create(payloadRedis.getUri()));
                 } else {
-                    jedisPool = new JedisPool(payloadRedis.getAddress(), payloadRedis.getPort());
+                    if (payloadRedis.isAuth()) {
+                        jedisPool = new JedisPool(new GenericObjectPoolConfig(), payloadRedis.getAddress(), payloadRedis.getPort(), 2000, payloadRedis.getPassword(), payloadRedis.isSsl());
+                    } else {
+                        jedisPool = new JedisPool(payloadRedis.getAddress(), payloadRedis.getPort());
+                    }
                 }
             }
             if (this.jedis == null) {
-                jedis = jedisPool.getResource();
-            }
-            jedis.connect();
-            if (payloadRedis.isAuth()) {
-                jedis.auth(payloadRedis.getPassword());
+                jedis = this.getResource();
             }
             return true; // No errors if we got here; success
         } catch (Exception ex) {
@@ -213,6 +214,15 @@ public class PayloadDatabase {
                 this.redisMonitor.start();
             }
         }
+    }
+
+    public Jedis getResource() {
+        Jedis jedis = this.jedisPool.getResource();
+        jedis.connect();
+        if (this.redis.isAuth()) {
+            jedis.auth(this.redis.getPassword());
+        }
+        return jedis;
     }
 
     public boolean disconnectMongo() {

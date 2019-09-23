@@ -11,6 +11,7 @@ public class PayloadRedis {
 
     private final boolean auth;
     private final String password;
+    private final boolean ssl;
 
     private final String uri;
 
@@ -24,11 +25,18 @@ public class PayloadRedis {
         ConfigurationSection authSection = section.getConfigurationSection("auth");
         boolean auth = authSection.getBoolean("enabled");
         String password = authSection.getString("password");
+        boolean ssl = authSection.getBoolean("ssl");
 
         String uri = section.getString("uri", null); // Default uri to null
         // The connection URI, if provided, will completely overwrite all other properties.
 
-        return new PayloadRedis(address, port, auth, password, uri, retryTimeout);
+        if (uri != null) {
+            if (uri.equalsIgnoreCase("null") || uri.equalsIgnoreCase("") || uri.length() < 1) {
+                uri = null;
+            }
+        }
+
+        return new PayloadRedis(address, port, auth, password, ssl, uri, retryTimeout);
     }
 
     public boolean useURI() {
