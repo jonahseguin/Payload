@@ -7,12 +7,11 @@ import com.jonahseguin.payload.base.type.PayloadData;
 import lombok.Getter;
 import org.bukkit.plugin.Plugin;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 @Getter
 public class PayloadAPI {
@@ -23,7 +22,7 @@ public class PayloadAPI {
     private final ConcurrentMap<String, PayloadCache> caches = new ConcurrentHashMap<>();
     private final Set<String> requested = new HashSet<>();
 
-    private TreeSet<PayloadCache> _sortedCaches = null;
+    private List<PayloadCache> _sortedCaches = null;
 
     protected PayloadAPI(PayloadPlugin plugin) throws IllegalAccessException {
         this.plugin = plugin;
@@ -146,13 +145,14 @@ public class PayloadAPI {
         return (PayloadCache<K, X, D>) this.caches.get(convertCacheName(name));
     }
 
-    public TreeSet<PayloadCache> getSortedCachesByDepends() {
+    public List<PayloadCache> getSortedCachesByDepends() {
         if (this._sortedCaches != null) {
             if (!this.hasBeenModified()) {
                 return this._sortedCaches;
             }
         }
-        this._sortedCaches = new TreeSet<>(this.caches.values());
+        this._sortedCaches = new ArrayList<>(this.caches.values()).stream().sorted().collect(Collectors.toList());
+        Collections.reverse(this._sortedCaches);
         return this._sortedCaches;
     }
 

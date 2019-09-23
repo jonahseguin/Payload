@@ -194,6 +194,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             payload.setSaveFailed(true); // save failed
             payload.sendMessage(this.getLangController().get(PLang.SAVE_FAILED_NOTIFY_PLAYER, this.getName()));
             this.alert(PayloadPermission.ADMIN, PLang.SAVE_FAILED_NOTIFY_ADMIN, this.getName(), payload.getUsername());
+            this.getErrorHandler().debug(this, "Failed to save Payload: " + payload.getUsername());
         } else {
             payload.setLastSaveTimestamp(System.currentTimeMillis());
             if (payload.isSaveFailed()) {
@@ -202,6 +203,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
                 // let them know that they are free to switch servers / logout / etc. without data loss now.
                 payload.sendMessage(this.getLangController().get(PLang.SAVE_SUCCESS_NOTIFY_PLAYER, this.getName()));
                 this.alert(PayloadPermission.ADMIN, PLang.SAVE_SUCCESS_NOTIFY_ADMIN, this.getName(), payload.getUsername());
+                this.getErrorHandler().debug(this, "Successfully saved Payload: " + payload.getUsername());
             }
             payload.setSaveFailed(false);
         }
@@ -264,17 +266,20 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     public void onRedisInitConnect() {
         super.onRedisInitConnect();
         // Allocate Jedis resources for Publishing and Subscribing
-        if (this.publisherJedis == null) {
-            this.publisherJedis = this.payloadDatabase.getJedisPool().getResource();
-        }
-        if (this.subscriberJedis == null) {
-            this.subscriberJedis = this.payloadDatabase.getJedisPool().getResource();
+        if (this.payloadDatabase != null && this.payloadDatabase.getJedisPool() != null) {
+            if (this.publisherJedis == null) {
+                this.publisherJedis = this.payloadDatabase.getJedisPool().getResource();
+            }
+            if (this.subscriberJedis == null) {
+                this.subscriberJedis = this.payloadDatabase.getJedisPool().getResource();
 
-            this.subscriberJedis.subscribe(this.handshakeListener,
-                    HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(),
-                    HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(),
-                    HandshakeEvent.SAVED_PAYLOAD.getName(),
-                    HandshakeEvent.SAVING_PAYLOAD.getName());
+                this.pool.submit(() ->
+                        this.subscriberJedis.subscribe(this.handshakeListener,
+                                HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(),
+                                HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(),
+                                HandshakeEvent.SAVED_PAYLOAD.getName(),
+                                HandshakeEvent.SAVING_PAYLOAD.getName()));
+            }
         }
     }
 

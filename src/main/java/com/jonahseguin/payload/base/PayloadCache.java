@@ -114,7 +114,6 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
             this.getState().lock();
             throw new PayloadRuntimeException("Instantiator for cache " + this.getName() + " cannot be Null!  Call withInstantiator() before starting!");
         }
-        // What else should be implemented here?
         this.init();
         this.running = true;
         this.failureManager.start();
@@ -130,16 +129,18 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
      */
     public final boolean stop() {
         if (!this.isRunning()) return true;
+        int failedSaves = this.saveAll(); // First, save everything.
+
+        this.shutdown(); // Allow the implementing cache to do it's shutdown first
         this.autoSaveTask.stop();
         this.cleanupTask.stop();
-        int failedSaves = this.saveAll();
-        if (failedSaves > 0) {
-            this.getErrorHandler().error(this, failedSaves + " Payload objects failed to save during shutdown");
-        }
-        this.shutdown(); // Allow the implementing cache to do it's shutdown first
+        this.failureManager.stop();
         this.pool.shutdown(); // Shutdown our thread pool
         this.running = false;
-        this.failureManager.stop();
+        if (failedSaves > 0) {
+            this.getErrorHandler().error(this, failedSaves + " Payload objects failed to save during shutdown");
+            return false;
+        }
         return true;
     }
 

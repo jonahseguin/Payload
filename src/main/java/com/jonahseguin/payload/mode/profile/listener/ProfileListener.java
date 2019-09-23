@@ -16,6 +16,7 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.util.List;
 import java.util.UUID;
 
 public class ProfileListener implements Listener {
@@ -26,24 +27,33 @@ public class ProfileListener implements Listener {
         final UUID uniqueId = event.getUniqueId();
         final String ip = event.getAddress().getHostAddress();
 
-        for (PayloadCache c : PayloadAPI.get().getSortedCachesByDepends()) {
+        List<PayloadCache> sortedCaches = PayloadAPI.get().getSortedCachesByDepends();
+
+        for (PayloadCache c : sortedCaches) {
             if (c instanceof ProfileCache) {
                 if (c.getState().isLocked()) {
                     event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, c.getLangController().get(PLang.KICK_MESSAGE_LOCKED, c.getName()));
+                    c.getErrorHandler().debug(c, "Denied join (locked) for " + username);
                     return; // Stop here
                 }
             }
         }
 
-        PayloadAPI.get().getSortedCachesByDepends().forEach(c -> {
+        sortedCaches.forEach(c -> {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
+                c.getErrorHandler().debug(c, "Starting caching " + username);
                 ProfileData data = cache.createData(username, uniqueId, ip);
                 PayloadProfileController controller = cache.controller(data);
                 controller.cache();
+                c.getErrorHandler().debug(c, "Cached " + username);
 
                 if (controller.isDenyJoin()) {
                     event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, controller.getJoinDenyReason());
+                    c.getErrorHandler().debug(c, "Denied join for " + username);
+                    // We need to reset their controller
+                    cache.removeController(uniqueId);
+                    cache.removeData(uniqueId);
                 }
             }
         });
@@ -76,6 +86,7 @@ public class ProfileListener implements Listener {
                 if (cache.getMode().equals(PayloadMode.STANDALONE)) {
                     // save on quit in standalone mode
                     cache.getPool().submit(() -> {
+                        cache.getErrorHandler().debug(cache, "Saving player " + player.getName() + " on quit");
                         if (!cache.save(player)) {
                             cache.getErrorHandler().debug(cache, "Player could not be saved on quit (not cached): " + player.getName());
                         }
@@ -88,7 +99,10 @@ public class ProfileListener implements Listener {
                             // Logging out, and not switching servers
                             profile.setOnline(false);
                             cache.save(player); // Save
+                            cache.getErrorHandler().debug(cache, "Saving player " + player.getName() + " on logout (not switching servers)");
                             // It's safe to save here because they aren't switching servers, but they are logging out entirely
+                        } else {
+                            cache.getErrorHandler().debug(cache, "Not saving player " + player.getName() + " on quit (is switching servers)");
                         }
                     } else {
                         // This shouldn't happen
