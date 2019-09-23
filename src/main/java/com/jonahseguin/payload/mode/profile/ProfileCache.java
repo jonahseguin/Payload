@@ -69,6 +69,16 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     @Override
     protected void shutdown() {
         // close layers in order, save all objects, etc.
+
+        for (Player player : this.getPlugin().getServer().getOnlinePlayers()) {
+            X payload = this.getLocalProfile(player);
+            if (payload != null) {
+                payload.setOnline(false);
+                payload.setLastSeenTimestamp(System.currentTimeMillis());
+            }
+        }
+        // ^ they will be saved in the superclass's shutdown impl
+
         if (this.mode.equals(PayloadMode.NETWORK_NODE)) {
             this.handshakeManager.getTimeoutTask().stop();
         }

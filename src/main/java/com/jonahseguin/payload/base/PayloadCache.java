@@ -129,9 +129,9 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
      */
     public final boolean stop() {
         if (!this.isRunning()) return true;
-        int failedSaves = this.saveAll(); // First, save everything.
 
         this.shutdown(); // Allow the implementing cache to do it's shutdown first
+        int failedSaves = this.saveAll(); // First, save everything.
         this.autoSaveTask.stop();
         this.cleanupTask.stop();
         this.failureManager.stop();

@@ -85,6 +85,11 @@ public class ProfileListener implements Listener {
                     // save on quit in standalone mode
                     cache.getPool().submit(() -> {
                         cache.getErrorHandler().debug(cache, "Saving player " + player.getName() + " on quit");
+                        PayloadProfile profile = cache.getLocalProfile(player);
+                        if (profile != null) {
+                            profile.setOnline(false);
+                            profile.setLastSeenTimestamp(System.currentTimeMillis());
+                        }
                         if (!cache.save(player)) {
                             cache.getErrorHandler().debug(cache, "Player could not be saved on quit (not cached): " + player.getName());
                         }
@@ -96,6 +101,7 @@ public class ProfileListener implements Listener {
                             // Not switching servers (no incoming handshake) -- we can assume they are actually
                             // Logging out, and not switching servers
                             profile.setOnline(false);
+                            profile.setLastSeenTimestamp(System.currentTimeMillis());
                             cache.save(player); // Save
                             cache.getErrorHandler().debug(cache, "Saving player " + player.getName() + " on logout (not switching servers)");
                             // It's safe to save here because they aren't switching servers, but they are logging out entirely

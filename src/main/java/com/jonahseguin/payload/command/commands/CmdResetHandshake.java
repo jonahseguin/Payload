@@ -72,7 +72,7 @@ public class CmdResetHandshake implements PayloadCommand {
 
     @Override
     public String usage() {
-        return "<cache name> <profile name>";
+        return "<cache name> <player name>";
     }
 
     @Override
