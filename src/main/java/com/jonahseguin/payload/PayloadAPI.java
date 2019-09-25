@@ -97,35 +97,16 @@ public class PayloadAPI {
      * This is the method for obtaining an {@link PayloadHook} for a {@link Plugin} / JavaPlugin instance,
      * for an external hooking plugin.
      * @param plugin {@link Plugin} the hooking plugin
-     * @return A {@link CompletableFuture<PayloadHook>} that will be completed once provisioning is complete,
-     * might also throw an exception which can be handled within the CompletableFuture
+     * @return The {@link PayloadHook} for your plugin
+     * might also throw an exception if the hook is already registered
      */
-    public CompletableFuture<PayloadHook> requestProvision(final Plugin plugin) {
+    public PayloadHook requestProvision(final Plugin plugin) {
         if (this.hooks.containsKey(plugin.getName())) {
             throw new IllegalStateException("Hook has already been provisioned for plugin " + plugin.getName());
         }
-        if (this.requested.contains(plugin.getName())) {
-            throw new IllegalStateException("Hook is already awaiting provisioning for plugin " + plugin.getName());
-        }
-        if (plugin instanceof PayloadPlugin) {
-            CompletableFuture<PayloadHook> future = new CompletableFuture<>();
-            future.completeExceptionally(new IllegalArgumentException("Plugin requesting provision cannot be of instance PayloadPlugin"));
-            return future;
-        }
-        this.requested.add(plugin.getName());
-        return CompletableFuture.supplyAsync(() -> {
-            while (PayloadPlugin.get().isLocked()) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ex) {
-                    throw new PayloadProvisionException("Interrupted while waiting for provision for plugin " + plugin.getName(), ex);
-                }
-            }
-            this.requested.remove(plugin.getName());
-            PayloadHook hook = new PayloadHook(plugin);
-            this.hooks.putIfAbsent(plugin.getName(), hook);
-            return hook;
-        });
+        PayloadHook hook = new PayloadHook(plugin);
+        this.hooks.putIfAbsent(plugin.getName(), hook);
+        return hook;
     }
 
     /**
