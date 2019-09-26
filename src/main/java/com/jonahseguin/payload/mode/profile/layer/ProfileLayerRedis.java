@@ -24,9 +24,11 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public X get(UUID uuid) throws PayloadLayerCannotProvideException {
-
         try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
             String json = jedis.hget(this.getCache().getName(), uuid.toString());
+            if (json == null) {
+                return null;
+            }
             return mapProfile(json);
         } catch (Exception expected) {
             this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error getting Profile from Redis Layer: " + uuid.toString());
@@ -54,12 +56,12 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     }
 
     @Override
-    public X get(ProfileData data) throws PayloadLayerCannotProvideException {
-        if (!this.has(data.getUniqueId())) {
-            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in Redis layer for Profile username:" + data.getUsername(), this.cache);
-        }
+    public X get(ProfileData data) {
         try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
             String json = jedis.hget(this.getCache().getName(), data.getUniqueId().toString());
+            if (json == null) {
+                return null;
+            }
             return mapProfile(json);
         }
         catch (Exception expected) {

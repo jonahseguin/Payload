@@ -1,6 +1,10 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.profile.layer;
 
-import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.type.PayloadQueryModifier;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
@@ -25,10 +29,7 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
     }
 
     @Override
-    public X get(UUID key) throws PayloadLayerCannotProvideException {
-        if (!this.has(key)) {
-            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in MongoDB layer for Profile UUID:" + key.toString(), this.cache);
-        }
+    public X get(UUID key) {
         try {
             Query<X> q = getQuery(key);
             Stream<X> stream = q.find().toList().stream();
@@ -72,10 +73,7 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
     }
 
     @Override
-    public X get(ProfileData data) throws PayloadLayerCannotProvideException {
-        if (!this.has(data)) {
-            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in MongoDB layer for Profile username:" + data.getUsername(), this.cache);
-        }
+    public X get(ProfileData data) {
         try {
             Query<X> q = getQuery(data.getUniqueId());
             Stream<X> stream = q.asList().stream();

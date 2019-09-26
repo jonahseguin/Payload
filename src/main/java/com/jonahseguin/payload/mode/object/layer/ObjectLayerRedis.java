@@ -6,7 +6,6 @@
 package com.jonahseguin.payload.mode.object.layer;
 
 import com.jonahseguin.payload.base.exception.PayloadException;
-import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.ObjectData;
 import com.jonahseguin.payload.mode.object.PayloadObject;
@@ -28,9 +27,12 @@ public class ObjectLayerRedis<X extends PayloadObject> extends ObjectCacheLayer<
     }
 
     @Override
-    public X get(String key) throws PayloadLayerCannotProvideException {
+    public X get(String key) {
         try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
             String json = jedis.hget(this.getCache().getName(), key);
+            if (json == null) {
+                return null;
+            }
             return mapObject(json);
         } catch (Exception expected) {
             this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error getting Object from Redis Layer: " + key);
@@ -39,7 +41,7 @@ public class ObjectLayerRedis<X extends PayloadObject> extends ObjectCacheLayer<
     }
 
     @Override
-    public X get(ObjectData data) throws PayloadLayerCannotProvideException {
+    public X get(ObjectData data) {
         return this.get(data.getIdentifier());
     }
 

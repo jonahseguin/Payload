@@ -1,6 +1,10 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.object.layer;
 
-import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.ObjectData;
 import com.jonahseguin.payload.mode.object.PayloadObject;
@@ -20,15 +24,12 @@ public class ObjectLayerLocal<X extends PayloadObject> extends ObjectCacheLayer<
     }
 
     @Override
-    public X get(String key) throws PayloadLayerCannotProvideException {
-        if (!this.has(key)) {
-            throw new PayloadLayerCannotProvideException("Cannot provide in local layer for object identifier: " + key, this.cache);
-        }
+    public X get(String key) {
         return this.localCache.get(key);
     }
 
     @Override
-    public X get(ObjectData data) throws PayloadLayerCannotProvideException {
+    public X get(ObjectData data) {
         return this.get(data.getIdentifier());
     }
 

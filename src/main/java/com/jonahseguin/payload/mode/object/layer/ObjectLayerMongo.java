@@ -1,6 +1,10 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.object.layer;
 
-import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
 import com.jonahseguin.payload.base.type.PayloadQueryModifier;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.ObjectData;
@@ -27,10 +31,7 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
     }
 
     @Override
-    public X get(String key) throws PayloadLayerCannotProvideException {
-        if (!this.has(key)) {
-            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in MongoDB layer for Object:" + key, this.cache);
-        }
+    public X get(String key) {
         try {
             Query<X> q = getQuery(key);
             Stream<X> stream = q.find().toList().stream();
@@ -78,22 +79,8 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
     }
 
     @Override
-    public X get(ObjectData data) throws PayloadLayerCannotProvideException {
-        if (!this.has(data)) {
-            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in MongoDB layer for Object:" + data.getIdentifier(), this.cache);
-        }
-        try {
-            Query<X> q = getQuery(data.getIdentifier());
-            Stream<X> stream = q.find().toList().stream();
-            Optional<X> xp = stream.findFirst();
-            return xp.orElse(null);
-        } catch (MongoException ex) {
-            this.getCache().getErrorHandler().exception(this.getCache(), ex, "MongoDB error getting Object from MongoDB Layer: " + data.getIdentifier());
-            return null;
-        } catch (Exception expected) {
-            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error getting Object from MongoDB Layer: " + data.getIdentifier());
-            return null;
-        }
+    public X get(ObjectData data) {
+        return this.get(data.getIdentifier());
     }
 
     @Override

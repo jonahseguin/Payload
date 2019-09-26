@@ -1,6 +1,10 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.profile.layer;
 
-import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
@@ -20,14 +24,14 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
     }
 
     @Override
-    public X get(ProfileData data) throws PayloadLayerCannotProvideException {
+    public X get(ProfileData data) {
         return get(data.getUniqueId());
     }
 
     @Override
-    public X get(UUID uuid) throws PayloadLayerCannotProvideException {
+    public X get(UUID uuid) {
         if (!this.has(uuid)) {
-            throw new PayloadLayerCannotProvideException("Cannot provide (does not have) in local layer for Profile UUID:" + uuid, this.cache);
+            return null;
         }
         X x = this.localCache.get(uuid);
         x.interact();
