@@ -249,7 +249,6 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             if (payload != null) {
                 payload.setLastSeenTimestamp(System.currentTimeMillis());
                 payload.setLastSeenServer(PayloadAPI.get().getPayloadID());
-                payload.setOnline(true);
                 payload.setLastInteractionTimestamp(System.currentTimeMillis());
                 if (!this.save(payload)) {
                     failures++;

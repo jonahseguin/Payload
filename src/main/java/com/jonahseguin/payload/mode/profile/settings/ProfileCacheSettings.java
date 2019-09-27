@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.profile.settings;
 
 import com.jonahseguin.payload.base.settings.CacheSettings;
@@ -15,5 +20,6 @@ public class ProfileCacheSettings extends CacheSettings {
     private boolean denyJoinOnHandshakeFailDatabase = false; // deny join if database is down during handshake?
     private boolean denyJoinDatabaseDown = false;
     private int handshakeTimeOutAttemptsAllowJoin = 3;
+    private boolean setOfflineOnShutdown = true; // update Profiles to offline=true on cache shutdown
 
 }

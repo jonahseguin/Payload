@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base;
 
 import com.jonahseguin.payload.PayloadHook;
@@ -131,7 +136,9 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         if (!this.isRunning()) return true;
 
         this.shutdown(); // Allow the implementing cache to do it's shutdown first
+
         int failedSaves = this.saveAll(); // First, save everything.
+
         this.autoSaveTask.stop();
         this.cleanupTask.stop();
         this.failureManager.stop();
