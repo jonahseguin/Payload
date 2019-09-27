@@ -79,7 +79,7 @@ public class ProfileListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH)
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        PayloadAPI.get().getSortedCachesByDepends().forEach(c -> {
+        PayloadAPI.get().getSortedCachesByDependsReversed().forEach(c -> {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
 

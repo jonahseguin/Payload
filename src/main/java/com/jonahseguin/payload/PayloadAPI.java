@@ -31,6 +31,7 @@ public class PayloadAPI {
     private final Set<String> requested = new HashSet<>();
 
     private List<PayloadCache> _sortedCaches = null;
+    private List<PayloadCache> _sortedCachesReversed = null;
 
     protected PayloadAPI(PayloadPlugin plugin) throws IllegalAccessException {
         this.plugin = plugin;
@@ -161,8 +162,22 @@ public class PayloadAPI {
         return this._sortedCaches;
     }
 
+    public List<PayloadCache> getSortedCachesByDependsReversed() {
+        if (this._sortedCachesReversed != null) {
+            if (!this.hasBeenModifiedReversed()) {
+                return this._sortedCachesReversed;
+            }
+        }
+        this._sortedCachesReversed = new ArrayList<>(this.caches.values()).stream().sorted().collect(Collectors.toList());
+        return this._sortedCachesReversed;
+    }
+
     private boolean hasBeenModified() {
         return this.caches.size() != this._sortedCaches.size();
+    }
+
+    private boolean hasBeenModifiedReversed() {
+        return this.caches.size() != this._sortedCachesReversed.size();
     }
 
     public void setPayloadID(String name) {
