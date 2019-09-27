@@ -66,6 +66,10 @@ public abstract class PayloadProfile implements Payload {
         this.player = player;
     }
 
+    public void uninitializePlayer(Player player) {
+
+    }
+
     public boolean isPlayerOnline() {
         if (this.player == null) {
             Player player = Bukkit.getPlayerExact(this.username);

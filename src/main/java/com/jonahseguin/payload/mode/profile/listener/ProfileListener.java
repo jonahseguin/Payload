@@ -90,6 +90,7 @@ public class ProfileListener implements Listener {
                         if (profile != null) {
                             profile.setOnline(false);
                             profile.setLastSeenTimestamp(System.currentTimeMillis());
+                            profile.uninitializePlayer(player);
                         }
                         if (!cache.save(player)) {
                             cache.getErrorHandler().debug(cache, "Player could not be saved on quit (not cached): " + player.getName());
@@ -98,6 +99,7 @@ public class ProfileListener implements Listener {
                 } else if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
                     PayloadProfile profile = cache.getLocalProfile(player);
                     if (profile != null) {
+                        profile.uninitializePlayer(player);
                         if (!profile.isSwitchingServers()) {
                             // Not switching servers (no incoming handshake) -- we can assume they are actually
                             // Logging out, and not switching servers
