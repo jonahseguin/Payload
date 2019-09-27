@@ -34,11 +34,10 @@ public class ServerPublisher {
     }
 
     public void publishQuit() {
-        PayloadPlugin.runASync(PayloadPlugin.get(), () -> {
-            try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
-                jedis.publish(ServerEvent.QUIT.getEvent(), serverManager.getThisServer().getName());
-            }
-        });
+        // Sync -- we want this to complete first before shutdown
+        try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
+            jedis.publish(ServerEvent.QUIT.getEvent(), serverManager.getThisServer().getName());
+        }
     }
 
     public void publishUpdateName(String oldName, String newName) {

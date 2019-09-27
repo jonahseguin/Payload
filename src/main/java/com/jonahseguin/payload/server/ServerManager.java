@@ -96,7 +96,7 @@ public class ServerManager implements Runnable {
     }
 
     public void shutdown() {
-        this.publisher.publishQuit();
+        this.publisher.publishQuit(); // Sync.
 
         if (this.subscriber != null) {
             if (this.subscriber.isSubscribed()) {
