@@ -13,6 +13,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -59,7 +60,7 @@ public class ProfileListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOW)
-    public void onCachingInit(PlayerLoginEvent event) {
+    public void onCachingInit(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         PayloadAPI.get().getSortedCachesByDepends().forEach(c -> {
             if (c instanceof ProfileCache) {
@@ -90,7 +91,7 @@ public class ProfileListener implements Listener {
                         if (profile != null) {
                             profile.setOnline(false);
                             profile.setLastSeenTimestamp(System.currentTimeMillis());
-                            profile.uninitializePlayer(player);
+                            profile.uninitializePlayer();
                         }
                         if (!cache.save(player)) {
                             cache.getErrorHandler().debug(cache, "Player could not be saved on quit (not cached): " + player.getName());
@@ -99,7 +100,7 @@ public class ProfileListener implements Listener {
                 } else if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
                     PayloadProfile profile = cache.getLocalProfile(player);
                     if (profile != null) {
-                        profile.uninitializePlayer(player);
+                        profile.uninitializePlayer();
                         if (!profile.isSwitchingServers()) {
                             // Not switching servers (no incoming handshake) -- we can assume they are actually
                             // Logging out, and not switching servers
@@ -121,7 +122,6 @@ public class ProfileListener implements Listener {
                     // but we do want to remove their locally cached profile because the data will be outdated
                     // and we want to prevent accidental data rollbacks
                     cache.getLocalLayer().remove(player.getUniqueId());
-
                 }
 
                 // Remove their data after they leave so that its reset for their next login

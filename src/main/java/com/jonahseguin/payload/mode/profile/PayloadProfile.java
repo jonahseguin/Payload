@@ -66,7 +66,7 @@ public abstract class PayloadProfile implements Payload {
         this.player = player;
     }
 
-    public void uninitializePlayer(Player player) {
+    public void uninitializePlayer() {
 
     }
 
