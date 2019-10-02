@@ -166,7 +166,6 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                     // They were last seen on this server
                     // Use the payload we already loaded
                     payload = prePayload;
-                    this.cache.cache(payload);
                     this.cache.getErrorHandler().debug(this.cache, "Recent server for Payload " + this.data.getUsername() + " is this server, using Payload from database");
                 } else {
                     PayloadServer from = this.cache.getPayloadDatabase().getServerManager().getServer(prePayload.getLastSeenServer());
@@ -178,7 +177,6 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                         // For the payload
                         this.cache.getErrorHandler().debug(this.cache, "Not handshaking for " + this.data.getUsername() + ", the server " + prePayload.getLastSeenServer() + " is not online.  Using Payload from database");
                         payload = prePayload;
-                        this.cache.cache(payload);
                     } else {
                         this.handshaking = true;
 
@@ -201,7 +199,6 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                             if (this.isAbortHandshakeNotCached()) {
                                 // the payload wasn't on the target server
                                 // just cache the prePayload we already loaded
-                                this.cache.cache(prePayload);
                                 payload = prePayload;
                             } else {
                                 // Handshake completed, cache normally
@@ -222,7 +219,6 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                                 // They attempted enough times, just cache using the prePayload
                                 this.cache.getErrorHandler().debug(this.cache, "Max handshake timeout attempts exceeded for Payload " + this.data.getUsername() + ", using Payload from database");
                                 payload = prePayload;
-                                this.cache.cache(payload);
                             } else {
                                 this.cache.getErrorHandler().debug(this.cache, "Handshake timed out for Payload " + this.data.getUsername());
                                 if (!this.cache.getSettings().isDenyJoinOnHandshakeTimeout()) {
@@ -246,7 +242,6 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 // Just use the object we loaded from the database as it's up to date.
                 this.cache.getErrorHandler().debug(this.cache, "No recent server found for Payload " + this.data.getUsername() + ", using Payload from database");
                 payload = prePayload;
-                this.cache.cache(payload);
             }
         } else {
             // They don't have any object stored in any database (Redis or MongoDB)
@@ -275,7 +270,13 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         }
 
         if (payload != null) {
-            payload.setLoginIp(this.data.getIp());
+            if (this.data.getIp() != null) {
+                payload.setLoginIp(this.data.getIp());
+            }
+            if (this.data.getUsername() != null) {
+                payload.setUsername(this.data.getUsername()); // Update their username
+            }
+            this.cache.cache(payload);
         }
 
         return payload;

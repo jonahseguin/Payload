@@ -11,7 +11,6 @@ import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.PayloadPermission;
-import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
 import com.jonahseguin.payload.base.failsafe.FailedPayload;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
@@ -151,8 +150,9 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             return failedPayload.getTemporaryPayload();
         }
 
+        /* -- OLD
         // Handle the getting of a Profile from the first available layer
-        for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
+         for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
             if (layer.has(uniqueId)) {
                 try {
                     return layer.get(uniqueId);
@@ -160,10 +160,17 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
                     this.getErrorHandler().exception(this, e, "Error getting Profile by UUID: " + uniqueId.toString());
                 }
             }
-        }
+        } END OLD -- */
 
+        // instead of doing this manually like above, we are instead now going to do it via controller and cache the profile
+        ProfileData data = this.createData(null, uniqueId, null);
+        PayloadProfileController<X> controller = this.controller(data);
+        return controller.cache();
+
+        /* -- OLD
         // No profile found for said UUID
         return null;
+         END OLD -- */
     }
 
     public X getLocalProfile(Player player) {
