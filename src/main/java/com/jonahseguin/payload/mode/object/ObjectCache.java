@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.object;
 
 import com.jonahseguin.payload.PayloadHook;
@@ -10,8 +15,11 @@ import com.jonahseguin.payload.mode.object.settings.ObjectCacheSettings;
 import lombok.Getter;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 @Getter
 public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X, ObjectData> {
@@ -97,6 +105,17 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
         ObjectData data = this.createData(key);
         PayloadObjectController<X> controller = this.controller(data);
         return controller.cache();
+    }
+
+    public Set<X> getAll() {
+        final Set<X> all = new HashSet<>(this.localLayer.getAll());
+        if (this.settings.isUseRedis()) {
+            all.addAll(this.redisLayer.getAll().stream().filter(x -> all.stream().noneMatch(x2 -> x.getObjectId().equals(x2.getObjectId()))).collect(Collectors.toSet()));
+        }
+        if (this.settings.isUseMongo()) {
+            all.addAll(this.mongoLayer.getAll().stream().filter(x -> all.stream().noneMatch(x2 -> x.getObjectId().equals(x2.getObjectId()))).collect(Collectors.toSet()));
+        }
+        return all;
     }
 
     @Override

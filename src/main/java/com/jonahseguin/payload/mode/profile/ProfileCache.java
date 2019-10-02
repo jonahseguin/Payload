@@ -201,6 +201,13 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         this.data.remove(uuid);
     }
 
+    public Set<X> getAll() {
+        final Set<X> all = this.localLayer.getAll().stream().filter(PayloadProfile::isOnlineThisServer).collect(Collectors.toSet());
+        all.addAll(this.redisLayer.getAll().stream().filter(x -> all.stream().noneMatch(x2 -> x.getUniqueId().equals(x2.getUniqueId()))).collect(Collectors.toSet()));
+        all.addAll(this.mongoLayer.getAll().stream().filter(x -> all.stream().noneMatch(x2 -> x.getUniqueId().equals(x2.getUniqueId()))).collect(Collectors.toSet()));
+        return all;
+    }
+
     @Override
     public PayloadProfileController<X> controller(ProfileData data) {
         if (this.controllers.containsKey(data.getUniqueId())) {
