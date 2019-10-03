@@ -121,6 +121,19 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         }
     }
 
+    public X getLocalProfileByName(String username) {
+        UUID uuid = PayloadPlugin.get().getUUIDs().get(username);
+        if (uuid != null) {
+            return this.getProfile(uuid);
+        }
+        Player exact = Bukkit.getPlayerExact(username);
+        if (exact != null) {
+            return this.getProfile(exact);
+        }
+        return null;
+    }
+
+
     public X getProfile(UUID uuid) {
         return this.get(uuid);
     }

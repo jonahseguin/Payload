@@ -11,6 +11,39 @@ public enum HandshakeEvent {
     // will just use the payload they already loaded when getting the lastSeenServer field
     ;
 
+    /*
+    -> cache.save(payload)
+    - check if player is online another server
+    - if they are online another server, publish Handshake Event: PAYLOAD_SAVED_ELSEWHERE
+
+-> other server receives PAYLOAD_SAVED_ELSEWHERE
+    - re-cache their profile from the database (Redis)
+
+
+this will ensure no data loss/rollback/overwrites.
+
+// -----------------------------------------------------------------------------------------
+
+-> cache.prepareUpdate(payload, callback(newPayload))
+  - if profile online another server: publish PAYLOAD_PREPARE_UPDATE
+  - if they're not, just save after the callback
+-> other server receives PAYLOAD_PREPARE_UPDATE
+  - if they have the profile online, (or even if they don't):
+  - if they are online, save them
+  - then publish PAYLOAD_UPDATE_PREPARED
+-> then the source server calls it's callback provided in #prepareUpdate, and then makes a cache.save(payload) call after saving it
+
+if (payload.isOnlineOtherServer()) {
+  cache.prepareUpdate(payload, (updatedPayload) -> {
+  updatedPayload.setPvPTimer(60);
+  });
+}
+else {
+  payload.setPvPTimer(60);
+  cache.save(payload);
+}
+     */
+
     private final String name;
 
     HandshakeEvent() {
