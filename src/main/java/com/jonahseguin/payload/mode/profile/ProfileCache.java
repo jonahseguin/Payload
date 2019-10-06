@@ -178,6 +178,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         // instead of doing this manually like above, we are instead now going to do it via controller and cache the profile
         ProfileData data = this.createData(null, uniqueId, null);
         PayloadProfileController<X> controller = this.controller(data);
+        controller.setLogin(false);
         return controller.cache();
 
         /* -- OLD
