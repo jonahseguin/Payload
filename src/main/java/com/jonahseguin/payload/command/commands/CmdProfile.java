@@ -47,6 +47,7 @@ public class CmdProfile implements PayloadCommand {
                 args.msg("&7Last Seen At: {0}", (profile.isOnline() ? "&aNow" : "&6" + formatDateTime(profile.getLastSeenTimestamp())));
                 args.msg("&7Last Saved: {0}", (profile.getLastSaveTimestamp() > 0 ? "&6" + formatDateTime(profile.getLastSeenTimestamp()) : "&cNever"));
                 args.msg("&7Last Save Status: {0}", (profile.isSaveFailed() ? "&cFailed" : "&cSuccessful"));
+                args.msg("&7Loading Source: &6{0}", profile.getLoadingSource());
                 args.msg("&7Login IP: {0}", (profile.getLoginIp() != null ? "&6" + profile.getLoginIp() : "&cN/A"));
             } else {
                 args.msg("&cPayload: A profile with username '{0}' does not exist in cache '{1}'.", playerName);

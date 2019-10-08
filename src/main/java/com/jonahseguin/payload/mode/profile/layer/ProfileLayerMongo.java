@@ -78,7 +78,12 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
             Query<X> q = getQuery(data.getUniqueId());
             Stream<X> stream = q.asList().stream();
             Optional<X> xp = stream.findFirst();
-            return xp.orElse(null);
+            X x = xp.orElse(null);
+            if (x != null) {
+                x.interact();
+                x.setLoadingSource(this.layerName());
+            }
+            return x;
         } catch (MongoException ex) {
             this.getCache().getErrorHandler().exception(this.getCache(), ex, "MongoDB error getting Profile from MongoDB Layer: " + data.getUsername());
             return null;
@@ -93,7 +98,12 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
             Query<X> q = getQueryForUsername(username);
             Stream<X> stream = q.asList().stream();
             Optional<X> xp = stream.findFirst();
-            return xp.orElse(null);
+            X x = xp.orElse(null);
+            if (x != null) {
+                x.interact();
+                x.setLoadingSource(this.layerName());
+            }
+            return x;
         } catch (MongoException ex) {
             this.getCache().getErrorHandler().exception(this.getCache(), ex, "MongoDB error getting Profile from MongoDB Layer: " + username);
             return null;

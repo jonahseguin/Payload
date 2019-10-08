@@ -71,8 +71,10 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     public X cache() {
         this.reset();
 
-        // Map their UUID to Username
-        PayloadPlugin.get().getUUIDs().put(this.data.getUsername(), this.data.getUniqueId());
+        if (this.data.getUniqueId() != null && this.data.getUsername() != null) {
+            // Map their UUID to Username
+            PayloadPlugin.get().getUUIDs().put(this.data.getUsername(), this.data.getUniqueId());
+        }
 
         if (this.login) {
             if (this.cache.getSettings().isDenyJoinDatabaseDown()) {
@@ -165,7 +167,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         // [X] --> if true allow their join and start failure handling (which will continue to attempt more handshakes until successful)
         // [X] --> if false we will just kick the player (deny the login) ****[will have to be handled in the ProfileListener event for e.disallow)****
 
-        this.cache.getErrorHandler().debug(this.cache, "Caching Payload " + this.getData().getIdentifier() + "(login: " + this.login + ")");
+        this.cache.getErrorHandler().debug(this.cache, "Caching Payload [network-node] " + this.getData().getIdentifier() + "(login: " + this.login + ")");
 
         X prePayload = attemptCache(this.login); // only load from database-only if they are logging in
 
@@ -183,7 +185,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                         // They were last seen on this server
                         // Use the payload we already loaded
                         payload = prePayload;
-                        this.cache.getErrorHandler().debug(this.cache, "Recent server for Payload " + this.data.getIdentifier() + " is this server, using Payload from database");
+                        this.cache.getErrorHandler().debug(this.cache, "Recent server for Payload " + this.data.getIdentifier() + " is this server, using Payload we already loaded");
                     } else {
                         PayloadServer from = this.cache.getPayloadDatabase().getServerManager().getServer(prePayload.getLastSeenServer());
 
@@ -302,6 +304,8 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 // Only cache them if they are logging in,
                 this.cache.cache(payload);
             }
+
+            this.cache.getErrorHandler().debug(this.cache, "Finished caching payload " + this.data.getIdentifier() + ", from: " + payload.getLoadingSource());
         }
 
         return payload;

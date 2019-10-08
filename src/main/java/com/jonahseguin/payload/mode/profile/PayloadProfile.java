@@ -47,7 +47,7 @@ public abstract class PayloadProfile implements Payload {
     protected transient boolean saveFailed = false; // If the player's profile failed to auto-save/save on shutdown,
     // This will be set to true, and we will notify the player once their
     // Profile has been saved successfully
-
+    protected transient String loadingSource = null;
     protected transient Player player = null;
 
     public PayloadProfile() {

@@ -6,7 +6,6 @@
 package com.jonahseguin.payload.mode.profile.layer;
 
 import com.jonahseguin.payload.base.exception.PayloadException;
-import com.jonahseguin.payload.base.exception.PayloadLayerCannotProvideException;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
@@ -23,13 +22,19 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     }
 
     @Override
-    public X get(UUID uuid) throws PayloadLayerCannotProvideException {
+    public X get(UUID uuid) {
         try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
             String json = jedis.hget(this.getCache().getName(), uuid.toString());
             if (json == null) {
                 return null;
             }
-            return mapProfile(json);
+            X x = mapProfile(json);
+            if (x != null) {
+                x.interact();
+                x.interactRedis();
+                x.setLoadingSource(this.layerName());
+            }
+            return x;
         } catch (Exception expected) {
             this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error getting Profile from Redis Layer: " + uuid.toString());
             return null;
@@ -57,17 +62,7 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public X get(ProfileData data) {
-        try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
-            String json = jedis.hget(this.getCache().getName(), data.getUniqueId().toString());
-            if (json == null) {
-                return null;
-            }
-            return mapProfile(json);
-        }
-        catch (Exception expected) {
-            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error getting Profile from Redis Layer: " + data.getUsername());
-            return null;
-        }
+        return this.get(data.getUniqueId());
     }
 
     @Override

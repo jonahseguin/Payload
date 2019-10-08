@@ -35,6 +35,7 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
         }
         X x = this.localCache.get(uuid);
         x.interact();
+        x.setLoadingSource(this.layerName());
         return x;
     }
 
