@@ -171,7 +171,6 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 // They are cached locally and online this server
                 // No need to do anything else
                 payload = prePayload;
-                this.cache.getErrorHandler().debug(this.cache, "Loaded Payload " + prePayload.getUsername() + " from local cache");
             } else {
                 if (prePayload.getLastSeenServer() != null && prePayload.isOnline()) {
                     // begin a handshake to get the server they were last seen on to save their profile before we continue to load their data
@@ -285,13 +284,18 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         }
 
         if (payload != null) {
-            if (this.data.getIp() != null) {
-                payload.setLoginIp(this.data.getIp());
+            if (this.login) {
+                if (this.data.getIp() != null) {
+                    payload.setLoginIp(this.data.getIp());
+                }
+                if (this.data.getUsername() != null) {
+                    payload.setUsername(this.data.getUsername()); // Update their username
+                }
             }
-            if (this.data.getUsername() != null) {
-                payload.setUsername(this.data.getUsername()); // Update their username
+            if (this.cache.getSettings().isAlwaysCacheOnLoadNetworkNode() || this.login) {
+                // Only cache them if they are logging in,
+                this.cache.cache(payload);
             }
-            this.cache.cache(payload);
         }
 
         return payload;

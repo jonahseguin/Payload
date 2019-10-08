@@ -81,7 +81,7 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
         long expiryTimeSeconds = this.getCache().getSettings().getLocalExpiryTimeSeconds();
         Set<UUID> purge = new HashSet<>();
         for (Map.Entry<UUID, X> entry : this.localCache.entrySet()) {
-            if (entry.getValue().getLastInteractionTimestamp() < (System.currentTimeMillis() - (expiryTimeSeconds * 1000))) {
+            if (!entry.getValue().isOnlineThisServer() && entry.getValue().getLastInteractionTimestamp() < (System.currentTimeMillis() - (expiryTimeSeconds * 1000))) {
                 // Expired
                 purge.add(entry.getKey());
             }

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.profile.listener;
 
 import com.jonahseguin.payload.PayloadAPI;
@@ -14,7 +19,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.List;
@@ -106,10 +110,19 @@ public class ProfileListener implements Listener {
                             // Logging out, and not switching servers
                             profile.setOnline(false);
                             profile.setLastSeenTimestamp(System.currentTimeMillis());
-                            cache.save(player); // Save
+                            cache.getPool().submit(() -> {
+                                cache.save(player);
+                                // In network node mode, join is handled before quit when switching servers
+                                // so we don't want to save on quit
+                                // but we do want to remove their locally cached profile because the data will be outdated
+                                // and we want to prevent accidental data rollbacks
+                                cache.getLocalLayer().remove(player.getUniqueId());
+                            }); // Save async
                             cache.getErrorHandler().debug(cache, "Saving player " + player.getName() + " on logout (not switching servers)");
                             // It's safe to save here because they aren't switching servers, but they are logging out entirely
                         } else {
+                            // Switching servers, don't save their data -- just remove
+                            cache.getLocalLayer().remove(player.getUniqueId()); // remove on quit to prevent accidental data rollbacks
                             cache.getErrorHandler().debug(cache, "Not saving player " + player.getName() + " on quit (is switching servers)");
                         }
                     } else {
@@ -117,11 +130,7 @@ public class ProfileListener implements Listener {
                         cache.getErrorHandler().debug(cache, "Profile null during logout for Payload '" + player.getName() + "': could not set online=false");
                     }
 
-                    // In network node mode, join is handled before quit when switching servers
-                    // so we don't want to save on quit
-                    // but we do want to remove their locally cached profile because the data will be outdated
-                    // and we want to prevent accidental data rollbacks
-                    cache.getLocalLayer().remove(player.getUniqueId());
+
                 }
 
                 // Remove their data after they leave so that its reset for their next login

@@ -21,5 +21,6 @@ public class ProfileCacheSettings extends CacheSettings {
     private boolean denyJoinDatabaseDown = false;
     private int handshakeTimeOutAttemptsAllowJoin = 3;
     private boolean setOfflineOnShutdown = true; // update Profiles to offline=true on cache shutdown
+    private boolean alwaysCacheOnLoadNetworkNode = false; // should we cache profiles that are fetched (not during login) in network_node mode (CAN CAUSE DATA LOSS)
 
 }
