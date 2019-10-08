@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.profile.pubsub;
 
 public enum HandshakeEvent {
@@ -33,15 +38,10 @@ this will ensure no data loss/rollback/overwrites.
   - then publish PAYLOAD_UPDATE_PREPARED
 -> then the source server calls it's callback provided in #prepareUpdate, and then makes a cache.save(payload) call after saving it
 
-if (payload.isOnlineOtherServer()) {
-  cache.prepareUpdate(payload, (updatedPayload) -> {
+cache.prepareUpdate(payload, (updatedPayload) -> {
   updatedPayload.setPvPTimer(60);
   });
-}
-else {
-  payload.setPvPTimer(60);
-  cache.save(payload);
-}
+
      */
 
     private final String name;
