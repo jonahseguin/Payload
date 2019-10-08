@@ -50,6 +50,7 @@ public class ProfileListener implements Listener {
                 c.getErrorHandler().debug(c, "Starting caching " + username);
                 ProfileData data = cache.createData(username, uniqueId, ip);
                 PayloadProfileController controller = cache.controller(data);
+                controller.setLogin(true); // Caching in login-mode
                 controller.cache();
 
                 if (controller.isDenyJoin()) {
