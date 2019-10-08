@@ -25,7 +25,6 @@ public class CmdProfile implements PayloadCommand {
         String cacheName = args.joinArgs(0, args.length() - 1);
         PayloadCache cache = PayloadAPI.get().getCache(cacheName);
         if (cache == null) {
-            args.msg("4");
             args.msg("&cA cache with the name '{0}' does not exist.  Type /payload caches for a list of caches.", cacheName);
             return;
         }
