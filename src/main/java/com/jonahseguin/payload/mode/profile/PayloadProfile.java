@@ -1,9 +1,15 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.profile;
 
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
 import dev.morphia.annotations.Id;
+import dev.morphia.annotations.PostLoad;
 import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -48,6 +54,7 @@ public abstract class PayloadProfile implements Payload {
         this.payloadId = PayloadAPI.get().getPayloadID();
     }
 
+
     public PayloadProfile(String username, UUID uniqueId, String loginIp) {
         this();
         this.username = username;
@@ -61,6 +68,18 @@ public abstract class PayloadProfile implements Payload {
         this.loginIp = data.getIp();
     }
 
+    @PostLoad
+    private void onPostPayloadLoad() {
+        this.uuid = UUID.fromString(this.uniqueId);
+    }
+
+    public UUID getUUID() {
+        if (this.uuid == null) {
+            this.uuid = UUID.fromString(this.uniqueId);
+        }
+        return this.uuid;
+    }
+
     public void initializePlayer(Player player) {
         Validate.notNull(player, "Player cannot be null for initializePlayer");
         this.player = player;
@@ -72,7 +91,7 @@ public abstract class PayloadProfile implements Payload {
 
     public boolean isPlayerOnline() {
         if (this.player == null) {
-            Player player = Bukkit.getPlayerExact(this.username);
+            Player player = Bukkit.getPlayer(this.uniqueId);
             if (player != null) {
                 this.player = player;
             }
