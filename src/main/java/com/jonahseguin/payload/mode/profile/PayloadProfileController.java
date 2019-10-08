@@ -104,6 +104,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                         if (layer.has(this.data)) {
                             this.cache.getErrorHandler().debug(this.cache, "Loading payload " + this.getData().getUniqueId() + " from layer " + layer.layerName());
                             prePayload = layer.get(this.data);
+                            break;
                         }
                     } catch (Exception ex) {
                         prePayload = null;
