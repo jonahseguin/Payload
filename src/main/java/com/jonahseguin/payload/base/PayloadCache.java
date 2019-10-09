@@ -5,6 +5,7 @@
 
 package com.jonahseguin.payload.base;
 
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
@@ -32,8 +33,10 @@ import org.bukkit.plugin.Plugin;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * The abstract backbone of all Payload cache systems.
@@ -236,6 +239,14 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         return this.name;
     }
 
+    public final String getServerSpecificName() {
+        if (this.getSettings().isServerSpecific()) {
+            return PayloadAPI.get().getPayloadID() + "-" + this.getName();
+        } else {
+            return this.getName();
+        }
+    }
+
     /**
      * Get the JavaPlugin controlling this cache
      * Every Payload cache must be associated with a JavaPlugin for event handling and etc.
@@ -324,6 +335,14 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
                 pl.sendMessage(msg);
             }
         }
+    }
+
+    public void runAsync(Runnable runnable) {
+        this.pool.submit(runnable);
+    }
+
+    public <T> Future<T> runAsync(Callable<T> callable) {
+        return this.pool.submit(callable);
     }
 
     public abstract void updatePayloadID();

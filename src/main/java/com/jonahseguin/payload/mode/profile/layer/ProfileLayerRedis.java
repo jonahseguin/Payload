@@ -10,7 +10,6 @@ import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
 import com.mongodb.BasicDBObject;
-import com.mongodb.util.JSONParseException;
 import redis.clients.jedis.Jedis;
 
 import java.util.*;
@@ -24,7 +23,7 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     @Override
     public X get(UUID uuid) {
         try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
-            String json = jedis.hget(this.getCache().getName(), uuid.toString());
+            String json = jedis.hget(this.getCache().getServerSpecificName(), uuid.toString());
             if (json == null) {
                 return null;
             }
@@ -44,7 +43,7 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     @Override
     public boolean has(UUID uuid) {
         try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
-            return jedis.hexists(this.getCache().getName(), uuid.toString());
+            return jedis.hexists(this.getCache().getServerSpecificName(), uuid.toString());
         } catch (Exception expected) {
             this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error checking if Profile exists in Redis Layer: " + uuid.toString());
             return false;
@@ -54,7 +53,7 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     @Override
     public void remove(UUID uuid) {
         try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
-            jedis.hdel(this.getCache().getName(), uuid.toString());
+            jedis.hdel(this.getCache().getServerSpecificName(), uuid.toString());
         } catch (Exception expected) {
             this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error removing Profile from Redis Layer: " + uuid);
         }
@@ -71,7 +70,7 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
         payload.interactRedis();
         String json = jsonifyProfile(payload);
         try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
-            jedis.hset(this.getCache().getName(), payload.getUniqueId().toString(), json);
+            jedis.hset(this.getCache().getServerSpecificName(), payload.getUniqueId().toString(), json);
             return true;
         }
         catch (Exception expected) {
@@ -87,34 +86,17 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public boolean has(X payload) {
-        payload.interact();
-        try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
-            return jedis.hexists(this.getCache().getName(), payload.getUniqueId().toString());
-        }
-        catch (Exception expected) {
-            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error checking if Profile exists in Redis Layer: " + payload.getUsername());
-            return false;
-        }
+        return this.has(payload.getUniqueId());
     }
 
     @Override
     public void remove(ProfileData data) {
-        try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
-            jedis.hdel(this.getCache().getName(), data.getUniqueId().toString());
-        }
-        catch (Exception expected) {
-            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error removing Profile from Redis Layer: " + data.getUsername());
-        }
+        this.remove(data.getUniqueId());
     }
 
     @Override
     public void remove(X payload) {
-        try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
-            jedis.hdel(this.getCache().getName(), payload.getUniqueId().toString());
-        }
-        catch (Exception expected) {
-            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error removing Profile from Redis Layer: " + payload.getUsername());
-        }
+        this.remove(payload.getUniqueId());
     }
 
     @Override
@@ -124,22 +106,22 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
         final long expiredTimestamp = System.currentTimeMillis() - (1000 * cacheRedisExpirySeconds);
         int cleaned = 0;
         try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
-            Map<String, String> objectsString = jedis.hgetAll(this.cache.getName());
+            Map<String, String> objectsString = jedis.hgetAll(this.cache.getServerSpecificName());
             for (Map.Entry<String, String> entry : objectsString.entrySet()) {
                 try {
                     X object = mapProfile(entry.getValue());
                     if (object != null) {
                         if (object.getRedisCacheTimestamp() <= expiredTimestamp) {
                             // Object is expired, remove it from Redis
-                            jedis.hdel(this.cache.getName(), entry.getKey());
+                            jedis.hdel(this.cache.getServerSpecificName(), entry.getKey());
                         }
                     } else {
                         // If the object is null, let's remove it from Redis (if it couldn't map or is just null)
-                        jedis.hdel(this.cache.getName(), entry.getKey());
+                        jedis.hdel(this.cache.getServerSpecificName(), entry.getKey());
                     }
                 } catch (Exception ex) {
                     // If we get an error [are unable to map the profile], let's remove it from Redis.
-                    jedis.hdel(this.cache.getName(), entry.getKey());
+                    jedis.hdel(this.cache.getServerSpecificName(), entry.getKey());
                 }
             }
         }
@@ -149,8 +131,8 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     @Override
     public long clear() {
         try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
-            long size = jedis.hlen(this.getCache().getName());
-            jedis.del(this.getCache().getName());
+            long size = jedis.hlen(this.getCache().getServerSpecificName());
+            jedis.del(this.getCache().getServerSpecificName());
             return size;
         } catch (Exception ex) {
             this.cache.getErrorHandler().exception(this.getCache(), ex, "Error clearing all Profiles from Redis Layer");
@@ -161,7 +143,7 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     @Override
     public Collection<X> getAll() {
         try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
-            Map<String, String> entrySet = jedis.hgetAll(this.cache.getName());
+            Map<String, String> entrySet = jedis.hgetAll(this.cache.getServerSpecificName());
             Set<X> profiles = new HashSet<>();
             for (String json : entrySet.values()) {
                 profiles.add(mapProfile(json));
@@ -176,7 +158,7 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
     @Override
     public long size() {
         try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
-            return jedis.hlen(this.getCache().getName());
+            return jedis.hlen(this.getCache().getServerSpecificName());
         } catch (Exception ex) {
             this.getCache().getErrorHandler().exception(this.getCache(), ex, "Error getting size from Redis Layer");
             return 0;
@@ -198,8 +180,6 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
             profile.interact();
             BasicDBObject dbObject = (BasicDBObject) this.getCache().getPayloadDatabase().getMorphia().toDBObject(profile);
             return dbObject.toJson();
-        } catch (JSONParseException ex) {
-            this.getCache().getErrorHandler().exception(this.getCache(), ex, "Could not parse JSON while trying to convert PayloadProfile to JSON for Redis");
         } catch (Exception ex) {
             this.getCache().getErrorHandler().exception(this.getCache(), ex, "Could not convert PayloadProfile to JSON for Redis");
         }
@@ -215,8 +195,6 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
             } else {
                 throw new PayloadException("PayloadProfile to map cannot be null", this.getCache());
             }
-        } catch (JSONParseException ex) {
-            super.getCache().getErrorHandler().exception(this.getCache(), ex, "Could not parse JSON to map profile from Redis");
         } catch (Exception ex) {
             super.getCache().getErrorHandler().exception(this.getCache(), ex, "Could not map profile from Redis");
         }

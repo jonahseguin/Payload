@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base.type;
 
 import com.jonahseguin.payload.base.PayloadCache;
@@ -43,5 +48,19 @@ public interface Payload {
      * cleanup internally.
      */
     void interact();
+
+    /**
+     * For server-specific caches
+     *
+     * @return The Payload ID of the server this object is stored for
+     */
+    String getPayloadServer();
+
+    /**
+     * For server-specific caches
+     *
+     * @param payloadID The Payload ID of the server this object is stored for
+     */
+    void setPayloadServer(String payloadID);
 
 }

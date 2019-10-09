@@ -80,6 +80,10 @@ public abstract class PayloadProfile implements Payload {
         return this.uuid;
     }
 
+    public UUID getUniqueId() {
+        return this.getUUID();
+    }
+
     public void initializePlayer(Player player) {
         Validate.notNull(player, "Player cannot be null for initializePlayer");
         this.player = player;
@@ -112,13 +116,6 @@ public abstract class PayloadProfile implements Payload {
             return player.getAddress().getAddress().getHostAddress();
         }
         return this.getLoginIp();
-    }
-
-    public UUID getUniqueId() {
-        if (this.uuid == null) {
-            this.uuid = UUID.fromString(this.uniqueId);
-        }
-        return this.uuid;
     }
 
     @Override

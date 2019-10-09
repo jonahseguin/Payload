@@ -9,10 +9,10 @@ import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.database.PayloadDatabase;
 import lombok.Getter;
+import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.Jedis;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.*;
 
 @Getter
 public class ServerManager implements Runnable {
@@ -23,9 +23,11 @@ public class ServerManager implements Runnable {
     private final PayloadDatabase database;
     private final PayloadServer thisServer;
     private final ConcurrentMap<String, PayloadServer> servers = new ConcurrentHashMap<>();
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
     private Jedis jedisSubscriber = null;
     private ServerPublisher publisher = null;
     private ServerSubscriber subscriber = null;
+    private BukkitTask pingTask = null;
 
     public ServerManager(PayloadDatabase database) {
         this.database = database;
@@ -36,7 +38,7 @@ public class ServerManager implements Runnable {
     public void startup() {
         this.publisher = new ServerPublisher(this);
 
-        PayloadPlugin.runASync(PayloadPlugin.get(), () -> {
+        this.executorService.submit(() -> {
             this.jedisSubscriber = this.database.getResource();
             this.subscriber = new ServerSubscriber(this);
             this.jedisSubscriber.subscribe(this.subscriber,
@@ -44,7 +46,7 @@ public class ServerManager implements Runnable {
         });
 
         this.publisher.publishJoin();
-        PayloadPlugin.get().getServer().getScheduler().runTaskTimerAsynchronously(PayloadPlugin.get(), this, (PING_FREQUENCY_SECONDS * 20), (PING_FREQUENCY_SECONDS * 20));
+        this.pingTask = PayloadPlugin.get().getServer().getScheduler().runTaskTimerAsynchronously(PayloadPlugin.get(), this, (PING_FREQUENCY_SECONDS * 20), (PING_FREQUENCY_SECONDS * 20));
     }
 
     public void registerServer(String name, boolean online) {
@@ -95,8 +97,21 @@ public class ServerManager implements Runnable {
         this.publisher.publishPing();
     }
 
+    private void shutdownExecutor() {
+        try {
+            this.executorService.shutdown();
+            this.executorService.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            this.database.databaseError(ex, "Interrupted during shutdown of Server Manager's Executor Service");
+        } finally {
+            this.executorService.shutdownNow();
+        }
+    }
+
     public void shutdown() {
-        this.publisher.publishQuit(); // Sync.
+        if (this.pingTask != null) {
+            this.pingTask.cancel();
+        }
 
         if (this.subscriber != null) {
             if (this.subscriber.isSubscribed()) {
@@ -104,9 +119,14 @@ public class ServerManager implements Runnable {
             }
             this.subscriber = null;
         }
+
+        this.publisher.publishQuit(); // Sync.
+        this.shutdownExecutor();
+
         this.publisher = null;
         if (this.jedisSubscriber != null) {
             this.jedisSubscriber.close();
+            this.jedisSubscriber = null;
         }
     }
 

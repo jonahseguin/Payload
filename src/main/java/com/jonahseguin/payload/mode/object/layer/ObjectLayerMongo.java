@@ -5,6 +5,7 @@
 
 package com.jonahseguin.payload.mode.object.layer;
 
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.type.PayloadQueryModifier;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.ObjectData;
@@ -16,7 +17,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -168,7 +168,7 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
 
     @Override
     public long size() {
-        return this.cache.getPayloadDatabase().getDatastore().getCount(this.cache.getPayloadClass());
+        return this.createQuery().count();
     }
 
     @Override
@@ -177,6 +177,9 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
             this.cache.getErrorHandler().error(this.cache, "Error initializing MongoDB Object Layer: Payload Database is not started");
         }
         this.nullPayload = this.cache.getInstantiator().instantiate(new ObjectData(null));
+        if (this.cache.getSettings().isServerSpecific()) {
+            this.addCriteriaModifier(query -> query.field("payloadServer").equalIgnoreCase(PayloadAPI.get().getPayloadID()));
+        }
     }
 
     @Override
@@ -218,7 +221,6 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
 
     public Query<X> getQuery(String key) {
         Query<X> q = createQuery();
-        q.maxTime(10, TimeUnit.SECONDS);
         q.criteria(this.nullPayload.identifierFieldName()).equalIgnoreCase(key);
         return q;
     }

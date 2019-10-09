@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @Getter
@@ -189,6 +190,18 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     public X getLocalProfile(Player player) {
         return this.localLayer.getLocalCache().get(player.getUniqueId());
+    }
+
+    public Future<X> getProfileAsync(Player player) {
+        return this.pool.submit(() -> this.getProfile(player));
+    }
+
+    public Future<X> getProfileAsync(UUID uuid) {
+        return this.pool.submit(() -> this.getProfile(uuid));
+    }
+
+    public Future<X> getProfileByNameAsync(String username) {
+        return this.pool.submit(() -> this.getProfileByName(username));
     }
 
     public Set<X> getOnlineProfiles() {

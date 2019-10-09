@@ -5,7 +5,6 @@
 
 package com.jonahseguin.payload.server;
 
-import com.jonahseguin.payload.PayloadPlugin;
 import org.bson.Document;
 import redis.clients.jedis.Jedis;
 
@@ -18,7 +17,7 @@ public class ServerPublisher {
     }
 
     public void publishPing() {
-        PayloadPlugin.runASync(PayloadPlugin.get(), () -> {
+        this.serverManager.getExecutorService().submit(() -> {
             try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
                 jedis.publish(ServerEvent.PING.getEvent(), serverManager.getThisServer().getName());
             }
@@ -26,7 +25,7 @@ public class ServerPublisher {
     }
 
     public void publishJoin() {
-        PayloadPlugin.runASync(PayloadPlugin.get(), () -> {
+        this.serverManager.getExecutorService().submit(() -> {
             try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
                 jedis.publish(ServerEvent.JOIN.getEvent(), serverManager.getThisServer().getName());
             }
@@ -35,13 +34,15 @@ public class ServerPublisher {
 
     public void publishQuit() {
         // Sync -- we want this to complete first before shutdown
-        try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
-            jedis.publish(ServerEvent.QUIT.getEvent(), serverManager.getThisServer().getName());
-        }
+        this.serverManager.getExecutorService().submit(() -> {
+            try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
+                jedis.publish(ServerEvent.QUIT.getEvent(), serverManager.getThisServer().getName());
+            }
+        });
     }
 
     public void publishUpdateName(String oldName, String newName) {
-        PayloadPlugin.runASync(PayloadPlugin.get(), () -> {
+        this.serverManager.getExecutorService().submit(() -> {
             try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
                 Document data = new Document();
                 data.append("old", oldName);
