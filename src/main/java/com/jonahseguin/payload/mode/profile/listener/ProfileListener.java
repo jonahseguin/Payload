@@ -13,6 +13,8 @@ import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.PayloadProfileController;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
+import com.jonahseguin.payload.mode.profile.event.PayloadProfileLogoutEvent;
+import com.jonahseguin.payload.mode.profile.event.PayloadProfileSwitchServersEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -93,6 +95,10 @@ public class ProfileListener implements Listener {
                     cache.getPool().submit(() -> {
                         cache.getErrorHandler().debug(cache, "Saving player " + player.getName() + " on quit");
                         PayloadProfile profile = cache.getLocalProfile(player);
+
+                        PayloadProfileLogoutEvent payloadEvent = new PayloadProfileLogoutEvent(profile);
+                        cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
+
                         if (profile != null) {
                             profile.setOnline(false);
                             profile.setLastSeenTimestamp(System.currentTimeMillis());
@@ -107,6 +113,10 @@ public class ProfileListener implements Listener {
                     if (profile != null) {
                         profile.uninitializePlayer();
                         if (!profile.isSwitchingServers()) {
+
+                            PayloadProfileLogoutEvent payloadEvent = new PayloadProfileLogoutEvent(profile);
+                            cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
+
                             // Not switching servers (no incoming handshake) -- we can assume they are actually
                             // Logging out, and not switching servers
                             profile.setOnline(false);
@@ -122,6 +132,10 @@ public class ProfileListener implements Listener {
                             cache.getErrorHandler().debug(cache, "Saving player " + player.getName() + " on logout (not switching servers)");
                             // It's safe to save here because they aren't switching servers, but they are logging out entirely
                         } else {
+
+                            PayloadProfileSwitchServersEvent payloadEvent = new PayloadProfileSwitchServersEvent(profile);
+                            cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
+
                             // Switching servers, don't save their data -- just remove
                             cache.getLocalLayer().remove(player.getUniqueId()); // remove on quit to prevent accidental data rollbacks
                             cache.getErrorHandler().debug(cache, "Not saving player " + player.getName() + " on quit (is switching servers)");
