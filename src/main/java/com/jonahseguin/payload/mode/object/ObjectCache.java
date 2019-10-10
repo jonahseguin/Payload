@@ -165,7 +165,7 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
         }
 
         if (success) {
-            if (this.settings.isEnableSync()) {
+            if (this.settings.isEnableSync() && !this.settings.isServerSpecific()) {
                 this.syncManager.publishUpdate(payload);
             }
         }
