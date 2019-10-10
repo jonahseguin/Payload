@@ -333,6 +333,16 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
         this.mode = mode;
     }
 
+    /**
+     * Set the SyncMode for this cache
+     * The sync mode determines the policy for when to cache objects that are saved in other servers
+     *
+     * @param mode
+     */
+    public void setSyncMode(SyncMode mode) {
+        this.syncMode = mode;
+    }
+
     @Override
     public void onMongoDbDisconnect() {
         this.getPayloadDatabase().getState().setMongoConnected(false);
