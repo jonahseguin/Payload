@@ -7,7 +7,7 @@ import com.jonahseguin.payload.base.type.PayloadData;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class PayloadTaskExecutor<K, X extends Payload, D extends PayloadData> {
+public class PayloadTaskExecutor<K, X extends Payload<K>, D extends PayloadData> {
 
     private final PayloadCache<K, X, D> cache;
     private final BlockingQueue<PayloadTask> tasks = new LinkedBlockingQueue<>();

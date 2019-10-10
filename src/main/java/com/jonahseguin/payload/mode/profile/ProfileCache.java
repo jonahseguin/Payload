@@ -210,6 +210,25 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
                 .collect(Collectors.toSet());
     }
 
+    @Override
+    public boolean isCached(UUID key) {
+        return this.localLayer.has(key);
+    }
+
+    @Override
+    public boolean uncache(UUID key) {
+        if (this.localLayer.has(key)) {
+            this.localLayer.remove(key);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void cacheAll() {
+
+    }
+
     public ProfileData createData(String username, UUID uniqueId, String ip) {
         ProfileData data = new ProfileData(username, uniqueId, ip);
         this.data.put(uniqueId, data);
@@ -260,6 +279,9 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             this.alert(PayloadPermission.ADMIN, PLang.SAVE_FAILED_NOTIFY_ADMIN, this.getName(), payload.getUsername());
             this.getErrorHandler().debug(this, "Failed to save Payload: " + payload.getUsername());
         } else {
+            if (this.settings.isEnableSync()) {
+                this.syncManager.publishUpdate(payload); // Publish the update to other servers
+            }
             payload.setLastSaveTimestamp(System.currentTimeMillis());
             if (payload.isSaveFailed()) {
                 // They previously had failed to save

@@ -96,8 +96,23 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
         }
     }
 
+    @Override
     public void cacheAll() {
-        this.mongoLayer.getAll().forEach(this::cache);
+        this.getAll().forEach(this::cache);
+    }
+
+    @Override
+    public boolean isCached(String key) {
+        return this.localLayer.has(key);
+    }
+
+    @Override
+    public boolean uncache(String key) {
+        if (this.localLayer.has(key)) {
+            this.localLayer.remove(key);
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -107,6 +122,7 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
         return controller.cache();
     }
 
+    @Override
     public Set<X> getAll() {
         final Set<X> all = new HashSet<>(this.localLayer.getAll());
         if (this.settings.isUseRedis()) {
@@ -131,6 +147,13 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
                 success = false;
             }
         }
+
+        if (success) {
+            if (this.settings.isEnableSync()) {
+                this.syncManager.publishUpdate(payload);
+            }
+        }
+
         return success;
     }
 

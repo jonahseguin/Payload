@@ -51,17 +51,17 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
     }
 
     @Override
-    public boolean has(String String) {
+    public boolean has(String key) {
         try {
-            Query<X> q = getQuery(String);
+            Query<X> q = getQuery(key);
             Stream<X> stream = q.find().toList().stream();
             Optional<X> xp = stream.findFirst();
             return xp.isPresent();
         } catch (MongoException ex) {
-            this.getCache().getErrorHandler().exception(this.getCache(), ex, "MongoDB error check if Object exists in MongoDB Layer: " + String);
+            this.getCache().getErrorHandler().exception(this.getCache(), ex, "MongoDB error check if Object exists in MongoDB Layer: " + key);
             return false;
         } catch (Exception expected) {
-            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error checking if Object exists in MongoDB Layer: " + String);
+            this.getCache().getErrorHandler().exception(this.getCache(), expected, "Error checking if Object exists in MongoDB Layer: " + key);
             return false;
         }
     }
@@ -178,7 +178,7 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
         }
         this.nullPayload = this.cache.getInstantiator().instantiate(new ObjectData(null));
         if (this.cache.getSettings().isServerSpecific()) {
-            this.addCriteriaModifier(query -> query.field("payloadServer").equalIgnoreCase(PayloadAPI.get().getPayloadID()));
+            this.addCriteriaModifier(query -> query.field("payloadId").equalIgnoreCase(PayloadAPI.get().getPayloadID()));
         }
     }
 

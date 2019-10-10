@@ -27,6 +27,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
             for (PayloadLayer<String, X, ObjectData> layer : this.cache.getLayerController().getLayers()) {
                 try {
                     if (layer.has(this.data)) {
+                        this.cache.getErrorHandler().debug(this.cache, "Loading object " + this.data.getIdentifier() + " from layer " + layer.layerName());
                         return layer.get(this.data);
                     }
                 } catch (Exception ex) {
@@ -52,6 +53,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
 
         if (payload != null) {
             this.cache.cache(payload);
+            this.cache.getErrorHandler().debug(this.cache, "Cached payload " + payload.getIdentifier());
         }
 
         return payload;

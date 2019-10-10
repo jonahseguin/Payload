@@ -10,7 +10,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class CacheState<K, X extends Payload, D extends PayloadData> {
+public class CacheState<K, X extends Payload<K>, D extends PayloadData> {
 
     private final PayloadCache<K, X, D> cache;
 

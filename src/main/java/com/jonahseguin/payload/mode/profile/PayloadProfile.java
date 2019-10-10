@@ -10,6 +10,7 @@ import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
 import dev.morphia.annotations.Id;
 import dev.morphia.annotations.PostLoad;
+import dev.morphia.annotations.PrePersist;
 import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -25,13 +26,12 @@ import java.util.UUID;
 // The implementing class of this abstract class must add an @Entity annotation (from MongoDB) with a collection name!
 @Getter
 @Setter
-public abstract class PayloadProfile implements Payload {
+public abstract class PayloadProfile implements Payload<UUID> {
 
     @Id
     protected ObjectId objectId = new ObjectId();
     protected String username;
     protected String uniqueId;
-    protected transient UUID uuid = null;
     protected String loginIp = null; // IP the profile logged in with
 
     protected String lastSeenServer = null; // The Payload ID of the server they last joined
@@ -39,6 +39,7 @@ public abstract class PayloadProfile implements Payload {
     protected boolean online = false; // is the profile online anywhere in the network, can be true even if they aren't online on this server instance
     protected String payloadId; // The ID of the Payload instance that currently holds this profile
 
+    protected transient UUID uuid = null;
     protected transient long cachedTimestamp = System.currentTimeMillis();
     protected transient long lastInteractionTimestamp = System.currentTimeMillis();
     protected transient long redisCacheTimestamp = System.currentTimeMillis();
@@ -65,7 +66,6 @@ public abstract class PayloadProfile implements Payload {
 
     public PayloadProfile(ProfileData data) {
         this(data.getUsername(), data.getUniqueId(), data.getIp());
-        this.loginIp = data.getIp();
     }
 
     @PostLoad
@@ -128,8 +128,8 @@ public abstract class PayloadProfile implements Payload {
     }
 
     @Override
-    public String getIdentifier() {
-        return this.uniqueId;
+    public UUID getIdentifier() {
+        return this.getUniqueId();
     }
 
     public void sendMessage(String msg) {
@@ -150,6 +150,10 @@ public abstract class PayloadProfile implements Payload {
     @Override
     public long cachedTimestamp() {
         return this.cachedTimestamp;
+    }
+
+    public String getName() {
+        return this.getUsername();
     }
 
     public void msg(String msg) {
@@ -182,4 +186,13 @@ public abstract class PayloadProfile implements Payload {
         return new ComponentBuilder(msg);
     }
 
+    @Override
+    public String getPayloadServer() {
+        return this.payloadId;
+    }
+
+    @Override
+    public void setPayloadServer(String payloadID) {
+        this.payloadId = payloadID;
+    }
 }

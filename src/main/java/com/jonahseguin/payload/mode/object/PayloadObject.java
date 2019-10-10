@@ -9,7 +9,7 @@ import org.bson.types.ObjectId;
 
 @Getter
 @Setter
-public abstract class PayloadObject implements Payload {
+public abstract class PayloadObject implements Payload<String> {
 
     private String payloadId;
 
@@ -35,5 +35,15 @@ public abstract class PayloadObject implements Payload {
     @Override
     public void interact() {
         this.cachedTimestamp = System.currentTimeMillis();
+    }
+
+    @Override
+    public String getPayloadServer() {
+        return this.payloadId;
+    }
+
+    @Override
+    public void setPayloadServer(String payloadID) {
+        this.payloadId = payloadID;
     }
 }

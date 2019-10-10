@@ -16,4 +16,5 @@ public abstract class CacheSettings {
     private int autoSaveIntervalSeconds = 600; // 10 minutes
     private int cleanupIntervalSeconds = 1200;
     private boolean serverSpecific = false; // should we associate each object with a server, and only cache objects that match this server
+    private boolean enableSync = true; // Enable the payload sync service.  This will sync objects/profiles (Payloads) across multiple servers, in a policy specific to the SyncMode
 }

@@ -19,6 +19,8 @@ import com.jonahseguin.payload.base.layer.LayerController;
 import com.jonahseguin.payload.base.settings.CacheSettings;
 import com.jonahseguin.payload.base.state.CacheState;
 import com.jonahseguin.payload.base.state.PayloadTaskExecutor;
+import com.jonahseguin.payload.base.sync.SyncManager;
+import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
 import com.jonahseguin.payload.base.task.PayloadCleanupTask;
 import com.jonahseguin.payload.base.type.*;
@@ -33,17 +35,14 @@ import org.bukkit.plugin.Plugin;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  * The abstract backbone of all Payload cache systems.
  * All Caching modes (profile, object, simple) extend this class.
  */
 @Getter
-public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> implements DatabaseDependent, Comparable<PayloadCache> {
+public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadData> implements DatabaseDependent, Comparable<PayloadCache> {
 
     protected final transient Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
 
@@ -55,6 +54,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     protected transient PayloadErrorHandler errorHandler = new DefaultErrorHandler();
     protected transient PayloadDatabase payloadDatabase = null;
     protected transient PayloadMode mode = PayloadMode.STANDALONE; // Payload Mode for this cache
+    protected transient SyncMode syncMode = SyncMode.UPDATE;
 
     protected transient final ExecutorService pool = Executors.newCachedThreadPool();
     protected transient final PayloadTaskExecutor<K, X, D> executor;
@@ -64,6 +64,7 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     protected transient final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
     protected transient final PayloadAutoSaveTask<K, X, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
     protected transient final PayloadCleanupTask<K, X, D> cleanupTask = new PayloadCleanupTask<>(this);
+    protected transient final SyncManager<K, X, D> syncManager = new SyncManager<>(this);
     protected transient PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
 
     protected transient final Class<K> keyType;
@@ -127,6 +128,9 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         this.failureManager.start();
         this.autoSaveTask.start();
         this.cleanupTask.start();
+        if (this.getSettings().isEnableSync()) {
+            this.syncManager.startup();
+        }
         return true;
     }
 
@@ -145,13 +149,27 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
         this.autoSaveTask.stop();
         this.cleanupTask.stop();
         this.failureManager.stop();
-        this.pool.shutdown(); // Shutdown our thread pool
+        if (this.getSettings().isEnableSync()) {
+            this.syncManager.shutdown();
+        }
+        this.shutdownPool();
         this.running = false;
         if (failedSaves > 0) {
             this.getErrorHandler().error(this, failedSaves + " Payload objects failed to save during shutdown");
             return false;
         }
         return true;
+    }
+
+    private void shutdownPool() {
+        try {
+            this.pool.shutdown();
+            this.pool.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            this.errorHandler.exception(this, ex, "Interrupted during shutdown of cache's thread pool");
+        } finally {
+            this.pool.shutdownNow();
+        }
     }
 
     /**
@@ -204,6 +222,20 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
     protected abstract X get(K key);
 
     /**
+     * Check if an object is locally-cached
+     * @param key Key
+     * @return True if cached
+     */
+    public abstract boolean isCached(K key);
+
+    /**
+     * Remove an object from the local cache
+     * @param key The key for the object to remove (identifier)
+     * @return True if removed, otherwise false
+     */
+    public abstract boolean uncache(K key);
+
+    /**
      * Get a number of objects currently stored locally in this cache
      * @return long number of objects cached
      */
@@ -224,8 +256,27 @@ public abstract class PayloadCache<K, X extends Payload, D extends PayloadData> 
      */
     public abstract void cache(X payload);
 
+    /**
+     * Save all locally-cached objects (or for profiles, only players who are online) to the database
+     * @return int : the number of failures
+     */
     public abstract int saveAll();
 
+    /**
+     * Load all database-stored objects into the local cache
+     */
+    public abstract void cacheAll();
+
+    /**
+     * Get all objects across all layers
+     * @return A HashSet containing all the objects
+     */
+    public abstract Set<X> getAll();
+
+    /**
+     * Get all currently locally-cached objects
+     * @return Locally-cached objects
+     */
     public abstract Collection<X> getCachedObjects();
 
     /**

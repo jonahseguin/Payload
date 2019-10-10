@@ -5,7 +5,7 @@ import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
 import org.bukkit.scheduler.BukkitTask;
 
-public class PayloadAutoSaveTask<K, X extends Payload, D extends PayloadData> implements Runnable {
+public class PayloadAutoSaveTask<K, X extends Payload<K>, D extends PayloadData> implements Runnable {
 
     private final PayloadCache<K, X, D> cache;
 

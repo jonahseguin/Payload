@@ -15,7 +15,7 @@ import java.util.ArrayList;
  * @param <D> PayloadData
  */
 @Getter
-public class LayerController<K, X extends Payload, D extends PayloadData> {
+public class LayerController<K, X extends Payload<K>, D extends PayloadData> {
 
     private final ArrayList<PayloadLayer<K, X, D>> layers = new ArrayList<>();
 

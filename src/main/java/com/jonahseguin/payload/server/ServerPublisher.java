@@ -21,6 +21,9 @@ public class ServerPublisher {
             try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
                 jedis.publish(ServerEvent.PING.getEvent(), serverManager.getThisServer().getName());
             }
+            catch (Exception ex) {
+                serverManager.getDatabase().databaseError(ex, "Server Manager: Error publishing PING event");
+            }
         });
     }
 
@@ -28,6 +31,9 @@ public class ServerPublisher {
         this.serverManager.getExecutorService().submit(() -> {
             try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
                 jedis.publish(ServerEvent.JOIN.getEvent(), serverManager.getThisServer().getName());
+            }
+            catch (Exception ex) {
+                serverManager.getDatabase().databaseError(ex, "Server Manager: Error publishing JOIN event");
             }
         });
     }
@@ -38,6 +44,9 @@ public class ServerPublisher {
             try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
                 jedis.publish(ServerEvent.QUIT.getEvent(), serverManager.getThisServer().getName());
             }
+            catch (Exception ex) {
+                serverManager.getDatabase().databaseError(ex, "Server Manager: Error publishing QUIT event");
+            }
         });
     }
 
@@ -47,7 +56,10 @@ public class ServerPublisher {
                 Document data = new Document();
                 data.append("old", oldName);
                 data.append("new", newName);
-                jedis.publish(ServerEvent.QUIT.getEvent(), data.toJson());
+                jedis.publish(ServerEvent.UPDATE_NAME.getEvent(), data.toJson());
+            }
+            catch (Exception ex) {
+                serverManager.getDatabase().databaseError(ex, "Server Manager: Error publishing UPDATE_NAME event");
             }
         });
     }

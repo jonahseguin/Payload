@@ -15,7 +15,7 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.*;
 
 @Getter
-public class FailureManager<K, X extends Payload, D extends PayloadData> implements Runnable {
+public class FailureManager<K, X extends Payload<K>, D extends PayloadData> implements Runnable {
 
     private final Map<D, FailedPayload<X, D>> failures = new HashMap<>();
     private final PayloadCache<K, X, D> cache;
