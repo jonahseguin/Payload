@@ -181,7 +181,7 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
             this.cache.getErrorHandler().error(this.cache, "Error initializing MongoDB Profile Layer: Payload Database is not started");
         }
         if (this.cache.getSettings().isServerSpecific()) {
-            this.addCriteriaModifier(query -> query.field("payloadServer").equalIgnoreCase(PayloadAPI.get().getPayloadID()));
+            this.addCriteriaModifier(query -> query.field("payloadId").equalIgnoreCase(PayloadAPI.get().getPayloadID()));
         }
     }
 

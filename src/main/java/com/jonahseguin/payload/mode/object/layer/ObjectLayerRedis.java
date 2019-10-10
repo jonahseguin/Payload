@@ -104,7 +104,7 @@ public class ObjectLayerRedis<X extends PayloadObject> extends ObjectCacheLayer<
     public long clear() {
         try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
             long size = jedis.hlen(this.cache.getServerSpecificName());
-            jedis.del(this.cache.getName());
+            jedis.del(this.cache.getServerSpecificName());
             return size;
         } catch (Exception ex) {
             this.getCache().getErrorHandler().exception(this.getCache(), ex, "Error clearing all objects from Redis Layer");

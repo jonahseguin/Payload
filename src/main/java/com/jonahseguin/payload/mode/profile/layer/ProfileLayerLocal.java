@@ -89,7 +89,7 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
         }
 
         for (UUID key : purge) {
-            this.localCache.remove(key);
+            this.cache.uncache(key);
         }
 
         return purge.size();

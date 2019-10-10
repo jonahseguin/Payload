@@ -165,28 +165,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             return failedPayload.getTemporaryPayload();
         }
 
-        /* -- OLD
-        // Handle the getting of a Profile from the first available layer
-         for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
-            if (layer.has(uniqueId)) {
-                try {
-                    return layer.get(uniqueId);
-                } catch (PayloadLayerCannotProvideException e) {
-                    this.getErrorHandler().exception(this, e, "Error getting Profile by UUID: " + uniqueId.toString());
-                }
-            }
-        } END OLD -- */
-
-        // instead of doing this manually like above, we are instead now going to do it via controller and cache the profile
         ProfileData data = this.createData(null, uniqueId, null);
         PayloadProfileController<X> controller = this.controller(data);
         controller.setLogin(false);
         return controller.cache();
-
-        /* -- OLD
-        // No profile found for said UUID
-        return null;
-         END OLD -- */
     }
 
     public X getLocalProfile(Player player) {
@@ -300,7 +282,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             this.alert(PayloadPermission.ADMIN, PLang.SAVE_FAILED_NOTIFY_ADMIN, this.getName(), payload.getUsername());
             this.getErrorHandler().debug(this, "Failed to save Payload: " + payload.getUsername());
         } else {
-            if (this.settings.isEnableSync()) {
+            if (this.settings.isEnableSync() && !this.settings.isServerSpecific()) {
                 this.syncManager.publishUpdate(payload); // Publish the update to other servers
             }
             payload.setLastSaveTimestamp(System.currentTimeMillis());
