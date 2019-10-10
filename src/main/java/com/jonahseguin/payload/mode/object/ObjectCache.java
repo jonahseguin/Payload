@@ -109,14 +109,14 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
 
     @Override
     public boolean uncache(String key) {
-        if (this.localLayer.has(key)) {
-            this.localLayer.remove(key);
-            return true;
-        }
-        if (this.getSyncMode().equals(SyncMode.CACHE_ALL)) {
+        if (this.getSyncMode().equals(SyncMode.CACHE_ALL) && !this.settings.isServerSpecific()) {
             if (this.getSettings().isEnableSync()) {
                 this.syncManager.publishUncache(key);
             }
+        }
+        if (this.localLayer.has(key)) {
+            this.localLayer.remove(key);
+            return true;
         }
         return false;
     }

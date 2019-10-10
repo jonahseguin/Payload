@@ -218,14 +218,14 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     @Override
     public boolean uncache(UUID key) {
-        if (this.localLayer.has(key)) {
-            this.localLayer.remove(key);
-            return true;
-        }
-        if (this.getSyncMode().equals(SyncMode.CACHE_ALL)) {
+        if (this.getSyncMode().equals(SyncMode.CACHE_ALL) && !this.settings.isServerSpecific()) {
             if (this.getSettings().isEnableSync()) {
                 this.syncManager.publishUncache(key);
             }
+        }
+        if (this.localLayer.has(key)) {
+            this.localLayer.remove(key);
+            return true;
         }
         return false;
     }
