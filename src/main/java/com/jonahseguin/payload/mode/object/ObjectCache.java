@@ -5,9 +5,11 @@
 
 package com.jonahseguin.payload.mode.object;
 
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
+import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.mode.object.layer.ObjectLayerLocal;
 import com.jonahseguin.payload.mode.object.layer.ObjectLayerMongo;
 import com.jonahseguin.payload.mode.object.layer.ObjectLayerRedis;
@@ -90,10 +92,9 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
         this.localLayer.remove(key);
     }
 
-    public void removeObject(String key) {
-        for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
-            layer.remove(key);
-        }
+    @Override
+    public String keyFromString(String key) {
+        return key;
     }
 
     @Override
@@ -112,7 +113,22 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
             this.localLayer.remove(key);
             return true;
         }
+        if (this.getSyncMode().equals(SyncMode.CACHE_ALL)) {
+            if (this.getSettings().isEnableSync()) {
+                this.syncManager.publishUncache(key);
+            }
+        }
         return false;
+    }
+
+    @Override
+    public void delete(String key) {
+        for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
+            layer.remove(key);
+        }
+        if (this.settings.isEnableSync()) {
+            this.syncManager.publishUncache(key);
+        }
     }
 
     @Override
@@ -203,6 +219,6 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
 
     @Override
     public void updatePayloadID() {
-
+        this.getCachedObjects().forEach(o -> o.setPayloadId(PayloadAPI.get().getPayloadID()));
     }
 }

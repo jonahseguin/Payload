@@ -27,10 +27,7 @@ public class SyncSubscriber<K, X extends Payload<K>, D extends PayloadData> exte
                 if (object != null) {
                     String source = object.getString("source");
                     if (!source.equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
-                        BasicDBObject data = BasicDBObject.parse(object.getString("data"));
-                        if (data != null) {
-                            this.manager.receiveUpdate(data);
-                        }
+                        this.manager.receiveSync(object);
                     }
                 }
             }

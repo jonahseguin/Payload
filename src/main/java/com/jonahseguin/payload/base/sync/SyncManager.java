@@ -10,7 +10,6 @@ import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
 import com.mongodb.BasicDBObject;
-import com.mongodb.DBObject;
 import lombok.Getter;
 import redis.clients.jedis.Jedis;
 
@@ -47,30 +46,53 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
 
     public void publishUpdate(X payload) {
         BasicDBObject object = (BasicDBObject) this.cache.getPayloadDatabase().getMorphia().toDBObject(payload);
+        this.publish(object.toJson(), SyncEvent.UPDATE, payload.getIdentifier().toString());
+    }
+
+    public void publishUncache(K key) {
+        this.publish(key.toString(), SyncEvent.UNCACHE, key.toString());
+    }
+
+    private void publish(String dataString, SyncEvent event, String identifierName) {
         BasicDBObject data = new BasicDBObject();
         data.append("source", PayloadAPI.get().getPayloadID());
-        data.append("data", object.toJson());
+        data.append("data", dataString);
+        data.append("event", event.getName());
         cache.getPool().submit(() -> {
             try (Jedis jedis = cache.getPayloadDatabase().getResource()) {
                 jedis.publish(this.getChannelName(), data.toJson());
-                this.cache.getErrorHandler().debug(this.cache, "Sync: Published update for Payload: " + payload.getIdentifier());
-            }
-            catch (Exception ex) {
-                this.cache.getErrorHandler().exception(this.cache, ex, "Sync: Failed to publish update for Payload: " + payload.getIdentifier());
+                this.cache.getErrorHandler().debug(this.cache, "Sync: Published " + event.getName() + " for Payload: " + identifierName);
+            } catch (Exception ex) {
+                this.cache.getErrorHandler().exception(this.cache, ex, "Sync: Failed to publish " + event.getName() + " for Payload: " + identifierName);
             }
         });
     }
 
-    public void receiveUpdate(BasicDBObject object) {
+    public void receiveSync(BasicDBObject object) {
         try {
-            X payload = this.cache.getPayloadDatabase().getMorphia().fromDBObject(this.cache.getPayloadDatabase().getDatastore(), this.cache.getPayloadClass(), object);
-            if (payload != null) {
-                if ((this.cache.getSyncMode().equals(SyncMode.UPDATE) && this.cache.isCached(payload.getIdentifier())) || this.cache.getSyncMode().equals(SyncMode.CACHE_ALL)) {
-                    if (!cache.getSettings().isServerSpecific() || payload.getPayloadServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
-                        this.cache.cache(payload);
-                        this.cache.getErrorHandler().debug(this.cache, "Sync: Updated payload " + payload.getIdentifier());
+            SyncEvent event = SyncEvent.fromString(object.getString("event"));
+            if (event != null) {
+                if (event.equals(SyncEvent.UPDATE)) {
+                    BasicDBObject data = BasicDBObject.parse(object.getString("data"));
+                    if (data != null) {
+                        X payload = this.cache.getPayloadDatabase().getMorphia().fromDBObject(this.cache.getPayloadDatabase().getDatastore(), this.cache.getPayloadClass(), object);
+                        if (payload != null) {
+                            if ((this.cache.getSyncMode().equals(SyncMode.UPDATE) && this.cache.isCached(payload.getIdentifier())) || this.cache.getSyncMode().equals(SyncMode.CACHE_ALL)) {
+                                if (!cache.getSettings().isServerSpecific() || payload.getPayloadServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
+                                    this.cache.cache(payload);
+                                    this.cache.getErrorHandler().debug(this.cache, "Sync: Updated payload " + payload.getIdentifier());
+                                }
+                            }
+                        }
                     }
+                } else if (event.equals(SyncEvent.UNCACHE)) {
+                    K key = this.cache.keyFromString(object.getString("data"));
+                    this.cache.uncache(key);
+                } else {
+                    this.cache.getErrorHandler().error(this.cache, "Sync: Unknown event received: " + event.getName());
                 }
+            } else {
+                this.cache.getErrorHandler().error(this.cache, "Sync: Unknown event received: " + object.getString("event"));
             }
         }
         catch (Exception ex) {

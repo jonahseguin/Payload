@@ -95,6 +95,8 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
         this.langController.loadFromFile(name.toLowerCase().replaceAll(" ", "_") + ".yml");
     }
 
+    public abstract K keyFromString(String key);
+
     public void withInstantiator(PayloadInstantiator<X, D> instantiator) {
         this.instantiator = instantiator;
     }
@@ -236,6 +238,20 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     public abstract boolean uncache(K key);
 
     /**
+     * Remove an object from the local cache on ALL SERVERS with this cache in the network/on this database
+     *
+     * @param key Key for the object to remove (identifier)
+     */
+    public void uncacheEverywhere(K key) {
+        if (this.getSettings().isEnableSync()) {
+            this.uncache(key);
+            this.syncManager.publishUncache(key);
+        } else {
+            this.getErrorHandler().exception(this, new UnsupportedOperationException("Cannot uncacheEverywhere unless Sync is enabled in cache settings!"));
+        }
+    }
+
+    /**
      * Get a number of objects currently stored locally in this cache
      * @return long number of objects cached
      */
@@ -247,6 +263,13 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @return Boolean successful
      */
     public abstract boolean save(X payload);
+
+    /**
+     * Delete a Payload from all layers (including local + database)
+     *
+     * @param key Key of payload to delete
+     */
+    public abstract void delete(K key);
 
     /**
      * Cache a Payload locally ONLY

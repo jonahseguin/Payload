@@ -14,6 +14,7 @@ import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.failsafe.FailedPayload;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
+import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerLocal;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerMongo;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerRedis;
@@ -221,12 +222,27 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             this.localLayer.remove(key);
             return true;
         }
+        if (this.getSyncMode().equals(SyncMode.CACHE_ALL)) {
+            if (this.getSettings().isEnableSync()) {
+                this.syncManager.publishUncache(key);
+            }
+        }
         return false;
     }
 
     @Override
-    public void cacheAll() {
+    public void delete(UUID key) {
+        for (PayloadLayer<UUID, X, ProfileData> layer : this.getLayerController().getLayers()) {
+            layer.remove(key);
+        }
+        if (this.settings.isEnableSync()) {
+            this.syncManager.publishUncache(key);
+        }
+    }
 
+    @Override
+    public void cacheAll() {
+        this.getAll().forEach(this::cache);
     }
 
     public ProfileData createData(String username, UUID uniqueId, String ip) {
@@ -245,6 +261,11 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     public void removeData(UUID uuid) {
         this.data.remove(uuid);
+    }
+
+    @Override
+    public UUID keyFromString(String key) {
+        return UUID.fromString(key);
     }
 
     public Set<X> getAll() {

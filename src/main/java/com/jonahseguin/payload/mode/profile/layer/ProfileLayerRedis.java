@@ -111,7 +111,7 @@ public class ProfileLayerRedis<X extends PayloadProfile> extends ProfileCacheLay
                 try {
                     X object = mapProfile(entry.getValue());
                     if (object != null) {
-                        if (object.getRedisCacheTimestamp() <= expiredTimestamp) {
+                        if (!object.isOnline() && object.getRedisCacheTimestamp() <= expiredTimestamp) {
                             // Object is expired, remove it from Redis
                             jedis.hdel(this.cache.getServerSpecificName(), entry.getKey());
                         }
