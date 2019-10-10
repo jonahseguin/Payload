@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base.failsafe;
 
 import com.jonahseguin.payload.PayloadPlugin;
@@ -108,7 +113,6 @@ public class FailureManager<K, X extends Payload<K>, D extends PayloadData> impl
             X payload = controller.cache();
 
             if (payload != null) {
-                cache.cache(payload);
                 // If success
                 if (failedPayload.getData() instanceof ProfileData) {
                     ProfileData profileData = (ProfileData) failedPayload.getData();
@@ -125,6 +129,7 @@ public class FailureManager<K, X extends Payload<K>, D extends PayloadData> impl
                     }
                     player.sendMessage(cache.getLangController().get(PLang.CACHE_FAILURE_PROFILE_ATTEMPT_SUCCESS, cache.getName()));
                 }
+                cache.cache(payload);
                 purge.add(failedPayload);
             } else {
                 // If failure
