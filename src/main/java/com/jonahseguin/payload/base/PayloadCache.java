@@ -387,10 +387,8 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     }
 
     public void updatePayloadFromNewer(X payload, X update) {
-        this.payloadDatabase.getDatastore().getMapper().getMappedClass(payload).getPersistenceFields().forEach(mf -> {
-            mf.setFieldValue(payload, mf.getFieldValue(update));
-        });
         X x = this.payloadDatabase.getDatastore().getMapper().fromDb(this.payloadDatabase.getDatastore(), this.payloadDatabase.getDatastore().getMapper().toDBObject(update), payload, this.payloadDatabase.getDatastore().getMapper().createEntityCache());
+        this.cache(x);
     }
 
     @Override
