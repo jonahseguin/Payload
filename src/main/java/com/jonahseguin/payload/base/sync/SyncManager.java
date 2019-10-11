@@ -76,6 +76,14 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
         if (payload.shouldPrepareUpdate()) {
             this.requestedSaves.put(payload.getIdentifier().toString(), callback);
             this.publishRequestSave(payload.getIdentifier());
+            this.cache.getPlugin().getServer().getScheduler().runTaskLaterAsynchronously(this.cache.getPlugin(), () -> {
+                if (this.requestedSaves.containsKey(payload.getIdentifier().toString())) {
+                    // Timed out
+                    this.requestedSaves.remove(payload.getIdentifier().toString());
+                    callback.callback(payload);
+                    this.cache.getErrorHandler().error(this.cache, "Sync: Timed out while preparing update for Payload: " + payload.getIdentifier());
+                }
+            }, (20 * 5));
         } else {
             callback.callback(payload);
         }
