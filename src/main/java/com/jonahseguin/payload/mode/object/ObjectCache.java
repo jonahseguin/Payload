@@ -180,19 +180,23 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
 
     @Override
     public boolean save(X payload) {
+        if (this.saveNoSync(payload)) {
+            if (this.settings.isEnableSync() && !this.settings.isServerSpecific()) {
+                this.syncManager.publishUpdate(payload);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean saveNoSync(X payload) {
         boolean success = true;
         for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
             if (!layer.save(payload)) {
                 success = false;
             }
         }
-
-        if (success) {
-            if (this.settings.isEnableSync() && !this.settings.isServerSpecific()) {
-                this.syncManager.publishUpdate(payload);
-            }
-        }
-
         return success;
     }
 
