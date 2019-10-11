@@ -26,7 +26,8 @@ public class SyncSubscriber<K, X extends Payload<K>, D extends PayloadData> exte
                 BasicDBObject object = BasicDBObject.parse(json);
                 if (object != null) {
                     String source = object.getString("source");
-                    if (!source.equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
+                    String cache = object.getString("cache");
+                    if (!source.equalsIgnoreCase(PayloadAPI.get().getPayloadID()) && this.manager.getCache().getName().equalsIgnoreCase(cache)) {
                         this.manager.receiveSync(object);
                     }
                 }

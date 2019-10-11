@@ -114,6 +114,29 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
                 this.syncManager.publishUncache(key);
             }
         }
+        return this.uncacheLocal(key);
+    }
+
+    @Override
+    public X getFromCache(String key) {
+        return this.localLayer.get(key);
+    }
+
+    @Override
+    public X getFromDatabase(String key) {
+        for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
+            if (layer.isDatabase()) {
+                X payload = layer.get(key);
+                if (payload != null) {
+                    return payload;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public boolean uncacheLocal(String key) {
         if (this.localLayer.has(key)) {
             this.localLayer.remove(key);
             return true;

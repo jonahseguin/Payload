@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.object;
 
 import com.jonahseguin.payload.PayloadAPI;
@@ -45,5 +50,20 @@ public abstract class PayloadObject implements Payload<String> {
     @Override
     public void setPayloadServer(String payloadID) {
         this.payloadId = payloadID;
+    }
+
+    @Override
+    public boolean shouldSave() {
+        return this.getCache().getSettings().isEnableSync() || this.getCache().getSettings().isServerSpecific();
+    }
+
+    @Override
+    public boolean shouldPrepareUpdate() {
+        return !this.getCache().getSettings().isEnableSync() && !this.getCache().getSettings().isServerSpecific();
+    }
+
+    @Override
+    public void save() {
+        this.getCache().save(this);
     }
 }

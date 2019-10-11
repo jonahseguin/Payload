@@ -10,7 +10,6 @@ import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
 import dev.morphia.annotations.Id;
 import dev.morphia.annotations.PostLoad;
-import dev.morphia.annotations.PrePersist;
 import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -194,5 +193,20 @@ public abstract class PayloadProfile implements Payload<UUID> {
     @Override
     public void setPayloadServer(String payloadID) {
         this.payloadId = payloadID;
+    }
+
+    @Override
+    public boolean shouldSave() {
+        return this.isOnlineThisServer();
+    }
+
+    @Override
+    public boolean shouldPrepareUpdate() {
+        return this.isOnlineOtherServer();
+    }
+
+    @Override
+    public void save() {
+        this.getCache().save(this);
     }
 }

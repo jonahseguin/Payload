@@ -224,6 +224,16 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     protected abstract X get(K key);
 
     /**
+     * Get an object stored in this cache locally
+     *
+     * @param key The key to use to get the object
+     * @return The object if available (else null)
+     */
+    public abstract X getFromCache(K key);
+
+    public abstract X getFromDatabase(K key);
+
+    /**
      * Check if an object is locally-cached
      * @param key Key
      * @return True if cached
@@ -237,6 +247,8 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     public abstract boolean uncache(K key);
 
+    public abstract boolean uncacheLocal(K key);
+
     /**
      * Remove an object from the local cache on ALL SERVERS with this cache in the network/on this database
      *
@@ -244,10 +256,18 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     public void uncacheEverywhere(K key) {
         if (this.getSettings().isEnableSync()) {
-            this.uncache(key);
+            this.uncacheLocal(key);
             this.syncManager.publishUncache(key);
         } else {
             this.getErrorHandler().exception(this, new UnsupportedOperationException("Cannot uncacheEverywhere unless Sync is enabled in cache settings!"));
+        }
+    }
+
+    public void prepareUpdate(X payload, PayloadCallback<X> callback) {
+        if (this.getSettings().isEnableSync()) {
+            this.syncManager.prepareUpdate(payload, callback);
+        } else {
+            this.getErrorHandler().exception(this, new UnsupportedOperationException("Cannot prepareUpdate unless Sync is enabled in cache settings!"));
         }
     }
 

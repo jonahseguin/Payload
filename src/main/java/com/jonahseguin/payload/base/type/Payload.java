@@ -63,4 +63,21 @@ public interface Payload<K> {
      */
     void setPayloadServer(String payloadID);
 
+    /**
+     * Whether this object/profile should be saved
+     * I.e only return true if a profile is online
+     *
+     * @return True if should save
+     */
+    boolean shouldSave();
+
+    /**
+     * Whether this object/profile needs to prepare (i.e be saved elsewhere) before an update/save
+     *
+     * @return true if should prepare before an update/save
+     */
+    boolean shouldPrepareUpdate();
+
+    void save();
+
 }

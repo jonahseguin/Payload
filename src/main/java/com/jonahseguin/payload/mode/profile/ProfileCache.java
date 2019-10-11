@@ -205,11 +205,34 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
                 this.syncManager.publishUncache(key);
             }
         }
+        return this.uncacheLocal(key);
+    }
+
+    @Override
+    public boolean uncacheLocal(UUID key) {
         if (this.localLayer.has(key)) {
             this.localLayer.remove(key);
             return true;
         }
         return false;
+    }
+
+    @Override
+    public X getFromCache(UUID key) {
+        return this.localLayer.get(key);
+    }
+
+    @Override
+    public X getFromDatabase(UUID key) {
+        for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
+            if (layer.isDatabase()) {
+                X payload = layer.get(key);
+                if (payload != null) {
+                    return payload;
+                }
+            }
+        }
+        return null;
     }
 
     @Override
