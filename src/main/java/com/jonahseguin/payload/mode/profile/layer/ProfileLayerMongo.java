@@ -75,7 +75,7 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
     public X getByUsername(String username) {
         try {
             Query<X> q = getQueryForUsername(username);
-            Stream<X> stream = q.asList().stream();
+            Stream<X> stream = q.find().toList().stream();
             Optional<X> xp = stream.findFirst();
             X x = xp.orElse(null);
             if (x != null) {

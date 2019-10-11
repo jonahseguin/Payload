@@ -314,13 +314,6 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         return payload;
     }
 
-    public void update(X payload) {
-        this.payload = payload;
-        if (payload.isPlayerOnline()) {
-            payload.initializePlayer(payload.getPlayer());
-        }
-    }
-
     /**
      * To be called by our HandshakeManager when receiving the PAYLOAD_SAVED event or the PAYLOAD_NOT_CACHED_CONTINUE event
      */

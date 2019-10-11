@@ -195,7 +195,7 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
     @Override
     public Collection<X> getAll() {
         Query<X> q = this.createQuery();
-        Stream<X> stream = q.asList().stream();
+        Stream<X> stream = q.find().toList().stream();
         return stream.collect(Collectors.toSet());
     }
 

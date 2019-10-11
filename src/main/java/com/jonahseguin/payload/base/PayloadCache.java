@@ -284,6 +284,8 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     public abstract boolean save(X payload);
 
+    public abstract boolean saveNoSync(X payload);
+
     /**
      * Delete a Payload from all layers (including local + database)
      *

@@ -15,12 +15,12 @@ import com.jonahseguin.payload.base.failsafe.FailedPayload;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.base.sync.SyncMode;
+import com.jonahseguin.payload.mode.profile.handshake.HandshakeEvent;
+import com.jonahseguin.payload.mode.profile.handshake.HandshakeListener;
+import com.jonahseguin.payload.mode.profile.handshake.HandshakeManager;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerLocal;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerMongo;
 import com.jonahseguin.payload.mode.profile.layer.ProfileLayerRedis;
-import com.jonahseguin.payload.mode.profile.pubsub.HandshakeEvent;
-import com.jonahseguin.payload.mode.profile.pubsub.HandshakeListener;
-import com.jonahseguin.payload.mode.profile.pubsub.HandshakeManager;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import lombok.Getter;
 import org.bukkit.Bukkit;
@@ -51,7 +51,6 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     private transient final ConcurrentMap<UUID, ProfileData> data = new ConcurrentHashMap<>();
 
-    private transient Jedis publisherJedis = null;
     private transient Jedis subscriberJedis = null;
 
     public ProfileCache(PayloadHook hook, String name, Class<X> type) {
@@ -92,13 +91,9 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         if (this.handshakeListener.isSubscribed()) {
             this.handshakeListener.unsubscribe();
         }
-        if (this.publisherJedis != null) {
-            this.publisherJedis.close();
-        }
         if (this.subscriberJedis != null) {
             this.subscriberJedis.close();
         }
-        this.publisherJedis = null;
         this.subscriberJedis = null;
         this.data.clear();
         this.controllers.clear();
@@ -292,6 +287,20 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     @Override
     public boolean save(X payload) {
+        this.getErrorHandler().debug(this, "Saving payload: " + payload.getIdentifier().toString());
+        if (this.saveNoSync(payload)) {
+            if (!payload.isSwitchingServers()) {
+                if (this.settings.isEnableSync() && !this.settings.isServerSpecific()) {
+                    this.syncManager.publishUpdate(payload); // Publish the update to other servers
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean saveNoSync(X payload) {
         boolean x = true;
         payload.setLastInteractionTimestamp(System.currentTimeMillis());
         for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
@@ -305,9 +314,6 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             this.alert(PayloadPermission.ADMIN, PLang.SAVE_FAILED_NOTIFY_ADMIN, this.getName(), payload.getUsername());
             this.getErrorHandler().debug(this, "Failed to save Payload: " + payload.getUsername());
         } else {
-            if (this.settings.isEnableSync() && !this.settings.isServerSpecific()) {
-                this.syncManager.publishUpdate(payload); // Publish the update to other servers
-            }
             payload.setLastSaveTimestamp(System.currentTimeMillis());
             if (payload.isSaveFailed()) {
                 // They previously had failed to save
@@ -381,13 +387,9 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     public void onRedisInitConnect() {
         // Allocate Jedis resources for Publishing and Subscribing
         if (this.payloadDatabase != null && this.payloadDatabase.getJedisPool() != null) {
-            if (this.publisherJedis == null) {
-                this.getErrorHandler().debug(this, "Initializing publisher Jedis");
-                this.publisherJedis = this.payloadDatabase.getResource();
-            }
             if (this.subscriberJedis == null) {
                 this.getErrorHandler().debug(this, "Subscribing to pub/sub events");
-                this.plugin.getServer().getScheduler().runTaskAsynchronously(this.plugin, () -> {
+                this.getPool().submit(() -> {
                     this.subscriberJedis = this.payloadDatabase.getResource();
                     this.subscriberJedis.subscribe(this.handshakeListener,
                             HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(),

@@ -163,12 +163,17 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
                         }
                     } else if (event.equals(SyncEvent.UNCACHE)) {
                         this.cache.uncacheLocal(key);
+                        this.cache.getErrorHandler().debug(this.cache, "Sync: Uncached payload: " + key.toString());
                     } else if (event.equals(SyncEvent.REQUEST_SAVE)) {
+                        this.cache.getErrorHandler().debug(this.cache, "Sync: Received REQUEST_SAVE for payload: " + key.toString());
                         if (this.cache.isCached(key)) {
                             X payload = this.cache.getFromCache(key);
                             if (payload.shouldSave()) {
-                                this.cache.save(cache.getFromCache(key));
+                                this.cache.getErrorHandler().debug(this.cache, "Sync: Saving payload as per request: " + key.toString());
+                                this.cache.saveNoSync(cache.getFromCache(key));
                                 this.publishSaveCompleted(key);
+                            } else {
+                                this.cache.getErrorHandler().debug(this.cache, "Sync: Not saving payload (!shouldSave()): " + key.toString());
                             }
                         }
                     } else if (event.equals(SyncEvent.SAVE_COMPLETED)) {
@@ -176,7 +181,12 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
                             this.cache.getPool().submit(() -> {
                                 X x = this.cache.getFromDatabase(key);
                                 if (x != null) {
-                                    this.cache.cache(x);
+                                    if (this.cache.isCached(key)) {
+                                        X payload = this.cache.getFromCache(key);
+                                        this.cache.updatePayloadFromNewer(payload, x);
+                                    } else {
+                                        this.cache.cache(x);
+                                    }
                                     this.requestedSaves.get(key.toString()).callback(x);
                                     this.requestedSaves.remove(key.toString());
                                 } else {

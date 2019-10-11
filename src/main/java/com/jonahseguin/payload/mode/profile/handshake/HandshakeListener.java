@@ -1,10 +1,16 @@
-package com.jonahseguin.payload.mode.profile.pubsub;
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
+package com.jonahseguin.payload.mode.profile.handshake;
 
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.PayloadProfileController;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import org.bson.Document;
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPubSub;
 
 import java.util.UUID;
@@ -27,7 +33,7 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
             try {
                 data = Document.parse(message);
             } catch (Exception ex) {
-                this.cache.getErrorHandler().exception(this.cache, ex, "Failed to parse data for Redis Handshake event: " + ex.getMessage());
+                this.cache.getErrorHandler().exception(this.cache, ex, "Failed to parse data for Payload Handshake event: " + ex.getMessage());
                 return;
             }
 
@@ -61,7 +67,7 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
                         try {
                             uuid = UUID.fromString(uniqueId);
                         } catch (IllegalArgumentException ex) {
-                            this.cache.getErrorHandler().exception(this.cache, ex, "Failed to parse UUID '" + uniqueId + "' for Redis Handshake event: " + ex.getMessage());
+                            this.cache.getErrorHandler().exception(this.cache, ex, "Failed to parse UUID '" + uniqueId + "' for Payload Handshake event: " + ex.getMessage());
                             return;
                         }
 
@@ -87,19 +93,27 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
 
                             if (target != null && target.isOnlineThisServer()) {
                                 // Save
-
                                 final X finalTarget = target;
                                 finalTarget.setSwitchingServers(true);
-                                this.cache.getPublisherJedis().publish(HandshakeEvent.SAVING_PAYLOAD.getName(), dataOutJson);
                                 this.cache.getPool().submit(() -> {
-                                    this.cache.save(finalTarget);
-                                    this.cache.getPublisherJedis().publish(HandshakeEvent.SAVED_PAYLOAD.getName(), dataOutJson);
+                                    try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
+                                        jedis.publish(HandshakeEvent.SAVING_PAYLOAD.getName(), dataOutJson);
+                                        this.cache.save(finalTarget);
+                                        jedis.publish(HandshakeEvent.SAVED_PAYLOAD.getName(), dataOutJson);
+                                    } catch (Exception ex) {
+                                        this.cache.getErrorHandler().exception(this.cache, ex, "Error publishing SAVING_PAYLOAD/SAVED_PAYLOAD during handshake for Payload " + uniqueId);
+                                    }
                                 });
                             } else {
                                 // Don't have them, emit an event to let the server know
-                                this.cache.getPublisherJedis().publish(HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(), dataOut.toJson());
+                                this.cache.getPool().submit(() -> {
+                                    try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
+                                        jedis.publish(HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(), dataOut.toJson());
+                                    } catch (Exception ex) {
+                                        this.cache.getErrorHandler().exception(this.cache, ex, "Error publishing PAYLOAD_NOT_CACHED_CONTINUE during handshake for Payload " + uniqueId);
+                                    }
+                                });
                             }
-
                         } else if (event.equals(HandshakeEvent.SAVING_PAYLOAD)) {
                             this.cache.getErrorHandler().debug(this.cache, "Received SAVING_PAYLOAD for Payload " + uuid.toString());
 
@@ -110,7 +124,7 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
                                 controller.setServerFound(true);
                                 controller.setLoadFromServer(sourcePayloadId);
                             } else {
-                                this.cache.getErrorHandler().debug(this.cache, "Controller was null during SAVING_PAYLOAD for uuid " + uniqueId);
+                                this.cache.getErrorHandler().debug(this.cache, "Controller was null during SAVING_PAYLOAD for Payload " + uniqueId);
                             }
 
                         } else if (event.equals(HandshakeEvent.SAVED_PAYLOAD)) {
@@ -122,9 +136,8 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
                             if (controller != null) {
                                 controller.onHandshakeComplete();
                             } else {
-                                this.cache.getErrorHandler().debug(this.cache, "Controller was null during SAVED_PAYLOAD for uuid " + uniqueId);
+                                this.cache.getErrorHandler().debug(this.cache, "Controller was null during SAVED_PAYLOAD for Payload " + uniqueId);
                             }
-
                         } else if (event.equals(HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE)) {
                             this.cache.getErrorHandler().debug(this.cache, "Received PAYLOAD_NOT_CACHED_CONTINUE for Payload " + uuid.toString());
 
@@ -137,9 +150,8 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
                                 controller.setAbortHandshakeNotCached(true);
                                 controller.onHandshakeComplete();
                             } else {
-                                this.cache.getErrorHandler().debug(this.cache, "Controller was null during SAVING_PAYLOAD for uuid " + uniqueId);
+                                this.cache.getErrorHandler().debug(this.cache, "Controller was null during PAYLOAD_NOT_CACHED_CONTINUE for Payload " + uniqueId);
                             }
-
                         }
                     }
                 }

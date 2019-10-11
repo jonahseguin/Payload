@@ -3,7 +3,7 @@
  * www.jonahseguin.com
  */
 
-package com.jonahseguin.payload.mode.profile.pubsub;
+package com.jonahseguin.payload.mode.profile.handshake;
 
 public enum HandshakeEvent {
 

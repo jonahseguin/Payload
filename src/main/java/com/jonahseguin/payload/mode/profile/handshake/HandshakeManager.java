@@ -3,7 +3,7 @@
  * www.jonahseguin.com
  */
 
-package com.jonahseguin.payload.mode.profile.pubsub;
+package com.jonahseguin.payload.mode.profile.handshake;
 
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
@@ -11,6 +11,7 @@ import com.jonahseguin.payload.mode.profile.PayloadProfileController;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import lombok.Getter;
 import org.bson.Document;
+import redis.clients.jedis.Jedis;
 
 @Getter
 public class HandshakeManager<X extends PayloadProfile> {
@@ -26,7 +27,6 @@ public class HandshakeManager<X extends PayloadProfile> {
     public HandshakeManager(ProfileCache<X> cache) {
         this.cache = cache;
         this.timeoutTask = new HandshakeTimeoutTask<>(this);
-
     }
 
 
@@ -37,7 +37,7 @@ public class HandshakeManager<X extends PayloadProfile> {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException ex) {
-                this.cache.getErrorHandler().exception(this.cache, ex, "Exception while waiting for handshake for Payload with username " + controller.getData().getUsername());
+                this.cache.getErrorHandler().exception(this.cache, ex, "Exception while waiting for handshake for Payload " + controller.getData().getUniqueId().toString());
                 return false;
             }
         }
@@ -57,7 +57,13 @@ public class HandshakeManager<X extends PayloadProfile> {
 
         controller.setHandshakeStartTime(System.currentTimeMillis());
 
-        this.cache.getPublisherJedis().publish(HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(), data.toJson());
+        try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
+            jedis.publish(HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(), data.toJson());
+        } catch (Exception ex) {
+            controller.setTimedOut(true);
+            controller.setFailure(true);
+            this.cache.getErrorHandler().exception(this.cache, ex, "Failed to publish REQUEST_PAYLOAD_SAVE (start handshaking) during handshake for Payload " + controller.getData().getUniqueId().toString());
+        }
     }
 
 }

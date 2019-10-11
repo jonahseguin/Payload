@@ -34,7 +34,6 @@ import java.io.*;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -182,7 +181,7 @@ public class PayloadDatabase {
                     // Using auth
                     MongoCredential credential = MongoCredential.createCredential(payloadMongo.getUsername(),
                             payloadMongo.getAuthDatabase(), payloadMongo.getPassword().toCharArray());
-                    mongoClient = new MongoClient(address, Collections.singletonList(credential), optionsBuilder.build());
+                    mongoClient = new MongoClient(address, credential, optionsBuilder.build());
                 } else {
                     // No auth
                     mongoClient = new MongoClient(address, optionsBuilder.build());

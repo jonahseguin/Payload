@@ -1,4 +1,9 @@
-package com.jonahseguin.payload.mode.profile.pubsub;
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
+package com.jonahseguin.payload.mode.profile.handshake;
 
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.PayloadProfileController;
