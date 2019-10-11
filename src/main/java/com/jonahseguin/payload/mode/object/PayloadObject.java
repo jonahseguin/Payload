@@ -62,6 +62,7 @@ public abstract class PayloadObject implements Payload<String> {
         return !this.getCache().getSettings().isEnableSync() && !this.getCache().getSettings().isServerSpecific();
     }
 
+
     @Override
     public void save() {
         this.getCache().save(this);

@@ -386,6 +386,13 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
         this.syncMode = mode;
     }
 
+    public void updatePayloadFromNewer(X payload, X update) {
+        this.payloadDatabase.getDatastore().getMapper().getMappedClass(payload).getPersistenceFields().forEach(mf -> {
+            mf.setFieldValue(payload, mf.getFieldValue(update));
+        });
+        X x = this.payloadDatabase.getDatastore().getMapper().fromDb(this.payloadDatabase.getDatastore(), this.payloadDatabase.getDatastore().getMapper().toDBObject(update), payload, this.payloadDatabase.getDatastore().getMapper().createEntityCache());
+    }
+
     @Override
     public void onMongoDbDisconnect() {
         this.getPayloadDatabase().getState().setMongoConnected(false);

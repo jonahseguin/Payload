@@ -29,6 +29,7 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
 
     private final ConcurrentMap<String, PayloadCallback<X>> requestedSaves = new ConcurrentHashMap<>();
     private final Set<PayloadCallback<PayloadServer>> requestedSaveAll = new HashSet<>();
+    private final Set<SyncHook<K, X>> hooks = new HashSet<>();
 
     public SyncManager(PayloadCache<K, X, D> cache) {
         this.cache = cache;
@@ -52,6 +53,10 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
             this.jedisSubscriber.close();
             this.jedisSubscriber = null;
         }
+    }
+
+    private void updateHooks(X payload) {
+        this.hooks.forEach(hook -> hook.update(payload));
     }
 
     public void prepareSaveAll(Runnable callback) {
@@ -141,9 +146,15 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
                             this.cache.getPool().submit(() -> {
                                 X payload = this.cache.getFromDatabase(key);
                                 if (payload != null) {
-                                    if (!cache.getSettings().isServerSpecific() || payload.getPayloadServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
-                                        this.cache.cache(payload);
-                                        this.cache.getErrorHandler().debug(this.cache, "Sync: Updated payload " + payload.getIdentifier());
+                                    if (this.cache.isCached(key) && this.cache.getFromCache(key).shouldSave()) {
+                                        this.cache.updatePayloadFromNewer(this.cache.getFromCache(key), payload);
+                                        this.cache.getErrorHandler().debug(this.cache, "Sync: Updated (merged from database) payload: " + key.toString());
+                                    } else {
+                                        if (!cache.getSettings().isServerSpecific() || payload.getPayloadServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
+                                            this.cache.cache(payload);
+                                            this.updateHooks(payload);
+                                            this.cache.getErrorHandler().debug(this.cache, "Sync: Updated payload: " + payload.getIdentifier());
+                                        }
                                     }
                                 } else {
                                     this.cache.getErrorHandler().error(this.cache, "Sync: Payload was null when fetching update for identifier: " + key.toString());

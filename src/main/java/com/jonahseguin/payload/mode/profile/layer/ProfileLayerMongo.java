@@ -172,7 +172,7 @@ public class ProfileLayerMongo<X extends PayloadProfile> extends ProfileCacheLay
 
     @Override
     public long size() {
-        return this.cache.getPayloadDatabase().getDatastore().getCount(this.cache.getPayloadClass());
+        return this.cache.getPayloadDatabase().getDatastore().find(this.cache.getPayloadClass()).count();
     }
 
     @Override
