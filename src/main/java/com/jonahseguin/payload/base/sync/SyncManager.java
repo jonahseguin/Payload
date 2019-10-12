@@ -146,7 +146,7 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
                             this.cache.getPool().submit(() -> {
                                 X payload = this.cache.getFromDatabase(key);
                                 if (payload != null) {
-                                    if (this.cache.isCached(key) && this.cache.getFromCache(key).shouldSave()) {
+                                    if (this.cache.isCached(key)) {
                                         this.cache.updatePayloadFromNewer(this.cache.getFromCache(key), payload);
                                         this.cache.getErrorHandler().debug(this.cache, "Sync: Updated (merged from database) payload: " + key.toString());
                                     } else {

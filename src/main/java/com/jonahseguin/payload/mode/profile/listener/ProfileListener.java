@@ -61,6 +61,7 @@ public class ProfileListener implements Listener {
                     cache.removeData(uniqueId);
                 } else {
                     c.getErrorHandler().debug(c, "Cached " + username);
+                    cache.removeData(uniqueId);
                 }
             }
         });
@@ -75,6 +76,10 @@ public class ProfileListener implements Listener {
                 PayloadProfileController controller = cache.getController(player.getUniqueId());
                 if (controller != null) {
                     controller.initializeOnJoin(player);
+                    if (!cache.getFailureManager().hasFailure(player.getUniqueId())) {
+                        cache.removeController(player.getUniqueId());
+                        cache.removeData(player.getUniqueId());
+                    }
                 }
                 if (cache.getFailureManager().hasFailure(player.getUniqueId())) {
                     cache.getFailureManager().getFailedPayload(player.getUniqueId()).setPlayer(player);
@@ -103,9 +108,9 @@ public class ProfileListener implements Listener {
                             profile.setOnline(false);
                             profile.setLastSeenTimestamp(System.currentTimeMillis());
                             profile.uninitializePlayer();
-                        }
-                        if (!cache.save(player)) {
-                            cache.getErrorHandler().debug(cache, "Player could not be saved on quit (not cached): " + player.getName());
+                            if (!cache.save(profile)) {
+                                cache.getErrorHandler().debug(cache, "Player could not be saved on quit: " + player.getName());
+                            }
                         }
                     });
                 } else if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
@@ -122,15 +127,18 @@ public class ProfileListener implements Listener {
                             profile.setOnline(false);
                             profile.setLastSeenTimestamp(System.currentTimeMillis());
                             cache.getPool().submit(() -> {
-                                cache.save(player);
+                                cache.save(profile);
                                 // In network node mode, join is handled before quit when switching servers
                                 // so we don't want to save on quit
                                 // but we do want to remove their locally cached profile because the data will be outdated
                                 // and we want to prevent accidental data rollbacks
                                 cache.getLocalLayer().remove(player.getUniqueId());
+                                cache.removeData(player.getUniqueId());
+                                cache.removeController(player.getUniqueId());
                             }); // Save async
                             cache.getErrorHandler().debug(cache, "Saving player " + player.getName() + " on logout (not switching servers)");
                             // It's safe to save here because they aren't switching servers, but they are logging out entirely
+                            return;
                         } else {
 
                             PayloadProfileSwitchServersEvent payloadEvent = new PayloadProfileSwitchServersEvent(profile);

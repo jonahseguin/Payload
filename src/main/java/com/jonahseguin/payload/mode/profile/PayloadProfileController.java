@@ -144,6 +144,8 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 this.getCache().getErrorHandler().debug(this.cache, "Creating a new profile for Payload " + this.data.getUsername());
                 // Otherwise make a new profile
                 payload = cache.getInstantiator().instantiate(this.data);
+                payload.setLoadingSource("New Profile");
+                payload.setOnline(true);
                 cache.getPool().submit(() -> cache.save(payload));
             }
             // If they aren't logging in (getting a payload by UUID/username) and it wasn't found, return null as they don't exist.
@@ -289,6 +291,8 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 // Just create them a new one and call it a day.
                 if (this.login) {
                     payload = cache.getInstantiator().instantiate(this.data);
+                    payload.setLoadingSource("New Profile");
+                    payload.setOnline(true);
                     cache.getPool().submit(() -> cache.save(payload));
                 }
             }
@@ -331,6 +335,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
 
     private void updatePayloadAfterJoin() {
         if (this.payload != null) {
+            payload.setSwitchingServers(false);
             payload.setLastSeenServer(PayloadAPI.get().getPayloadID());
             payload.setOnline(true);
             payload.setCachedTimestamp(System.currentTimeMillis());
