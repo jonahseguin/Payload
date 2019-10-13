@@ -73,7 +73,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
 
         if (this.data.getUniqueId() != null && this.data.getUsername() != null) {
             // Map their UUID to Username
-            PayloadPlugin.get().getUUIDs().put(this.data.getUsername(), this.data.getUniqueId());
+            PayloadPlugin.get().saveUUID(this.data.getUsername(), this.data.getUniqueId());
         }
 
         if (this.login) {

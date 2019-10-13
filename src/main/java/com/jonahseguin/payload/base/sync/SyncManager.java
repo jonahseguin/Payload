@@ -148,6 +148,7 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
                                 if (payload != null) {
                                     if (this.cache.isCached(key)) {
                                         this.cache.updatePayloadFromNewer(this.cache.getFromCache(key), payload);
+                                        this.updateHooks(this.cache.getFromCache(key));
                                         this.cache.getErrorHandler().debug(this.cache, "Sync: Updated (merged from database) payload: " + key.toString());
                                     } else {
                                         if (!cache.getSettings().isServerSpecific() || payload.getPayloadServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {

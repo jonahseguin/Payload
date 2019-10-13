@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload;
 
 import com.google.common.collect.HashBiMap;
@@ -99,6 +104,18 @@ public class PayloadPlugin extends JavaPlugin {
 
     public HashBiMap<String, UUID> getUUIDs() {
         return uuids;
+    }
+
+    public void saveUUID(String username, UUID uuid) {
+        this.uuids.put(username.toLowerCase(), uuid);
+    }
+
+    public UUID getUUID(String username) {
+        return this.uuids.get(username.toLowerCase());
+    }
+
+    public String getUsername(UUID uuid) {
+        return this.uuids.inverse().get(uuid);
     }
 
     /**

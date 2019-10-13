@@ -105,7 +105,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     }
 
     public X getProfileByName(String username) {
-        UUID uuid = PayloadPlugin.get().getUUIDs().get(username);
+        UUID uuid = PayloadPlugin.get().getUUIDs().get(username.toLowerCase());
         if (uuid != null) {
             return this.getProfile(uuid);
         }
@@ -119,7 +119,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     }
 
     public X getLocalProfileByName(String username) {
-        UUID uuid = PayloadPlugin.get().getUUIDs().get(username);
+        UUID uuid = PayloadPlugin.get().getUUID(username);
         if (uuid != null) {
             return this.getProfile(uuid);
         }
