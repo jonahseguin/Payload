@@ -10,6 +10,7 @@ import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
 import dev.morphia.annotations.Id;
 import dev.morphia.annotations.PostLoad;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -25,6 +26,7 @@ import java.util.UUID;
 // The implementing class of this abstract class must add an @Entity annotation (from MongoDB) with a collection name!
 @Getter
 @Setter
+@EqualsAndHashCode
 public abstract class PayloadProfile implements Payload<UUID> {
 
     @Id

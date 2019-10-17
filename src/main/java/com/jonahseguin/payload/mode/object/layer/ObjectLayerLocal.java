@@ -9,6 +9,7 @@ import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.ObjectData;
 import com.jonahseguin.payload.mode.object.PayloadObject;
 import lombok.Getter;
+import org.bson.types.ObjectId;
 
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,48 +26,52 @@ public class ObjectLayerLocal<X extends PayloadObject> extends ObjectCacheLayer<
 
     @Override
     public X get(String key) {
-        return this.localCache.get(key);
+        return this.localCache.get(key.toLowerCase());
     }
 
     @Override
     public X get(ObjectData data) {
-        return this.get(data.getIdentifier());
+        return this.get(data.getIdentifier().toLowerCase());
+    }
+
+    public X getByObjectID(ObjectId id) {
+        return this.localCache.values().stream().filter(x -> x.getObjectId().equals(id)).findFirst().orElse(null);
     }
 
     @Override
     public boolean save(X payload) {
-        this.localCache.put(payload.getIdentifier(), payload);
+        this.localCache.put(payload.getIdentifier().toLowerCase(), payload);
         return true;
     }
 
     @Override
     public boolean has(String key) {
-        return this.localCache.containsKey(key);
+        return this.localCache.containsKey(key.toLowerCase());
     }
 
     @Override
     public boolean has(ObjectData data) {
-        return this.has(data.getIdentifier());
+        return this.has(data.getIdentifier().toLowerCase());
     }
 
     @Override
     public boolean has(X payload) {
-        return this.has(payload.getIdentifier());
+        return this.has(payload.getIdentifier().toLowerCase());
     }
 
     @Override
     public void remove(String key) {
-        this.localCache.remove(key);
+        this.localCache.remove(key.toLowerCase());
     }
 
     @Override
     public void remove(ObjectData data) {
-        this.remove(data.getIdentifier());
+        this.remove(data.getIdentifier().toLowerCase());
     }
 
     @Override
     public void remove(X payload) {
-        this.remove(payload.getIdentifier());
+        this.remove(payload.getIdentifier().toLowerCase());
     }
 
     @Override
@@ -98,7 +103,7 @@ public class ObjectLayerLocal<X extends PayloadObject> extends ObjectCacheLayer<
 
     @Override
     public String layerName() {
-        return null;
+        return "Object Local";
     }
 
     @Override

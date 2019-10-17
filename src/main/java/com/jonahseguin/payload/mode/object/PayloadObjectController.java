@@ -28,21 +28,19 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
 
     @Override
     public X cache() {
-        if (!cache.getState().isLocked() && cache.getPayloadDatabase().getState().canCacheFunction(this.cache)) {
-            for (PayloadLayer<String, X, ObjectData> layer : this.cache.getLayerController().getLayers()) {
-                try {
-                    if (layer.has(this.data)) {
-                        this.cache.getErrorHandler().debug(this.cache, "Loading object " + this.data.getIdentifier() + " from layer " + layer.layerName());
-                        return layer.get(this.data);
+        for (PayloadLayer<String, X, ObjectData> layer : this.cache.getLayerController().getLayers()) {
+            try {
+                if (layer.has(this.data)) {
+                    this.cache.getErrorHandler().debug(this.cache, "Loading object " + this.data.getIdentifier() + " from layer " + layer.layerName());
+                    payload = layer.get(this.data);
+                    if (payload != null) {
+                        break;
                     }
-                } catch (Exception ex) {
-                    failure = true;
-                    this.cache.getErrorHandler().exception(this.cache, ex, "Failed to load object " + this.data.getIdentifier() + " from layer " + layer.layerName());
                 }
+            } catch (Exception ex) {
+                failure = true;
+                this.cache.getErrorHandler().exception(this.cache, ex, "Failed to load object " + this.data.getIdentifier() + " from layer " + layer.layerName());
             }
-        } else {
-            failure = true;
-            this.cache.getErrorHandler().debug(this.cache, "Failing caching object " + this.getData().getIdentifier() + " because the database is not connected or the cache is locked");
         }
 
         if (payload == null && this.failure) {

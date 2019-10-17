@@ -9,6 +9,7 @@ import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileData;
 import lombok.Getter;
+import org.bson.types.ObjectId;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +38,10 @@ public class ProfileLayerLocal<X extends PayloadProfile> extends ProfileCacheLay
         x.interact();
         x.setLoadingSource(this.layerName());
         return x;
+    }
+
+    public X getByObjectID(ObjectId id) {
+        return this.localCache.values().stream().filter(x -> x.getObjectId().equals(id)).findFirst().orElse(null);
     }
 
     @Override

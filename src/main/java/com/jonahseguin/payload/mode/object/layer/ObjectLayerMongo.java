@@ -176,7 +176,11 @@ public class ObjectLayerMongo<X extends PayloadObject> extends ObjectCacheLayer<
         if (!this.cache.getPayloadDatabase().isStarted()) {
             this.cache.getErrorHandler().error(this.cache, "Error initializing MongoDB Object Layer: Payload Database is not started");
         }
-        this.nullPayload = this.cache.getInstantiator().instantiate(new ObjectData(null));
+        try {
+            this.nullPayload = this.cache.getPayloadClass().newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            this.cache.getErrorHandler().error(this.cache, "Error initializing MongoDB Object Layer: Your Payload Class must have an EMPTY default PUBLIC constructor available!");
+        }
         if (this.cache.getSettings().isServerSpecific()) {
             this.addCriteriaModifier(query -> query.field("payloadId").equalIgnoreCase(PayloadAPI.get().getPayloadID()));
         }

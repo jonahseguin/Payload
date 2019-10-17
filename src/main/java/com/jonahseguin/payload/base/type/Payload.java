@@ -80,4 +80,8 @@ public interface Payload<K> {
 
     void save();
 
+    int hashCode();
+
+    boolean equals(Object object);
+
 }
