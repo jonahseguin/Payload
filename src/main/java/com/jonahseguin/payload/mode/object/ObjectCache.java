@@ -202,6 +202,15 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
 
     @Override
     public void cache(X payload) {
+        if (this.hasObjectLocal(payload.getIdentifier())) {
+            this.updatePayloadFromNewer(this.getLocalObject(payload.getIdentifier()), payload);
+        } else {
+            this.saveToLocal(payload);
+        }
+    }
+
+    @Override
+    public void saveToLocal(X payload) {
         this.localLayer.save(payload);
     }
 

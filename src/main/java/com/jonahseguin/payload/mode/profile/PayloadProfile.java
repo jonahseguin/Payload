@@ -10,7 +10,6 @@ import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
 import dev.morphia.annotations.Id;
 import dev.morphia.annotations.PostLoad;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -26,7 +25,6 @@ import java.util.UUID;
 // The implementing class of this abstract class must add an @Entity annotation (from MongoDB) with a collection name!
 @Getter
 @Setter
-@EqualsAndHashCode
 public abstract class PayloadProfile implements Payload<UUID> {
 
     @Id
@@ -210,6 +208,40 @@ public abstract class PayloadProfile implements Payload<UUID> {
     @Override
     public void save() {
         this.getCache().save(this);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = 1;
+        Object $objectId = this.getObjectId();
+        result = result * 59 + ($objectId == null ? 43 : $objectId.hashCode());
+        Object $uniqueId = this.getUniqueId();
+        result = result * 59 + ($uniqueId == null ? 43 : $uniqueId.hashCode());
+        return result;
+    }
+
+    protected boolean canEqual(Object other) {
+        return other instanceof PayloadProfile;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        } else if (!(o instanceof PayloadProfile)) {
+            return false;
+        } else {
+            PayloadProfile other = (PayloadProfile) o;
+            if (!other.canEqual(this)) {
+                return false;
+            } else {
+                if (this.objectId != null && other.objectId != null) {
+                    return this.objectId.equals(other.objectId);
+                } else {
+                    return false;
+                }
+            }
+        }
     }
 
 }

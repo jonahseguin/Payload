@@ -390,8 +390,10 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
 
     public void updatePayloadFromNewer(X payload, X update) {
         X x = this.payloadDatabase.getDatastore().getMapper().fromDb(this.payloadDatabase.getDatastore(), this.payloadDatabase.getDatastore().getMapper().toDBObject(update), payload, this.payloadDatabase.getDatastore().getMapper().createEntityCache());
-        this.cache(x);
+        this.saveToLocal(x);
     }
+
+    public abstract void saveToLocal(X payload);
 
     @Override
     public void onMongoDbDisconnect() {

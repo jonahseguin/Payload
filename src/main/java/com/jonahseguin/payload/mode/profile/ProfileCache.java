@@ -101,6 +101,15 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     @Override
     public void cache(X payload) {
+        if (this.hasProfileLocal(payload.getUniqueId())) {
+            this.updatePayloadFromNewer(this.getLocalLayer().get(payload.getUniqueId()), payload);
+        } else {
+            this.saveToLocal(payload);
+        }
+    }
+
+    @Override
+    public void saveToLocal(X payload) {
         this.localLayer.save(payload);
     }
 
