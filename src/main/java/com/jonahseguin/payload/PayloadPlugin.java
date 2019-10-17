@@ -247,4 +247,9 @@ public class PayloadPlugin extends JavaPlugin {
     public PCommandHandler getCommandHandler() {
         return commandHandler;
     }
+
+    public ClassLoader getPayloadClassLoader() {
+        return this.getClassLoader();
+    }
+
 }

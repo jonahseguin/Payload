@@ -20,6 +20,7 @@ import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
 import dev.morphia.Morphia;
+import dev.morphia.mapping.DefaultCreator;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
@@ -189,6 +190,12 @@ public class PayloadDatabase {
             }
             this.mongoClient = mongoClient;
             this.morphia = new Morphia();
+            morphia.getMapper().getOptions().setObjectFactory(new DefaultCreator() {
+                @Override
+                protected ClassLoader getClassLoaderForClass() {
+                    return PayloadPlugin.get().getPayloadClassLoader();
+                }
+            });
             this.datastore = this.morphia.createDatastore(mongoClient, payloadMongo.getDatabase());
 
             // If MongoDB fails it will automatically attempt to reconnect until it connects
