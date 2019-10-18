@@ -318,6 +318,8 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     public abstract Set<X> getAll();
 
+    public abstract Future<X> saveAsync(X payload);
+
     /**
      * Get all currently locally-cached objects
      * @return Locally-cached objects

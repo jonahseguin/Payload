@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @Getter
@@ -198,6 +199,15 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
             }
         }
         return success;
+    }
+
+    @Override
+    public Future<X> saveAsync(X payload) {
+        this.localLayer.save(payload);
+        return this.runAsync(() -> {
+            this.save(payload);
+            return payload;
+        });
     }
 
     @Override

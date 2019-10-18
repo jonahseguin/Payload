@@ -9,6 +9,7 @@ import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
 import dev.morphia.annotations.Id;
+import dev.morphia.annotations.Indexed;
 import dev.morphia.annotations.PostLoad;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,7 +30,10 @@ public abstract class PayloadProfile implements Payload<UUID> {
 
     @Id
     protected ObjectId objectId = new ObjectId();
+
+    @Indexed
     protected String username;
+    @Indexed
     protected String uniqueId;
     protected String loginIp = null; // IP the profile logged in with
 

@@ -295,6 +295,15 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     }
 
     @Override
+    public Future<X> saveAsync(X payload) {
+        this.localLayer.save(payload);
+        return this.runAsync(() -> {
+            this.save(payload);
+            return payload;
+        });
+    }
+
+    @Override
     public boolean save(X payload) {
         this.getErrorHandler().debug(this, "Saving payload: " + payload.getIdentifier().toString());
         if (this.saveNoSync(payload)) {
