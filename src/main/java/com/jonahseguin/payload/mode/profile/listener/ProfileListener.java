@@ -62,7 +62,6 @@ public class ProfileListener implements Listener {
                 } else {
                     c.getErrorHandler().debug(c, "Cached " + username);
                     cache.removeData(uniqueId);
-                    cache.removeController(uniqueId);
                 }
             }
         });
@@ -76,6 +75,7 @@ public class ProfileListener implements Listener {
                 ProfileCache cache = (ProfileCache) c;
                 PayloadProfileController controller = cache.getController(player.getUniqueId());
                 if (controller != null) {
+                    cache.getErrorHandler().debug(cache, "Initialized " + player.getName() + " for cache " + cache.getName());
                     controller.initializeOnJoin(player);
                     if (!cache.getFailureManager().hasFailure(player.getUniqueId())) {
                         cache.removeController(player.getUniqueId());
