@@ -55,7 +55,7 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
         }
     }
 
-    private void updateHooks(X payload) {
+    public void updateHooks(X payload) {
         this.hooks.forEach(hook -> hook.update(payload));
     }
 
@@ -134,7 +134,7 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
         });
     }
 
-    public void receiveSync(BasicDBObject object) {
+    public void receiveSync(final BasicDBObject object) {
         try {
             final SyncEvent event = SyncEvent.fromString(object.getString("event"));
             if (event != null) {
@@ -146,12 +146,12 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
                             this.cache.getPool().submit(() -> {
                                 X payload = this.cache.getFromDatabase(key);
                                 if (payload != null) {
-                                    if (this.cache.isCached(key)) {
-                                        this.cache.updatePayloadFromNewer(this.cache.getFromCache(key), payload);
-                                        this.updateHooks(this.cache.getFromCache(key));
-                                        this.cache.getErrorHandler().debug(this.cache, "Sync: Updated (merged from database) payload: " + key.toString());
-                                    } else {
-                                        if (!cache.getSettings().isServerSpecific() || payload.getPayloadServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
+                                    if (!this.cache.getSettings().isServerSpecific() || payload.getPayloadServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
+                                        if (this.cache.isCached(key)) {
+                                            this.cache.updatePayloadFromNewer(this.cache.getFromCache(key), payload);
+                                            this.updateHooks(this.cache.getFromCache(key));
+                                            this.cache.getErrorHandler().debug(this.cache, "Sync: Updated (merged from database) payload: " + key.toString());
+                                        } else {
                                             this.cache.cache(payload);
                                             this.updateHooks(payload);
                                             this.cache.getErrorHandler().debug(this.cache, "Sync: Updated payload: " + payload.getIdentifier());
@@ -180,15 +180,20 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
                     } else if (event.equals(SyncEvent.SAVE_COMPLETED)) {
                         if (this.requestedSaves.containsKey(key.toString())) {
                             this.cache.getPool().submit(() -> {
-                                X x = this.cache.getFromDatabase(key);
-                                if (x != null) {
-                                    if (this.cache.isCached(key)) {
-                                        X payload = this.cache.getFromCache(key);
-                                        this.cache.updatePayloadFromNewer(payload, x);
-                                    } else {
-                                        this.cache.cache(x);
+                                X payload = this.cache.getFromDatabase(key);
+                                if (payload != null) {
+                                    if (!this.cache.getSettings().isServerSpecific() || payload.getPayloadServer().equalsIgnoreCase(PayloadAPI.get().getPayloadID())) {
+                                        if (this.cache.isCached(key)) {
+                                            this.cache.updatePayloadFromNewer(this.cache.getFromCache(key), payload);
+                                            this.updateHooks(this.cache.getFromCache(key));
+                                            this.cache.getErrorHandler().debug(this.cache, "Sync: Updated (merged from database) payload: " + key.toString());
+                                        } else {
+                                            this.cache.cache(payload);
+                                            this.updateHooks(payload);
+                                            this.cache.getErrorHandler().debug(this.cache, "Sync: Updated payload: " + payload.getIdentifier());
+                                        }
                                     }
-                                    this.requestedSaves.get(key.toString()).callback(x);
+                                    this.requestedSaves.get(key.toString()).callback(payload);
                                     this.requestedSaves.remove(key.toString());
                                 } else {
                                     this.cache.getErrorHandler().error(this.cache, "Sync: Payload is null after loading from database after save completed for prepareUpdate");

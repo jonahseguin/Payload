@@ -98,7 +98,7 @@ public class HandshakeListener<X extends PayloadProfile> extends JedisPubSub {
                                 this.cache.getPool().submit(() -> {
                                     try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
                                         jedis.publish(HandshakeEvent.SAVING_PAYLOAD.getName(), dataOutJson);
-                                        this.cache.save(finalTarget);
+                                        this.cache.saveNoSync(finalTarget);
                                         jedis.publish(HandshakeEvent.SAVED_PAYLOAD.getName(), dataOutJson);
                                     } catch (Exception ex) {
                                         this.cache.getErrorHandler().exception(this.cache, ex, "Error publishing SAVING_PAYLOAD/SAVED_PAYLOAD during handshake for Payload " + uniqueId);

@@ -29,7 +29,6 @@ public class HandshakeManager<X extends PayloadProfile> {
         this.timeoutTask = new HandshakeTimeoutTask<>(this);
     }
 
-
     public boolean waitForHandshake(PayloadProfileController<X> controller) {
         // ** Should be called async only **
         // Wait
@@ -57,13 +56,15 @@ public class HandshakeManager<X extends PayloadProfile> {
 
         controller.setHandshakeStartTime(System.currentTimeMillis());
 
-        try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
-            jedis.publish(HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(), data.toJson());
-        } catch (Exception ex) {
-            controller.setTimedOut(true);
-            controller.setFailure(true);
-            this.cache.getErrorHandler().exception(this.cache, ex, "Failed to publish REQUEST_PAYLOAD_SAVE (start handshaking) during handshake for Payload " + controller.getData().getUniqueId().toString());
-        }
+        cache.runAsync(() -> {
+            try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
+                jedis.publish(HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(), data.toJson());
+            } catch (Exception ex) {
+                controller.setTimedOut(true);
+                controller.setFailure(true);
+                this.cache.getErrorHandler().exception(this.cache, ex, "Failed to publish REQUEST_PAYLOAD_SAVE (start handshaking) during handshake for Payload " + controller.getData().getUniqueId().toString());
+            }
+        });
     }
 
 }

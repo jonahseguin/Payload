@@ -103,6 +103,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     public void cache(X payload) {
         if (this.hasProfileLocal(payload.getUniqueId())) {
             this.updatePayloadFromNewer(this.getLocalLayer().get(payload.getUniqueId()), payload);
+            this.syncManager.updateHooks(this.getFromCache(payload.getUniqueId()));
         } else {
             this.saveToLocal(payload);
         }

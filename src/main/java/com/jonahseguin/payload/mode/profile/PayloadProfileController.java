@@ -150,8 +150,17 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             }
             // If they aren't logging in (getting a payload by UUID/username) and it wasn't found, return null as they don't exist.
         } else {
-            // Update their login ip
-            payload.setLoginIp(this.data.getIp());
+            if (this.login) {
+                // Update their login ip
+                if (this.data.getIp() != null) {
+                    payload.setLoginIp(this.data.getIp());
+                }
+                if (this.data.getUsername() != null) {
+                    payload.setUsername(this.data.getUsername()); // Update their username
+                }
+                payload.setSwitchingServers(false);
+                payload.setOnline(true);
+            }
 
             // Cache the Payload if successful
             this.cache.cache(payload);
@@ -306,6 +315,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 if (this.data.getUsername() != null) {
                     payload.setUsername(this.data.getUsername()); // Update their username
                 }
+                payload.setSwitchingServers(false);
             }
             if (this.cache.getSettings().isAlwaysCacheOnLoadNetworkNode() || this.login) {
                 // Only cache them if they are logging in,
@@ -340,9 +350,8 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             payload.setOnline(true);
             payload.setCachedTimestamp(System.currentTimeMillis());
             payload.setLastSeenTimestamp(System.currentTimeMillis());
-            this.cache.getPool().submit(() -> {
-                this.cache.save(payload);
-            });
+            this.cache.saveAsync(payload);
+            this.cache.getErrorHandler().debug(this.cache, "Initialized Payload " + payload.getUsername() + ": set online = true, etc.");
         }
     }
 
