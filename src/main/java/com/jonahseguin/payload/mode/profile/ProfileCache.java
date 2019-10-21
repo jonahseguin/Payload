@@ -297,7 +297,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     @Override
     public Future<X> saveAsync(X payload) {
-        this.localLayer.save(payload);
+        this.cache(payload);
         return this.runAsync(() -> {
             this.save(payload);
             return payload;
@@ -322,9 +322,12 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     public boolean saveNoSync(X payload) {
         boolean x = true;
         payload.setLastInteractionTimestamp(System.currentTimeMillis());
+        this.cache(payload);
         for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
-            if (!layer.save(payload)) {
-                x = false;
+            if (layer.isDatabase()) {
+                if (!layer.save(payload)) {
+                    x = false;
+                }
             }
         }
         if (!x) {

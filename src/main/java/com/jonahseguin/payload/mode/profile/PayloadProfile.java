@@ -99,7 +99,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
     public boolean isPlayerOnline() {
         if (this.player == null) {
             Player player = Bukkit.getPlayer(this.getUUID());
-            if (player != null) {
+            if (player != null && player.isOnline()) {
                 this.player = player;
             }
         }

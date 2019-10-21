@@ -316,6 +316,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                     payload.setUsername(this.data.getUsername()); // Update their username
                 }
                 payload.setSwitchingServers(false);
+                payload.setLastSeenServer(PayloadAPI.get().getPayloadID());
             }
             if (this.cache.getSettings().isAlwaysCacheOnLoadNetworkNode() || this.login) {
                 // Only cache them if they are logging in,
