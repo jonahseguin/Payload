@@ -5,6 +5,8 @@
 
 package com.jonahseguin.payload;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.exception.runtime.PayloadProvisionException;
 import com.jonahseguin.payload.base.type.Payload;
@@ -21,9 +23,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 @Getter
+@Singleton
 public class PayloadAPI {
 
-    private static PayloadAPI instance;
     private final PayloadPlugin plugin;
     private final ConcurrentMap<String, PayloadHook> hooks = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, PayloadCache> caches = new ConcurrentHashMap<>();
@@ -33,12 +35,9 @@ public class PayloadAPI {
     private List<PayloadCache> _sortedCaches = null;
     private List<PayloadCache> _sortedCachesReversed = null;
 
-    protected PayloadAPI(PayloadPlugin plugin) throws IllegalAccessException {
+    @Inject
+    PayloadAPI(PayloadPlugin plugin) {
         this.plugin = plugin;
-        if (PayloadAPI.instance != null) {
-            throw new IllegalAccessException("PayloadAPI can only be created by the internal Payload plugin.");
-        }
-        PayloadAPI.instance = this;
     }
 
     /**
@@ -57,14 +56,6 @@ public class PayloadAPI {
      */
     public final boolean validateHook(Plugin plugin, PayloadHook hook) {
         return this.isProvisioned(plugin) && getHook(plugin).equals(hook);
-    }
-
-    /**
-     * Get the singleton instance of the Payload API
-     * @return {@link PayloadAPI}
-     */
-    public static PayloadAPI get() {
-        return PayloadAPI.instance;
     }
 
     public static String convertCacheName(String name) {
@@ -182,8 +173,8 @@ public class PayloadAPI {
 
     public void setPayloadID(String name) {
         if (StringUtils.isAlphanumeric(name)) {
-            final String oldName = PayloadPlugin.get().getLocal().getPayloadID();
-            PayloadPlugin.get().getLocal().savePayloadID(name);
+            final String oldName = plugin.getLocal().getPayloadID();
+            plugin.getLocal().savePayloadID(name);
             for (PayloadCache cache : getCaches().values()) {
                 cache.updatePayloadID();
             }

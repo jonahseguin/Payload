@@ -15,6 +15,8 @@ import com.jonahseguin.payload.base.failsafe.FailedPayload;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.base.sync.SyncMode;
+import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadData;
 import com.jonahseguin.payload.mode.profile.handshake.HandshakeEvent;
 import com.jonahseguin.payload.mode.profile.handshake.HandshakeListener;
 import com.jonahseguin.payload.mode.profile.handshake.HandshakeManager;
@@ -57,6 +59,9 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         super(hook, name, UUID.class, type);
     }
 
+    /**
+     * Called internally by {@link PayloadCache#start()}
+     */
     @Override
     protected void init() {
         // Startup!
@@ -71,6 +76,9 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         this.layerController.init();
     }
 
+    /**
+     * Called internally by {@link PayloadCache#stop()}
+     */
     @Override
     protected void shutdown() {
         // close layers in order, save all objects, etc.
@@ -99,6 +107,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         this.controllers.clear();
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache}
+     * @param payload Payload to cache (save locally)
+     */
     @Override
     public void cache(X payload) {
         if (this.hasProfileLocal(payload.getUniqueId())) {
@@ -109,11 +121,22 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         }
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache}
+     * @param payload the Payload to save
+     */
     @Override
     public void saveToLocal(X payload) {
         this.localLayer.save(payload);
     }
 
+    /**
+     * Get a profile by username
+     * This uses either an online matching player or the UUID cache to determine a unique ID based on the username.
+     * If no unique id can be found, we will revert to the Mongo Layer
+     * @param username The player's username
+     * @return {@link PayloadProfile}
+     */
     public X getProfileByName(String username) {
         UUID uuid = PayloadPlugin.get().getUUIDs().get(username.toLowerCase());
         if (uuid != null) {
@@ -157,6 +180,11 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return this.hasProfileLocal(player.getUniqueId());
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache}
+     * @param uniqueId {@link UUID} of the player to get a Profile for
+     * @return {@link PayloadProfile}
+     */
     @Override
     protected X get(UUID uniqueId) {
         if (this.getFailureManager().hasFailure(uniqueId)) {
@@ -198,11 +226,21 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#isCached(Object)}
+     * @param key Key
+     * @return
+     */
     @Override
     public boolean isCached(UUID key) {
         return this.localLayer.has(key);
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#uncache(Object)}
+     * @param key The key for the object to remove (identifier)
+     * @return
+     */
     @Override
     public boolean uncache(UUID key) {
         if (this.getSyncMode().equals(SyncMode.CACHE_ALL) && !this.settings.isServerSpecific()) {
@@ -213,6 +251,11 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return this.uncacheLocal(key);
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#uncacheLocal(Object)}
+     * @param key The key for the object to remove (identifier)
+     * @return
+     */
     @Override
     public boolean uncacheLocal(UUID key) {
         if (this.localLayer.has(key)) {
@@ -222,11 +265,21 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return false;
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#getFromCache(Object)}
+     * @param key The key to use to get the object
+     * @return
+     */
     @Override
     public X getFromCache(UUID key) {
         return this.localLayer.get(key);
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#getFromDatabase(Object)}
+     * @param key The key to use to get the object
+     * @return
+     */
     @Override
     public X getFromDatabase(UUID key) {
         for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
@@ -240,6 +293,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return null;
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#delete(Object)} )
+     * @param key Key of payload to delete
+     */
     @Override
     public void delete(UUID key) {
         for (PayloadLayer<UUID, X, ProfileData> layer : this.getLayerController().getLayers()) {
@@ -250,6 +307,9 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         }
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#cacheAll()}
+     */
     @Override
     public void cacheAll() {
         this.getAll().forEach(this::cache);
@@ -273,6 +333,11 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         this.data.remove(uuid);
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#keyFromString(String)}
+     * @param key String key
+     * @return
+     */
     @Override
     public UUID keyFromString(String key) {
         return UUID.fromString(key);
@@ -285,6 +350,11 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return all;
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#controller(PayloadData)}
+     * @param data {@link PayloadData}
+     * @return
+     */
     @Override
     public PayloadProfileController<X> controller(ProfileData data) {
         if (this.controllers.containsKey(data.getUniqueId())) {
@@ -295,6 +365,11 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return controller;
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#saveAsync(Payload)}
+     * @param payload Payload to save
+     * @return
+     */
     @Override
     public Future<X> saveAsync(X payload) {
         this.cache(payload);
@@ -304,6 +379,11 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         });
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#save(Payload)}
+     * @param payload Payload to save
+     * @return
+     */
     @Override
     public boolean save(X payload) {
         this.getErrorHandler().debug(this, "Saving payload: " + payload.getIdentifier().toString());
@@ -318,6 +398,11 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return false;
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#saveNoSync(Payload)}
+     * @param payload Payload to save
+     * @return
+     */
     @Override
     public boolean saveNoSync(X payload) {
         boolean x = true;
@@ -358,6 +443,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return false;
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#saveAll()}
+     * @return
+     */
     @Override
     public int saveAll() {
         int failures = 0;
@@ -424,11 +513,18 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         super.onRedisInitConnect();
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#getCachedObjects()}
+     * @return
+     */
     @Override
     public Collection<X> getCachedObjects() {
         return this.localLayer.getLocalCache().values();
     }
 
+    /**
+     * See superclass for documentation {@link PayloadCache#updatePayloadID()}
+     */
     @Override
     public void updatePayloadID() {
         for (X x : this.getCachedObjects()) {

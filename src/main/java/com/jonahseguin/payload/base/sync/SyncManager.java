@@ -142,7 +142,7 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
                 final K key = this.cache.keyFromString(object.getString("data"));
                 if (server != null && key != null) {
                     if (event.equals(SyncEvent.UPDATE)) {
-                        if ((this.cache.getSyncMode().equals(SyncMode.UPDATE) && this.cache.isCached(key)) || this.cache.getSyncMode().equals(SyncMode.CACHE_ALL)) {
+                        if (this.cache.isCached(key) || this.cache.getSyncMode().equals(SyncMode.CACHE_ALL)) {
                             this.cache.getPool().submit(() -> {
                                 X payload = this.cache.getFromDatabase(key);
                                 if (payload != null) {
@@ -161,6 +161,9 @@ public class SyncManager<K, X extends Payload<K>, D extends PayloadData> {
                                     this.cache.getErrorHandler().error(this.cache, "Sync: Payload was null when fetching update for identifier: " + key.toString());
                                 }
                             });
+                        }
+                        else {
+                            this.cache.getErrorHandler().debug(this.cache, "Sync: Ignoring update (not cached) for payload: " + key.toString());
                         }
                     } else if (event.equals(SyncEvent.UNCACHE)) {
                         this.cache.uncacheLocal(key);

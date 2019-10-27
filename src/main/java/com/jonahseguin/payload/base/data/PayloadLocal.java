@@ -1,5 +1,7 @@
 package com.jonahseguin.payload.base.data;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.PLang;
@@ -21,13 +23,20 @@ import java.util.UUID;
  */
 @Getter
 @Setter
+@Singleton
 public class PayloadLocal {
 
+    private final PayloadPlugin plugin;
     private String payloadID = null;
     private boolean firstStartup = true;
     private boolean debug = true;
     private YamlConfiguration config;
     private File payloadFile;
+
+    @Inject
+    public PayloadLocal(PayloadPlugin plugin) {
+        this.plugin = plugin;
+    }
 
     public String getPayloadID() {
         return payloadID;
@@ -40,7 +49,7 @@ public class PayloadLocal {
             config.save(payloadFile);
         } catch (IOException ex) {
             Bukkit.getLogger().warning("[Payload] Failed to save payload-id to payload.yml");
-            if (PayloadPlugin.get().isDebug()) {
+            if (plugin.isDebug()) {
                 ex.printStackTrace();
             }
         }
@@ -51,7 +60,7 @@ public class PayloadLocal {
      * @return true if successful
      */
     public boolean loadPayloadID() {
-        payloadFile = new File(PayloadPlugin.get().getDataFolder() + File.separator + "payload.yml");
+        payloadFile = new File(plugin.getDataFolder() + File.separator + "payload.yml");
         if (!payloadFile.exists()) {
             try {
                 payloadFile.mkdirs();
@@ -112,8 +121,8 @@ public class PayloadLocal {
     }
 
     private void handleError() {
-        PayloadPlugin.get().setLocked(true); // Lock server
-        PayloadPlugin.get().alert(PayloadPermission.ADMIN, PLang.ERROR_FAILED_TO_LOAD_PAYLOAD_FILE); // Alert online staff if any + console
+        plugin.setLocked(true); // Lock server
+        plugin.alert(PayloadPermission.ADMIN, PLang.ERROR_FAILED_TO_LOAD_PAYLOAD_FILE); // Alert online staff if any + console
     }
 
 }

@@ -11,8 +11,10 @@ public class DefaultErrorHandler implements PayloadErrorHandler {
 
     @Override
     public void debug(PayloadCache cache, String message) {
-        PayloadPlugin.get().getLogger().info("[Debug][" + cache.getName() + "] " + message);
-        this.alertAdmins(cache, PLang.ADMIN_ALERT_CACHE_DEBUG, cache.getName(), message);
+        if (this.isDebug()) {
+            PayloadPlugin.get().getLogger().info("[Debug][" + cache.getName() + "] " + message);
+            this.alertAdmins(cache, PLang.ADMIN_ALERT_CACHE_DEBUG, cache.getName(), message);
+        }
     }
 
     @Override

@@ -5,6 +5,8 @@
 
 package com.jonahseguin.payload.command;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.PLang;
@@ -20,11 +22,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Getter
+@Singleton
 public class PCommandHandler implements CommandExecutor {
 
+    private final PayloadPlugin plugin;
     private final Map<String, PayloadCommand> commands = new HashMap<>();
-
-    public PCommandHandler() {
+    
+    @Inject
+    public PCommandHandler(PayloadPlugin plugin) {
+        this.plugin = plugin;
         register(new CmdHelp());
         register(new CmdCache());
         register(new CmdCacheList());
@@ -78,15 +84,15 @@ public class PCommandHandler implements CommandExecutor {
 
             if (command != null) {
                 if (command.playerOnly() && !(sender instanceof Player)) {
-                    sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_PLAYER_ONLY));
+                    sender.sendMessage(plugin.getGlobalLangController().get(PLang.COMMAND_PLAYER_ONLY));
                     return true;
                 }
                 if (!command.permission().has(sender)) {
-                    sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_NO_PERMISSION));
+                    sender.sendMessage(plugin.getGlobalLangController().get(PLang.COMMAND_NO_PERMISSION));
                     return true;
                 }
                 if (args.length < command.minArgs()) {
-                    sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_INCORRECT_USAGE, command.minArgs() + "", "/" + command.name() + " " + command.usage()));
+                    sender.sendMessage(plugin.getGlobalLangController().get(PLang.COMMAND_INCORRECT_USAGE, command.minArgs() + "", "/" + command.name() + " " + command.usage()));
                     return true;
                 }
                 CmdArgs cmdArgs = new CmdArgs(sender, pCmd, args);
@@ -101,7 +107,7 @@ public class PCommandHandler implements CommandExecutor {
                     }
                 }
             } else {
-                sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.UNKNOWN_COMMAND, pCmd));
+                sender.sendMessage(plugin.getGlobalLangController().get(PLang.UNKNOWN_COMMAND, pCmd));
             }
 
             return true;

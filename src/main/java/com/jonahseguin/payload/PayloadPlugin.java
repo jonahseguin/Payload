@@ -6,6 +6,10 @@
 package com.jonahseguin.payload;
 
 import com.google.common.collect.HashBiMap;
+import com.google.inject.Guice;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.Singleton;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.data.PayloadLocal;
 import com.jonahseguin.payload.base.lang.PLang;
@@ -13,13 +17,12 @@ import com.jonahseguin.payload.base.lang.PayloadLangController;
 import com.jonahseguin.payload.base.listener.LockListener;
 import com.jonahseguin.payload.command.PCommandHandler;
 import com.jonahseguin.payload.mode.profile.listener.ProfileListener;
+import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.plugin.java.JavaPluginLoader;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,34 +37,27 @@ import java.util.UUID;
  *
  * Main Bukkit/Spigot JavaPlugin class, entrance point of this piece of software
  */
+@Singleton
+@Getter
 public class PayloadPlugin extends JavaPlugin {
 
     public static final String PREFIX = "[Payload] ";
 
-    private static PayloadPlugin instance = null;
+    private static PayloadPlugin plugin;
+    private Injector injector = null;
 
     private boolean locked = true;
     private final PayloadLangController globalLangController = new PayloadLangController();
-    private final PayloadLocal local = new PayloadLocal();
-    private final PCommandHandler commandHandler = new PCommandHandler();
+    @Inject private PayloadLocal local;
+    @Inject private PCommandHandler commandHandler;
     private final HashBiMap<String, UUID> uuids = HashBiMap.create(); // <Username, UUID>
-
-    public PayloadPlugin() {
-        if (PayloadPlugin.instance != null) {
-            throw new IllegalStateException("PayloadPlugin has already been created");
-        }
-    }
-
-    public PayloadPlugin(JavaPluginLoader loader, PluginDescriptionFile description, File dataFolder, File file) {
-        super(loader, description, dataFolder, file);
-        if (PayloadPlugin.instance != null) {
-            throw new IllegalStateException("PayloadPlugin has already been created");
-        }
-    }
 
     @Override
     public void onEnable() {
-        PayloadPlugin.instance = this;
+        PayloadModule module = new PayloadModule(this, this);
+        this.injector = Guice.createInjector(module);
+        this.injector.injectMembers(this);
+
         this.copyResources();
         if (!this.local.loadPayloadID()) {
             // Failed to load.  This will be handled by the method itself.
@@ -73,22 +69,12 @@ public class PayloadPlugin extends JavaPlugin {
         this.getServer().getPluginManager().registerEvents(new LockListener(), this);
         this.getServer().getPluginManager().registerEvents(new ProfileListener(), this);
         this.getCommand("payload").setExecutor(this.commandHandler);
-        this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", PayloadPlugin.get().getDescription().getVersion()));
-        try {
-            new PayloadAPI(this);
-            this.locked = false;
-        }
-        catch (IllegalAccessException ex) {
-            this.getLogger().warning("Payload failed to initialize API; was already created... LOCKING");
-            this.locked = true;
-            this.getLogger().warning("To ensure no other plugins are creating a PayloadAPI instance, Payload has been locked.");
-        }
+        this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", getDescription().getVersion()));
     }
 
     @Override
     public void onDisable() {
-        this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin disabled.", PayloadPlugin.get().getDescription().getVersion()));
-        PayloadPlugin.instance = null;
+        this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin disabled.", getDescription().getVersion()));
     }
 
     private void copyResources() {
@@ -154,14 +140,6 @@ public class PayloadPlugin extends JavaPlugin {
      */
     public static void runASync(Plugin plugin, Runnable runnable) {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, runnable);
-    }
-
-    /**
-     * Get the Singleton instance of the {@link PayloadPlugin} class
-     * @return Instance
-     */
-    public static PayloadPlugin get() {
-        return instance;
     }
 
     /**
@@ -250,6 +228,14 @@ public class PayloadPlugin extends JavaPlugin {
 
     public ClassLoader getPayloadClassLoader() {
         return this.getClassLoader();
+    }
+
+    private static PayloadPlugin getPlugin() {
+        return plugin;
+    }
+
+    public static PayloadModule install(Plugin plugin) {
+        return new PayloadModule(PayloadPlugin.getPlugin(), plugin);
     }
 
 }

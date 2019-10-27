@@ -6,6 +6,9 @@
 package com.jonahseguin.payload;
 
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.PayloadObject;
@@ -18,6 +21,7 @@ public class PayloadHook {
 
     private final Plugin plugin;
 
+    @Inject
     PayloadHook(Plugin plugin) {
         this.plugin = plugin;
     }

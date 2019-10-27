@@ -59,7 +59,7 @@ public abstract class PayloadObject implements Payload<String> {
 
     @Override
     public boolean shouldPrepareUpdate() {
-        return !this.getCache().getSettings().isEnableSync() && !this.getCache().getSettings().isServerSpecific();
+        return this.getCache().getSettings().isEnableSync() && !this.getCache().getSettings().isServerSpecific();
     }
 
 

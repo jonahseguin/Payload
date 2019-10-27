@@ -26,6 +26,7 @@ import com.jonahseguin.payload.base.task.PayloadCleanupTask;
 import com.jonahseguin.payload.base.type.*;
 import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.PayloadDatabase;
+import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -72,6 +73,15 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
 
     protected transient boolean running = false;
 
+    /**
+     * Creates an instance of a PayloadCache
+     * This constructor should ONLY be used internally by Payload using a PayloadHook and the createCache() methods within
+     * {@link PayloadHook}
+     * @param hook {@link PayloadHook} the hook provided for your plugin acquired via {@link PayloadAPI#requestProvision(Plugin)}
+     * @param name The name of the cache.  Must be unique with no spaces or special characters (used in redis + mongo)
+     * @param keyType The key type for this cache.  This is defined within the different cache implementations
+     * @param payloadClass The class type for the object you will be caching.
+     */
     public PayloadCache(final PayloadHook hook, final String name, Class<K> keyType, Class<X> payloadClass) {
         if (hook.getPlugin() == null) {
             throw new IllegalArgumentException("Plugin cannot be null");
@@ -95,12 +105,29 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
         this.langController.loadFromFile(name.toLowerCase().replaceAll(" ", "_") + ".yml");
     }
 
+    /**
+     * Internal method to convert a String to the key type (i.e UUID or String)
+     * @param key String key
+     * @return K key type object
+     */
     public abstract K keyFromString(String key);
 
+    /**
+     * Provide the instantiator for the creation of NEW (never joined before) profiles/objects
+     * This is required to be set before calling {@link #start()}
+     * @param instantiator {@link PayloadInstantiator}
+     */
     public void withInstantiator(PayloadInstantiator<X, D> instantiator) {
         this.instantiator = instantiator;
     }
 
+    /**
+     * Provide a custom error handler implementation for the handling of error/debug/exception messages within
+     * Payload.  The default error handler should be sufficient for most use-cases,
+     * in the event you want to use a library like Sentry.io, I recommend simply extending the {@link DefaultErrorHandler} class
+     * and keeping the super() calls in each method, and simply adding sentry calls.
+     * @param errorHandler {@link PayloadErrorHandler}
+     */
     public void setErrorHandler(PayloadErrorHandler errorHandler) {
         this.errorHandler = errorHandler;
     }
@@ -163,6 +190,10 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
         return true;
     }
 
+    /**
+     * Internal method to safely shutdown the internal cache thread pool.
+     * This allows time for processes to finish executing before continuing.
+     */
     private void shutdownPool() {
         try {
             this.pool.shutdown();
@@ -176,7 +207,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
 
     /**
      * Pass the database object for this cache.
-     * Called internally.
+     * Called internally when you create a cache using your {@link PayloadHook}
      *
      * @param database PayloadDatabase
      */
@@ -221,6 +252,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param key The key to use to get the object (i.e a string, number, etc.)
      * @return The object if available (else null)
      */
+    @Nullable
     protected abstract X get(K key);
 
     /**
@@ -229,8 +261,15 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param key The key to use to get the object
      * @return The object if available (else null)
      */
+    @Nullable
     public abstract X getFromCache(K key);
 
+    /**
+     * Get an object stored in the first available database layer
+     * @param key The key to use to get the object
+     * @return The object if available (else null)
+     */
+    @Nullable
     public abstract X getFromDatabase(K key);
 
     /**
@@ -242,11 +281,18 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
 
     /**
      * Remove an object from the local cache
+     * If sync is enabled, this will also publish an UNCACHE event for other instances on this database.
      * @param key The key for the object to remove (identifier)
      * @return True if removed, otherwise false
      */
     public abstract boolean uncache(K key);
 
+    /**
+     * Remove an object from the local cache
+     * Contrary to {@link #uncache(Object)}
+     * @param key The key for the object to remove (identifier)
+     * @return True if removed, otherwise false
+     */
     public abstract boolean uncacheLocal(K key);
 
     /**
@@ -263,12 +309,34 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
         }
     }
 
+    /**
+     * Prepare an update for a payload
+     * You can use this functionality to prevent data loss when objects are loaded across multiple instances
+     * You should use this method to acquire the latest version of a payload from the server that is most relevant
+     * ** This is only supported if sync is enabled {@link CacheSettings#isEnableSync()}
+     * THIS IS A SYNC OPERATION.  FOR ASYNC, USE
+     * @param payload The payload to get an updated version of
+     * @param callback A callback with the updated Payload, you should use the callback's provided Payload parameter
+     *                 to make your changes to, rather than the {@param payload} Payload you provided.
+     */
     public void prepareUpdate(X payload, PayloadCallback<X> callback) {
         if (this.getSettings().isEnableSync()) {
             this.syncManager.prepareUpdate(payload, callback);
         } else {
             this.getErrorHandler().exception(this, new UnsupportedOperationException("Cannot prepareUpdate unless Sync is enabled in cache settings!"));
         }
+    }
+
+    /**
+     * Async version of {@link #prepareUpdate(Payload, PayloadCallback)}
+     * Simply uses the cache's thread executor service to complete this operation.
+     * @see #prepareUpdate(Payload, PayloadCallback)
+     * @param payload The payload to get an updated version of
+     * @param callback A callback with the updated Payload, you should use the callback's provided Payload parameter
+     *                 to make your changes to, rather than the {@param payload} Payload you provided.
+     */
+    public void prepareUpdateAsync(X payload, PayloadCallback<X> callback) {
+        this.runAsync(() -> this.prepareUpdate(payload, callback));
     }
 
     /**
@@ -279,16 +347,50 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
 
     /**
      * Save a Payload to all layers / in this cache
+     * If sync is enabled, this save will also propagate to other caches on the database
+     * Your {@link SyncMode} setting for this cache {@link #syncMode} will determine the policy
+     * for when an object is cached locally from an update/save operation.
+     * {@link SyncMode#UPDATE}: Only cache if already previously cached
+     * {@link SyncMode#CACHE_ALL}: Always cache
      * @param payload Payload to save
      * @return Boolean successful
      */
     public abstract boolean save(X payload);
 
+    /**
+     * Same as {@link #save(Payload)}, without the sync operations.  This is primarily used internally.
+     * @param payload Payload to save
+     * @return Boolean successful
+     */
     public abstract boolean saveNoSync(X payload);
 
     /**
+     * Same as {@link #save(Payload)}, but called asynchronously using the local cache thread executor pool.
+     * For safety, we save the Payload to the local cache synchronously.
+     * @param payload Payload to save
+     * @return A {@link Future<X>} with the saved {@param payload} after the save operation is completed, successfully or not
+     */
+    public abstract Future<X> saveAsync(X payload);
+
+    /**
+     * Save a Payload to the local cache, without any kind of sync operation checking/etc.
+     * This is used primarily internally by Payload and is NOT recommended for outside use.
+     * The other {@link #cache(Payload)} is better fit for your use, as it will automatically
+     * replace existing payload object instances without messing up your existing references
+     * in the case that it is already cached.
+     * @param payload the Payload to save
+     */
+    public abstract void saveToLocal(X payload);
+
+    /**
+     * Save all locally-cached objects (or for profiles, only players who are online) to the database
+     * @return int : the number of failures
+     */
+    public abstract int saveAll();
+
+    /**
      * Delete a Payload from all layers (including local + database)
-     *
+     * If sync is enabled, the Payload will also be uncached from all other caches on this database.
      * @param key Key of payload to delete
      */
     public abstract void delete(K key);
@@ -301,11 +403,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     public abstract void cache(X payload);
 
-    /**
-     * Save all locally-cached objects (or for profiles, only players who are online) to the database
-     * @return int : the number of failures
-     */
-    public abstract int saveAll();
 
     /**
      * Load all database-stored objects into the local cache
@@ -317,8 +414,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @return A HashSet containing all the objects
      */
     public abstract Set<X> getAll();
-
-    public abstract Future<X> saveAsync(X payload);
 
     /**
      * Get all currently locally-cached objects
@@ -337,6 +432,11 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
         return this.name;
     }
 
+    /**
+     * Internal method used by payload to provide a server-specific name for this cache, if server-specific caching is enabled.
+     * This is primarily used by Redis layers for naming the redis key.
+     * @return String: The server specific name for this cache
+     */
     public final String getServerSpecificName() {
         if (this.getSettings().isServerSpecific()) {
             return PayloadAPI.get().getPayloadID() + "-" + this.getName();
@@ -384,39 +484,65 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * Set the SyncMode for this cache
      * The sync mode determines the policy for when to cache objects that are saved in other servers
      *
-     * @param mode
+     * Your {@link SyncMode} setting for this cache {@link #syncMode} will determine the policy
+     * for when an object is cached locally from an update/save operation.
+     * {@link SyncMode#UPDATE}: Only cache if already previously cached
+     * {@link SyncMode#CACHE_ALL}: Always cache
+     *
+     * @param mode {@link SyncMode}
      */
     public void setSyncMode(SyncMode mode) {
         this.syncMode = mode;
     }
 
+    /**
+     * Internal method used by Payload to forcefully update a local instance of a Payload object with a newer one,
+     * allowing your references to the existing Payload to remain intact and up-to-date.
+     * Note that this only effects persistent (non-transient) fields.
+     * @param payload The Payload to update
+     * @param update The newer version of said payload to replace the values of {@param payload} with.
+     */
     public void updatePayloadFromNewer(X payload, X update) {
-        X x = this.payloadDatabase.getDatastore().getMapper().fromDb(this.payloadDatabase.getDatastore(), this.payloadDatabase.getDatastore().getMapper().toDBObject(update), payload, this.payloadDatabase.getDatastore().getMapper().createEntityCache());
-        this.saveToLocal(x);
+        this.payloadDatabase.getDatastore().getMapper().getMappedClass(this.payloadClass).getPersistenceFields().forEach(mf -> {
+            mf.setFieldValue(payload, mf.getFieldValue(update));
+        });
     }
 
-    public abstract void saveToLocal(X payload);
-
+    /**
+     * Internal method that handles when MongoDB disconnects
+     */
     @Override
     public void onMongoDbDisconnect() {
         this.getPayloadDatabase().getState().setMongoConnected(false);
     }
 
+    /**
+     * Internal method that handles when Redis disconnects
+     */
     @Override
     public void onRedisDisconnect() {
         this.getPayloadDatabase().getState().setRedisConnected(false);
     }
 
+    /**
+     * Internal method that handles when a MongoDB connection is established after a previous disconnect
+     */
     @Override
     public void onMongoDbReconnect() {
         this.getPayloadDatabase().getState().setMongoConnected(true);
     }
 
+    /**
+     * Internal method that handles when a Redis connection is established after a previous disconnect
+     */
     @Override
     public void onRedisReconnect() {
         this.getPayloadDatabase().getState().setRedisConnected(true);
     }
 
+    /**
+     * Internal method that handles when MongoDB connects for the first time
+     */
     @Override
     public void onMongoDbInitConnect() {
         this.getPayloadDatabase().getState().setMongoConnected(true);
@@ -427,12 +553,21 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
         }
     }
 
+    /**
+     * Internal method that handles when Redis connects for the first time
+     */
     @Override
     public void onRedisInitConnect() {
         this.getPayloadDatabase().getState().setRedisConnected(true);
         this.getPayloadDatabase().getState().setRedisInitConnect(true);
     }
 
+    /**
+     * Utility method to send a message to online players with a certain permission
+     * @param required The required permission
+     * @param lang The language definition
+     * @param args The arguments for the language definition
+     */
     public void alert(PayloadPermission required, PLang lang, String... args) {
         Bukkit.getLogger().info(this.langController.get(lang, args));
         for (Player pl : this.plugin.getServer().getOnlinePlayers()) {
@@ -442,6 +577,11 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
         }
     }
 
+    /**
+     * Utility method to send a message to online players with a certain permission
+     * @param required The required permission
+     * @param msg The message to send
+     */
     public void alert(PayloadPermission required, String msg) {
         msg = ChatColor.translateAlternateColorCodes('&', msg);
         Bukkit.getLogger().info(msg);
@@ -452,24 +592,62 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
         }
     }
 
+    /**
+     * Simple utility method to run a task asynchronously in a separate thread provided by the cache's local cached thread executor pool.
+     * This is recommended over using the Bukkit scheduler when performing operations relative to the cache, as it will ensure operations
+     * are completed BEFORE cache shutdown, plus the cached thread nature yields a slight performance improvement.
+     * @see Executors#newCachedThreadPool()
+     * @param runnable The task to run
+     */
     public void runAsync(Runnable runnable) {
         this.pool.submit(runnable);
     }
 
+    /**
+     * Simple utility method to run a task asynchronously in a separate thread provided by the cache's local cached thread executor pool.
+     * This is recommended over using the Bukkit scheduler when performing operations relative to the cache, as it will ensure operations
+     * are completed BEFORE cache shutdown, plus the cached thread nature yields a slight performance improvement.
+     * @see Executors#newCachedThreadPool()
+     * @param callable The task to run
+     * @return {@link Future<T>} a future with the callable's parameter after execution has completed.
+     */
     public <T> Future<T> runAsync(Callable<T> callable) {
         return this.pool.submit(callable);
     }
 
+    /**
+     * Internal method to update the Payload ID for objects stored in this cache after the Payload ID has been changed
+     * (via command)
+     */
     public abstract void updatePayloadID();
 
+    /**
+     * Add a dependency to this cache
+     * Dependencies of this cache will:
+     * - Cache objects before this cache (primarily for profiles)
+     * - Initialize objects before this cache
+     * @param cache The {@link PayloadCache} implementation for this cache to depend on.
+     */
     public void addDepend(PayloadCache cache) {
         this.dependingCaches.add(cache.getName());
     }
 
+    /**
+     * Checks if this cache is dependent on a specific cache.
+     * This is used primarily internally for determining the loading order when sorting caches during
+     * initializing/loading.
+     * @param cache {@link PayloadCache}
+     * @return True if this cache is dependent, false if it's not
+     */
     public boolean isDependentOn(PayloadCache cache) {
         return this.dependingCaches.contains(cache.getName());
     }
 
+    /**
+     * Simple comparator method to determine order between caches based on dependencies
+     * @param o The {@link PayloadCache} to compare.
+     * @return Comparator sorting integer
+     */
     @Override
     public int compareTo(PayloadCache o) {
         if (this.isDependentOn(o)) {
