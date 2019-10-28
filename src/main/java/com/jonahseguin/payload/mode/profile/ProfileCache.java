@@ -6,7 +6,6 @@
 package com.jonahseguin.payload.mode.profile;
 
 import com.jonahseguin.payload.PayloadAPI;
-import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
@@ -27,6 +26,7 @@ import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import redis.clients.jedis.Jedis;
 
 import java.util.Collection;
@@ -55,9 +55,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     private transient Jedis subscriberJedis = null;
 
-    public ProfileCache(PayloadHook hook, String name, Class<X> type) {
-        super(hook, name, UUID.class, type);
+    public ProfileCache(Plugin plugin, PayloadAPI api, PayloadPlugin payloadPlugin, String name, Class<X> type) {
+        super(plugin, api, payloadPlugin, name, UUID.class, type);
     }
+
 
     /**
      * Called internally by {@link PayloadCache#start()}
@@ -138,7 +139,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
      * @return {@link PayloadProfile}
      */
     public X getProfileByName(String username) {
-        UUID uuid = PayloadPlugin.get().getUUIDs().get(username.toLowerCase());
+        UUID uuid = payloadPlugin.getUUIDs().get(username.toLowerCase());
         if (uuid != null) {
             return this.getProfile(uuid);
         }
@@ -152,7 +153,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     }
 
     public X getLocalProfileByName(String username) {
-        UUID uuid = PayloadPlugin.get().getUUID(username);
+        UUID uuid = payloadPlugin.getUUID(username);
         if (uuid != null) {
             return this.getProfile(uuid);
         }
@@ -454,7 +455,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             X payload = this.getLocalProfile(p);
             if (payload != null) {
                 payload.setLastSeenTimestamp(System.currentTimeMillis());
-                payload.setLastSeenServer(PayloadAPI.get().getPayloadID());
+                payload.setLastSeenServer(api.getPayloadID());
                 payload.setLastInteractionTimestamp(System.currentTimeMillis());
                 if (!this.save(payload)) {
                     failures++;
@@ -528,9 +529,9 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     @Override
     public void updatePayloadID() {
         for (X x : this.getCachedObjects()) {
-            x.setPayloadId(PayloadAPI.get().getPayloadID());
+            x.setPayloadId(api.getPayloadID());
             if (x.isPlayerOnline()) {
-                x.setLastSeenServer(PayloadAPI.get().getPayloadID());
+                x.setLastSeenServer(api.getPayloadID());
             }
         }
         this.pool.submit(this::saveAll);

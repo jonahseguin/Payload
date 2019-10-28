@@ -5,8 +5,8 @@
 
 package com.jonahseguin.payload.base;
 
+import com.google.common.base.Preconditions;
 import com.jonahseguin.payload.PayloadAPI;
-import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.error.DefaultErrorHandler;
@@ -45,59 +45,57 @@ import java.util.concurrent.*;
 @Getter
 public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadData> implements DatabaseDependent, Comparable<PayloadCache> {
 
-    protected final transient Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
-
+    protected final Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
+    protected final PayloadAPI api;
+    protected final PayloadPlugin payloadPlugin;
+    
     protected String name; // The name for this payload cache
 
-    protected transient boolean debug = false; // Debug for this cache
+    protected boolean debug = false; // Debug for this cache
 
-    protected transient Set<String> dependingCaches = new HashSet<>();
-    protected transient PayloadErrorHandler errorHandler = new DefaultErrorHandler();
-    protected transient PayloadDatabase payloadDatabase = null;
-    protected transient PayloadMode mode = PayloadMode.STANDALONE; // Payload Mode for this cache
-    protected transient SyncMode syncMode = SyncMode.UPDATE;
+    protected Set<String> dependingCaches = new HashSet<>();
+    protected PayloadErrorHandler errorHandler = new DefaultErrorHandler();
+    protected PayloadDatabase payloadDatabase = null;
+    protected PayloadMode mode = PayloadMode.STANDALONE; // Payload Mode for this cache
+    protected SyncMode syncMode = SyncMode.UPDATE;
 
-    protected transient final ExecutorService pool = Executors.newCachedThreadPool();
-    protected transient final PayloadTaskExecutor<K, X, D> executor;
-    protected transient final PayloadLangController langController = new PayloadLangController();
-    protected transient final CacheState<K, X, D> state;
-    protected transient final LayerController<K, X, D> layerController = new LayerController<>();
-    protected transient final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
-    protected transient final PayloadAutoSaveTask<K, X, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
-    protected transient final PayloadCleanupTask<K, X, D> cleanupTask = new PayloadCleanupTask<>(this);
-    protected transient final SyncManager<K, X, D> syncManager = new SyncManager<>(this);
-    protected transient PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
+    protected final ExecutorService pool = Executors.newCachedThreadPool();
+    protected final PayloadTaskExecutor<K, X, D> executor;
+    protected final PayloadLangController langController = new PayloadLangController();
+    protected final CacheState<K, X, D> state;
+    protected final LayerController<K, X, D> layerController = new LayerController<>();
+    protected final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
+    protected final PayloadAutoSaveTask<K, X, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
+    protected final PayloadCleanupTask<K, X, D> cleanupTask = new PayloadCleanupTask<>(this);
+    protected final SyncManager<K, X, D> syncManager = new SyncManager<>(this);
+    protected PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
 
-    protected transient final Class<K> keyType;
-    protected transient final Class<X> payloadClass;
+    protected final Class<K> keyType;
+    protected final Class<X> payloadClass;
 
-    protected transient boolean running = false;
+    protected boolean running = false;
 
     /**
      * Creates an instance of a PayloadCache
      * This constructor should ONLY be used internally by Payload using a PayloadHook and the createCache() methods within
-     * {@link PayloadHook}
-     * @param hook {@link PayloadHook} the hook provided for your plugin acquired via {@link PayloadAPI#requestProvision(Plugin)}
+     * @param api
+     * @param payloadPlugin
      * @param name The name of the cache.  Must be unique with no spaces or special characters (used in redis + mongo)
      * @param keyType The key type for this cache.  This is defined within the different cache implementations
      * @param payloadClass The class type for the object you will be caching.
      */
-    public PayloadCache(final PayloadHook hook, final String name, Class<K> keyType, Class<X> payloadClass) {
-        if (hook.getPlugin() == null) {
-            throw new IllegalArgumentException("Plugin cannot be null");
-        }
-        if (name == null) {
-            throw new IllegalArgumentException("Name cannot be null");
-        }
-        if (hook.getPlugin() instanceof PayloadPlugin) {
-            throw new IllegalArgumentException("Plugin cannot be PayloadPlugin");
-        }
-        if (!hook.isValid()) {
-            throw new IllegalStateException("Provided PayloadHook is not valid; cannot create cache '" + name + "'");
-        }
+    public PayloadCache(final Plugin plugin, PayloadAPI api, PayloadPlugin payloadPlugin, final String name, Class<K> keyType, Class<X> payloadClass) {
+        Preconditions.checkNotNull(plugin);
+        Preconditions.checkNotNull(name);
+        Preconditions.checkNotNull(keyType);
+        Preconditions.checkNotNull(payloadClass);
+        Preconditions.checkNotNull(api);
+        Preconditions.checkNotNull(payloadPlugin);
+        this.api = api;
+        this.payloadPlugin = payloadPlugin;
         this.keyType = keyType;
         this.payloadClass = payloadClass;
-        this.plugin = hook.getPlugin();
+        this.plugin = plugin;
         this.name = name;
         this.executor = new PayloadTaskExecutor<>(this);
         this.state = new CacheState<>(this);
@@ -138,7 +136,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @return Boolean locked
      */
     public final boolean isLocked() {
-        return this.state.isLocked() || PayloadPlugin.get().isLocked();
+        return this.state.isLocked() || payloadPlugin.isLocked();
     }
 
     /**
@@ -207,7 +205,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
 
     /**
      * Pass the database object for this cache.
-     * Called internally when you create a cache using your {@link PayloadHook}
+     * Called internally when you create a cache
      *
      * @param database PayloadDatabase
      */
@@ -439,7 +437,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     public final String getServerSpecificName() {
         if (this.getSettings().isServerSpecific()) {
-            return PayloadAPI.get().getPayloadID() + "-" + this.getName();
+            return payloadPlugin.getLocal().getPayloadID() + "-" + this.getName();
         } else {
             return this.getName();
         }

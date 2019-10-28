@@ -20,7 +20,7 @@ public class PayloadModule extends AbstractModule {
     private final PayloadPlugin payloadPlugin;
     private final Plugin plugin;
 
-    public PayloadModule(PayloadPlugin payloadPlugin, Plugin plugin) {
+    PayloadModule(PayloadPlugin payloadPlugin, Plugin plugin) {
         this.payloadPlugin = payloadPlugin;
         this.plugin = plugin;
     }

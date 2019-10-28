@@ -6,6 +6,8 @@
 package com.jonahseguin.payload.service;
 
 import com.google.inject.Inject;
+import com.jonahseguin.payload.PayloadAPI;
+import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.PayloadData;
 import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.mode.object.ObjectCache;
@@ -16,22 +18,30 @@ import org.bukkit.plugin.Plugin;
 
 public class PayloadDatabaseCacheService implements PayloadCacheService {
 
+    private final PayloadPlugin payloadPlugin;
     private final Plugin plugin;
+    private final PayloadAPI api;
     private final PayloadDatabase database;
 
     @Inject
-    public PayloadDatabaseCacheService(Plugin plugin, PayloadDatabase database) {
+    public PayloadDatabaseCacheService(PayloadPlugin payloadPlugin, Plugin plugin, PayloadAPI api, PayloadDatabase database) {
+        this.payloadPlugin = payloadPlugin;
         this.plugin = plugin;
+        this.api = api;
         this.database = database;
     }
 
     @Override
     public <X extends PayloadProfile> ProfileCache<X> createProfileCache(String name, Class<X> type) {
-        return null;
+        ProfileCache<X> cache = new ProfileCache<>(plugin, api, payloadPlugin, name, type);
+        api.saveCache(cache);
+        return cache;
     }
 
     @Override
     public <X extends PayloadObject> ObjectCache<X> createObjectCache(String name, Class<X> type) {
-        return null;
+        ObjectCache<X> cache = new ObjectCache<>(plugin, api, payloadPlugin, name, type);
+        api.saveCache(cache);
+        return cache;
     }
 }

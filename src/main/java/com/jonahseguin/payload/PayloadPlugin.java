@@ -17,6 +17,7 @@ import com.jonahseguin.payload.base.lang.PayloadLangController;
 import com.jonahseguin.payload.base.listener.LockListener;
 import com.jonahseguin.payload.command.PCommandHandler;
 import com.jonahseguin.payload.mode.profile.listener.ProfileListener;
+import com.jonahseguin.payload.service.PayloadCacheService;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -54,6 +55,7 @@ public class PayloadPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        plugin = this;
         PayloadModule module = new PayloadModule(this, this);
         this.injector = Guice.createInjector(module);
         this.injector.injectMembers(this);
@@ -75,6 +77,7 @@ public class PayloadPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin disabled.", getDescription().getVersion()));
+        plugin = null;
     }
 
     private void copyResources() {
