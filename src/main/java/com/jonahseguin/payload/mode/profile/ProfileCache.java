@@ -40,25 +40,19 @@ import java.util.stream.Collectors;
 @Getter
 public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X, ProfileData> {
 
-    private transient final ProfileCacheSettings settings = new ProfileCacheSettings();
-    private transient final ConcurrentMap<UUID, PayloadProfileController<X>> controllers = new ConcurrentHashMap<>();
+    private final ProfileCacheSettings settings = new ProfileCacheSettings();
+    private final ConcurrentMap<UUID, PayloadProfileController<X>> controllers = new ConcurrentHashMap<>();
+    private final HandshakeManager<X> handshakeManager = new HandshakeManager<>(this);
+    private final HandshakeListener<X> handshakeListener = new HandshakeListener<>(this);
+    private final ProfileLayerLocal<X> localLayer = new ProfileLayerLocal<>(this);
+    private final ProfileLayerRedis<X> redisLayer = new ProfileLayerRedis<>(this);
+    private final ProfileLayerMongo<X> mongoLayer = new ProfileLayerMongo<>(this);
+    private final ConcurrentMap<UUID, ProfileData> data = new ConcurrentHashMap<>();
+    private Jedis subscriberJedis = null;
 
-    // Handshaking for NETWORK_NODE mode
-    private transient final HandshakeManager<X> handshakeManager = new HandshakeManager<>(this);
-    private transient final HandshakeListener<X> handshakeListener = new HandshakeListener<>(this);
-
-    private transient final ProfileLayerLocal<X> localLayer = new ProfileLayerLocal<>(this);
-    private transient final ProfileLayerRedis<X> redisLayer = new ProfileLayerRedis<>(this);
-    private transient final ProfileLayerMongo<X> mongoLayer = new ProfileLayerMongo<>(this);
-
-    private transient final ConcurrentMap<UUID, ProfileData> data = new ConcurrentHashMap<>();
-
-    private transient Jedis subscriberJedis = null;
-
-    public ProfileCache(Plugin plugin, PayloadAPI api, PayloadPlugin payloadPlugin, String name, Class<X> type) {
-        super(plugin, api, payloadPlugin, name, UUID.class, type);
+    public ProfileCache(final Plugin plugin, final PayloadPlugin payloadPlugin, final PayloadAPI api, String name, Class<X> type) {
+        super(plugin, payloadPlugin, api, name, UUID.class, type);
     }
-
 
     /**
      * Called internally by {@link PayloadCache#start()}
@@ -153,7 +147,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     }
 
     public X getLocalProfileByName(String username) {
-        UUID uuid = payloadPlugin.getUUID(username);
+        UUID uuid = PayloadPlugin.get().getUUID(username);
         if (uuid != null) {
             return this.getProfile(uuid);
         }
@@ -455,7 +449,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             X payload = this.getLocalProfile(p);
             if (payload != null) {
                 payload.setLastSeenTimestamp(System.currentTimeMillis());
-                payload.setLastSeenServer(api.getPayloadID());
+                payload.setLastSeenServer(PayloadAPI.get().getPayloadID());
                 payload.setLastInteractionTimestamp(System.currentTimeMillis());
                 if (!this.save(payload)) {
                     failures++;
@@ -529,9 +523,9 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     @Override
     public void updatePayloadID() {
         for (X x : this.getCachedObjects()) {
-            x.setPayloadId(api.getPayloadID());
+            x.setPayloadId(PayloadAPI.get().getPayloadID());
             if (x.isPlayerOnline()) {
-                x.setLastSeenServer(api.getPayloadID());
+                x.setLastSeenServer(PayloadAPI.get().getPayloadID());
             }
         }
         this.pool.submit(this::saveAll);

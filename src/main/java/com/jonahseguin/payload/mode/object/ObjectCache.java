@@ -6,7 +6,6 @@
 package com.jonahseguin.payload.mode.object;
 
 import com.jonahseguin.payload.PayloadAPI;
-import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.base.sync.SyncMode;
@@ -15,7 +14,6 @@ import com.jonahseguin.payload.mode.object.layer.ObjectLayerMongo;
 import com.jonahseguin.payload.mode.object.layer.ObjectLayerRedis;
 import com.jonahseguin.payload.mode.object.settings.ObjectCacheSettings;
 import lombok.Getter;
-import org.bukkit.plugin.Plugin;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -39,8 +37,8 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
     private final ObjectLayerMongo<X> mongoLayer = new ObjectLayerMongo<>(this);
 
 
-    public ObjectCache(Plugin plugin, PayloadAPI api, PayloadPlugin payloadPlugin, String name, Class<X> payloadClass) {
-        super(plugin, api, payloadPlugin, name, String.class, payloadClass);
+    public ObjectCache(PayloadHook hook, String name, Class<X> payloadClass) {
+        super(hook, name, String.class, payloadClass);
     }
 
     @Override
@@ -266,6 +264,6 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
 
     @Override
     public void updatePayloadID() {
-        this.getCachedObjects().forEach(o -> o.setPayloadId(api.getPayloadID()));
+        this.getCachedObjects().forEach(o -> o.setPayloadId(PayloadAPI.get().getPayloadID()));
     }
 }

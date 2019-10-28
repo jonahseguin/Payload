@@ -46,59 +46,53 @@ import java.util.concurrent.*;
 public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadData> implements DatabaseDependent, Comparable<PayloadCache> {
 
     protected final Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
-    protected final PayloadAPI api;
     protected final PayloadPlugin payloadPlugin;
-    
+    protected final PayloadAPI api;
+
     protected String name; // The name for this payload cache
-
-    protected boolean debug = false; // Debug for this cache
-
-    protected Set<String> dependingCaches = new HashSet<>();
-    protected PayloadErrorHandler errorHandler = new DefaultErrorHandler();
-    protected PayloadDatabase payloadDatabase = null;
-    protected PayloadMode mode = PayloadMode.STANDALONE; // Payload Mode for this cache
-    protected SyncMode syncMode = SyncMode.UPDATE;
-
+    protected final PayloadLangController langController;
     protected final ExecutorService pool = Executors.newCachedThreadPool();
     protected final PayloadTaskExecutor<K, X, D> executor;
-    protected final PayloadLangController langController = new PayloadLangController();
     protected final CacheState<K, X, D> state;
     protected final LayerController<K, X, D> layerController = new LayerController<>();
     protected final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
     protected final PayloadAutoSaveTask<K, X, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
     protected final PayloadCleanupTask<K, X, D> cleanupTask = new PayloadCleanupTask<>(this);
     protected final SyncManager<K, X, D> syncManager = new SyncManager<>(this);
-    protected PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
-
     protected final Class<K> keyType;
     protected final Class<X> payloadClass;
-
+    protected boolean debug = false; // Debug for this cache
+    protected Set<String> dependingCaches = new HashSet<>();
+    protected PayloadErrorHandler errorHandler = new DefaultErrorHandler();
+    protected PayloadDatabase payloadDatabase = null;
+    protected PayloadMode mode = PayloadMode.STANDALONE; // Payload Mode for this cache
+    protected SyncMode syncMode = SyncMode.UPDATE;
+    protected PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
     protected boolean running = false;
 
     /**
      * Creates an instance of a PayloadCache
-     * This constructor should ONLY be used internally by Payload using a PayloadHook and the createCache() methods within
-     * @param api
-     * @param payloadPlugin
+     * This constructor should ONLY be used internally by Payload
      * @param name The name of the cache.  Must be unique with no spaces or special characters (used in redis + mongo)
      * @param keyType The key type for this cache.  This is defined within the different cache implementations
      * @param payloadClass The class type for the object you will be caching.
      */
-    public PayloadCache(final Plugin plugin, PayloadAPI api, PayloadPlugin payloadPlugin, final String name, Class<K> keyType, Class<X> payloadClass) {
+    public PayloadCache(final Plugin plugin, final PayloadPlugin payloadPlugin, final PayloadAPI api, final String name, Class<K> keyType, Class<X> payloadClass) {
         Preconditions.checkNotNull(plugin);
+        Preconditions.checkNotNull(payloadPlugin);
+        Preconditions.checkNotNull(api);
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(keyType);
         Preconditions.checkNotNull(payloadClass);
-        Preconditions.checkNotNull(api);
-        Preconditions.checkNotNull(payloadPlugin);
-        this.api = api;
-        this.payloadPlugin = payloadPlugin;
         this.keyType = keyType;
         this.payloadClass = payloadClass;
         this.plugin = plugin;
+        this.payloadPlugin = payloadPlugin;
+        this.api = api;
         this.name = name;
         this.executor = new PayloadTaskExecutor<>(this);
         this.state = new CacheState<>(this);
+        this.langController = new PayloadLangController(payloadPlugin);
 
         this.langController.loadFromFile(name.toLowerCase().replaceAll(" ", "_") + ".yml");
     }
@@ -205,7 +199,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
 
     /**
      * Pass the database object for this cache.
-     * Called internally when you create a cache
+     * Called internally by Payload
      *
      * @param database PayloadDatabase
      */
@@ -437,7 +431,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     public final String getServerSpecificName() {
         if (this.getSettings().isServerSpecific()) {
-            return payloadPlugin.getLocal().getPayloadID() + "-" + this.getName();
+            return api.getPayloadID() + "-" + this.getName();
         } else {
             return this.getName();
         }

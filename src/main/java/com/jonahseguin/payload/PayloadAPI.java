@@ -8,7 +8,6 @@ package com.jonahseguin.payload;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.exception.runtime.PayloadProvisionException;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
 import com.jonahseguin.payload.database.PayloadDatabase;
@@ -17,7 +16,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.bukkit.plugin.Plugin;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -39,6 +37,10 @@ public class PayloadAPI {
         this.plugin = plugin;
     }
 
+    public static PayloadModule install(Plugin plugin) {
+        return new PayloadModule(PayloadPlugin.getPlugin(), plugin);
+    }
+
     /**
      * Get the local unique ID associated with this server's instance of Payload
      * @return String unique ID
@@ -46,7 +48,6 @@ public class PayloadAPI {
     public String getPayloadID() {
         return this.plugin.getLocal().getPayloadID();
     }
-
 
     public static String convertCacheName(String name) {
         return name.toLowerCase().replace(" ", "");

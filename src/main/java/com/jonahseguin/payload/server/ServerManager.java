@@ -5,6 +5,8 @@
 
 package com.jonahseguin.payload.server;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.database.PayloadDatabase;
@@ -15,11 +17,13 @@ import redis.clients.jedis.Jedis;
 import java.util.concurrent.*;
 
 @Getter
+@Singleton
 public class ServerManager implements Runnable {
 
     public static final long ASSUME_OFFLINE_SECONDS = 60;
     public static final long PING_FREQUENCY_SECONDS = 10;
 
+    private final PayloadPlugin payloadPlugin;
     private final PayloadDatabase database;
     private final PayloadServer thisServer;
     private final ConcurrentMap<String, PayloadServer> servers = new ConcurrentHashMap<>();
@@ -29,9 +33,11 @@ public class ServerManager implements Runnable {
     private ServerSubscriber subscriber = null;
     private BukkitTask pingTask = null;
 
-    public ServerManager(PayloadDatabase database) {
+    @Inject
+    public ServerManager(PayloadDatabase database, PayloadAPI api, PayloadPlugin payloadPlugin) {
         this.database = database;
-        this.thisServer = new PayloadServer(PayloadAPI.get().getPayloadID(), System.currentTimeMillis(), true);
+        this.payloadPlugin = payloadPlugin;
+        this.thisServer = new PayloadServer(api.getPayloadID(), System.currentTimeMillis(), true);
         this.servers.put(this.thisServer.getName().toLowerCase(), this.thisServer);
     }
 
@@ -46,7 +52,7 @@ public class ServerManager implements Runnable {
         });
 
         this.publisher.publishJoin();
-        this.pingTask = PayloadPlugin.get().getServer().getScheduler().runTaskTimerAsynchronously(PayloadPlugin.get(), this, (PING_FREQUENCY_SECONDS * 20), (PING_FREQUENCY_SECONDS * 20));
+        this.pingTask = payloadPlugin.getServer().getScheduler().runTaskTimerAsynchronously(payloadPlugin, this, (PING_FREQUENCY_SECONDS * 20), (PING_FREQUENCY_SECONDS * 20));
     }
 
     public void registerServer(String name, boolean online) {
