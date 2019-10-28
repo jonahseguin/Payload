@@ -3,15 +3,12 @@
  * www.jonahseguin.com
  */
 
-package com.jonahseguin.payload.service;
+package com.jonahseguin.payload.base;
 
-import com.google.inject.Inject;
-import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.PayloadObject;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
-import org.bukkit.plugin.Plugin;
 
 public interface PayloadCacheService {
 

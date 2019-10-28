@@ -1,5 +1,12 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base.lang;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.exception.runtime.PayloadRuntimeException;
 import org.apache.commons.lang.Validate;
@@ -24,11 +31,15 @@ import java.util.concurrent.ConcurrentMap;
  *
  * ChatColor and "{0} {1} {2}" etc. formatting are supported for arguments.
  */
+@Singleton
 public class PayloadLangController {
 
     private final ConcurrentMap<PLang, String> definitions = new ConcurrentHashMap<>();
+    private final PayloadPlugin payloadPlugin;
 
-    public PayloadLangController() {
+    @Inject
+    public PayloadLangController(PayloadPlugin payloadPlugin) {
+        this.payloadPlugin = payloadPlugin;
         this.createDefaults();
     }
 
@@ -80,13 +91,13 @@ public class PayloadLangController {
      * @param args (optional) Array of arguments to be passed for formatting the definition, in order from index {0} upwards.
      * @return The formatted text: with ChatColor and custom language / arguments
      */
-    public String get(PLang key, String... args) {
+    public String get(PLang key, Object... args) {
         Validate.notNull(key, "PLang must not be null");
         return PayloadPlugin.format(this.getRawDefinition(key), args);
     }
 
     public void loadFromFile(String fileName) {
-        File folder = PayloadPlugin.get().getDataFolder();
+        File folder = payloadPlugin.getDataFolder();
         File file;
         try {
             if (!folder.exists()) {

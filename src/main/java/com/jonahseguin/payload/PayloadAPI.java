@@ -8,7 +8,6 @@ package com.jonahseguin.payload;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.exception.runtime.PayloadProvisionException;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
 import com.jonahseguin.payload.database.PayloadDatabase;
@@ -17,7 +16,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.bukkit.plugin.Plugin;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -27,7 +25,6 @@ import java.util.stream.Collectors;
 public class PayloadAPI {
 
     private final PayloadPlugin plugin;
-    private final ConcurrentMap<String, PayloadHook> hooks = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, PayloadCache> caches = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, PayloadDatabase> databases = new ConcurrentHashMap<>();
     private final Set<String> requested = new HashSet<>();
@@ -40,6 +37,10 @@ public class PayloadAPI {
         this.plugin = plugin;
     }
 
+    public static PayloadModule install(Plugin plugin) {
+        return new PayloadModule(PayloadPlugin.getPlugin(), plugin);
+    }
+
     /**
      * Get the local unique ID associated with this server's instance of Payload
      * @return String unique ID
@@ -48,69 +49,16 @@ public class PayloadAPI {
         return this.plugin.getLocal().getPayloadID();
     }
 
-    /**
-     * Check if a hook is valid for a plugin
-     * @param plugin Plugin
-     * @param hook PayloadHook
-     * @return True if valid, else false
-     */
-    public final boolean validateHook(Plugin plugin, PayloadHook hook) {
-        return this.isProvisioned(plugin) && getHook(plugin).equals(hook);
-    }
-
     public static String convertCacheName(String name) {
         return name.toLowerCase().replace(" ", "");
-    }
-
-    /**
-     * Check if a hook has been provisioned for a plugin
-     * @param plugin {@link Plugin}
-     * @return True if provisioned, else false
-     */
-    public boolean isProvisioned(Plugin plugin) {
-        return this.hooks.containsKey(plugin.getName());
-    }
-
-
-    /**
-     * Get the {@link PayloadHook} for a {@link Plugin}
-     * @param plugin {@link Plugin}
-     * @return {@link PayloadHook} if the plugin is provisioned ({@link #isProvisioned(Plugin)})
-     */
-    public PayloadHook getHook(Plugin plugin) {
-        if (!this.isProvisioned(plugin)) {
-            throw new PayloadProvisionException("Cannot get a hook that is not yet provisioned.  Use requestProvision() first.");
-        }
-        return this.hooks.get(plugin.getName());
-    }
-
-    /**
-     * Request a provision for a Plugin, async.
-     * This is the method for obtaining an {@link PayloadHook} for a {@link Plugin} / JavaPlugin instance,
-     * for an external hooking plugin.
-     * @param plugin {@link Plugin} the hooking plugin
-     * @return The {@link PayloadHook} for your plugin
-     * might also throw an exception if the hook is already registered
-     */
-    public PayloadHook requestProvision(final Plugin plugin) {
-        if (this.hooks.containsKey(plugin.getName())) {
-            throw new IllegalStateException("Hook has already been provisioned for plugin " + plugin.getName());
-        }
-        PayloadHook hook = new PayloadHook(plugin);
-        this.hooks.putIfAbsent(plugin.getName(), hook);
-        return hook;
     }
 
     /**
      * Register a cache w/ a hook
      *
      * @param cache {@link PayloadCache}
-     * @param hook  {@link PayloadHook}
      */
-    public final void saveCache(PayloadCache cache, PayloadHook hook) {
-        if (!this.validateHook(hook.getPlugin(), hook)) {
-            throw new IllegalStateException("Hook is not valid for cache to save in PayloadAPI");
-        }
+    public final void saveCache(PayloadCache cache) {
         this.caches.putIfAbsent(convertCacheName(cache.getName()), cache);
     }
 

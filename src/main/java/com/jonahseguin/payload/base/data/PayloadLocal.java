@@ -1,7 +1,10 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base.data;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.PLang;
@@ -23,7 +26,6 @@ import java.util.UUID;
  */
 @Getter
 @Setter
-@Singleton
 public class PayloadLocal {
 
     private final PayloadPlugin plugin;
@@ -33,7 +35,6 @@ public class PayloadLocal {
     private YamlConfiguration config;
     private File payloadFile;
 
-    @Inject
     public PayloadLocal(PayloadPlugin plugin) {
         this.plugin = plugin;
     }

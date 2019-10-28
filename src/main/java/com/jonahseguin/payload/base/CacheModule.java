@@ -6,21 +6,12 @@
 package com.jonahseguin.payload.base;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.TypeLiteral;
-import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
 
-public class CacheModule<K, X extends Payload<K>, D extends PayloadData> extends AbstractModule {
-
-    private final PayloadCache<K, X, D> cache;
-
-    public CacheModule(PayloadCache<K, X, D> cache) {
-        this.cache = cache;
-    }
+public class CacheModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bind(new TypeLiteral<PayloadCache<K, X, D>>(){}).toInstance(cache);
+        bind(PayloadCacheService.class).to(PayloadDatabaseCacheService.class);
     }
 
 

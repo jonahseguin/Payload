@@ -6,7 +6,6 @@
 package com.jonahseguin.payload.mode.object;
 
 import com.jonahseguin.payload.PayloadAPI;
-import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.base.sync.SyncMode;

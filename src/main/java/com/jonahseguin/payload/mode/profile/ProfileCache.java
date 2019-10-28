@@ -6,7 +6,6 @@
 package com.jonahseguin.payload.mode.profile;
 
 import com.jonahseguin.payload.PayloadAPI;
-import com.jonahseguin.payload.PayloadHook;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
@@ -27,6 +26,7 @@ import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import redis.clients.jedis.Jedis;
 
 import java.util.Collection;
@@ -40,23 +40,18 @@ import java.util.stream.Collectors;
 @Getter
 public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X, ProfileData> {
 
-    private transient final ProfileCacheSettings settings = new ProfileCacheSettings();
-    private transient final ConcurrentMap<UUID, PayloadProfileController<X>> controllers = new ConcurrentHashMap<>();
+    private final ProfileCacheSettings settings = new ProfileCacheSettings();
+    private final ConcurrentMap<UUID, PayloadProfileController<X>> controllers = new ConcurrentHashMap<>();
+    private final HandshakeManager<X> handshakeManager = new HandshakeManager<>(this);
+    private final HandshakeListener<X> handshakeListener = new HandshakeListener<>(this);
+    private final ProfileLayerLocal<X> localLayer = new ProfileLayerLocal<>(this);
+    private final ProfileLayerRedis<X> redisLayer = new ProfileLayerRedis<>(this);
+    private final ProfileLayerMongo<X> mongoLayer = new ProfileLayerMongo<>(this);
+    private final ConcurrentMap<UUID, ProfileData> data = new ConcurrentHashMap<>();
+    private Jedis subscriberJedis = null;
 
-    // Handshaking for NETWORK_NODE mode
-    private transient final HandshakeManager<X> handshakeManager = new HandshakeManager<>(this);
-    private transient final HandshakeListener<X> handshakeListener = new HandshakeListener<>(this);
-
-    private transient final ProfileLayerLocal<X> localLayer = new ProfileLayerLocal<>(this);
-    private transient final ProfileLayerRedis<X> redisLayer = new ProfileLayerRedis<>(this);
-    private transient final ProfileLayerMongo<X> mongoLayer = new ProfileLayerMongo<>(this);
-
-    private transient final ConcurrentMap<UUID, ProfileData> data = new ConcurrentHashMap<>();
-
-    private transient Jedis subscriberJedis = null;
-
-    public ProfileCache(PayloadHook hook, String name, Class<X> type) {
-        super(hook, name, UUID.class, type);
+    public ProfileCache(final Plugin plugin, final PayloadPlugin payloadPlugin, final PayloadAPI api, String name, Class<X> type) {
+        super(plugin, payloadPlugin, api, name, UUID.class, type);
     }
 
     /**
@@ -138,7 +133,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
      * @return {@link PayloadProfile}
      */
     public X getProfileByName(String username) {
-        UUID uuid = PayloadPlugin.get().getUUIDs().get(username.toLowerCase());
+        UUID uuid = payloadPlugin.getUUIDs().get(username.toLowerCase());
         if (uuid != null) {
             return this.getProfile(uuid);
         }

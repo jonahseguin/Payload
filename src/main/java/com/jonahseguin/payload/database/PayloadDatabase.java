@@ -5,11 +5,12 @@
 
 package com.jonahseguin.payload.database;
 
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.PayloadPermission;
-import com.jonahseguin.payload.base.exception.runtime.PayloadConfigException;
 import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.database.mongo.PayloadMongo;
 import com.jonahseguin.payload.database.mongo.PayloadMongoMonitor;
@@ -20,22 +21,17 @@ import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
 import dev.morphia.Morphia;
+import dev.morphia.ext.guice.GuiceExtension;
 import dev.morphia.mapping.DefaultCreator;
 import dev.morphia.mapping.MapperOptions;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
-import java.io.*;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -49,6 +45,10 @@ import java.util.UUID;
 public class PayloadDatabase {
 
     private boolean started = false;
+
+    private final PayloadAPI api;
+    private final PayloadPlugin payloadPlugin;
+    private final Plugin plugin;
 
     private final String name;
     private final String uuid = UUID.randomUUID().toString();
@@ -70,23 +70,31 @@ public class PayloadDatabase {
     private Jedis monitorJedis = null;
     private PayloadRedisMonitor redisMonitor = null;
 
-    public PayloadDatabase(String name, PayloadMongo mongo, PayloadRedis redis, ClassLoader classLoader) {
+    @Inject
+    public PayloadDatabase(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, String name, PayloadMongo mongo, PayloadRedis redis) {
+        this.payloadPlugin = payloadPlugin;
+        this.plugin = plugin;
         this.name = name;
         this.mongo = mongo;
         this.redis = redis;
-        PayloadAPI.get().registerDatabase(this);
-        this.serverManager = new ServerManager(this);
+        this.api = api;
+        this.serverManager = new ServerManager(this, api, payloadPlugin);
         this.morphia = new Morphia();
+        api.registerDatabase(this);
 
         MapperOptions options = morphia.getMapper().getOptions();
         morphia.getMapper().setOptions(MapperOptions.builder(options)
                 .objectFactory(new DefaultCreator(options) {
                     @Override
                     protected ClassLoader getClassLoaderForClass() {
-                        return classLoader;
+                        return payloadPlugin.getPayloadClassLoader();
                     }
                 })
                 .build());
+    }
+
+    public void enableGuice(Injector injector) {
+        new GuiceExtension(this.morphia, injector);
     }
 
     public void hookCache(PayloadCache cache) {
@@ -97,102 +105,6 @@ public class PayloadDatabase {
         else {
             throw new IllegalStateException("PayloadDatabase '" + name + "' has already hooked cache '" + cache + "'");
         }
-    }
-
-    /**
-     * Same as {@link #loadConfigFile(File, String, ClassLoader)}, but instead uses a File: loads that file as a YamlConfiguration
-     * and then calls {@link #fromConfig(YamlConfiguration, String, ClassLoader)}
-     * The difference in this method from {@link #loadConfigFile(File, String, ClassLoader)} is that it will
-     * CREATE the file and copy the default config if it doesn't exist.
-     *
-     * @param file The file to load the config info from
-     * @param name A unique name for the Database, for debugging purposes etc.
-     * @return a new {@link PayloadDatabase} instance
-     * @throws PayloadConfigException If any errors occur during loading the config or parsing database information
-     */
-    public static PayloadDatabase fromConfigFile(File file, String name, ClassLoader classLoader) throws PayloadConfigException {
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-                File targetFile = new File(PayloadPlugin.get().getDataFolder() + File.separator + "database.yml");
-                if (!targetFile.exists()) {
-                    throw new PayloadConfigException("Default 'database.yml' file does not exist; could not be copied");
-                }
-                OutputStream os = new FileOutputStream(file);
-                Files.copy(Paths.get(targetFile.toURI()), os);
-                os.flush();
-                os.close();
-            } catch (IOException ex) {
-                throw new PayloadConfigException("Error creating file '" + file.getName() + "' for new Payload config copy", ex);
-            }
-        }
-        return loadConfigFile(file, name, classLoader);
-    }
-
-    /**
-     * Load an instance of a PayloadDatabase from a YAML configuration file (assumes certain key names!)
-     * * Must follow the payload spec.
-     *
-     * @param config The YamlConfiguration to load the data from
-     * @param name   A unique name for the Database, for debugging purposes etc.
-     * @return a new {@link PayloadDatabase} instance
-     * @throws PayloadConfigException Thrown if configuration format does not match Payload spec (as shown in default database.yml file)
-     */
-    public static PayloadDatabase fromConfig(YamlConfiguration config, String name, ClassLoader classLoader) throws PayloadConfigException {
-        ConfigurationSection mongoSection = config.getConfigurationSection("mongodb");
-        ConfigurationSection redisSection = config.getConfigurationSection("redis");
-
-        if (mongoSection != null) {
-            if (redisSection != null) {
-                PayloadMongo mongo = PayloadMongo.fromConfig(mongoSection);
-                PayloadRedis redis = PayloadRedis.fromConfig(redisSection);
-
-                return new PayloadDatabase(name, mongo, redis, classLoader);
-            } else {
-                throw new PayloadConfigException("'redis' configuration section missing when loading PayloadDatabase fromConfig.  See example database.yml for proper formatting.");
-            }
-        } else {
-            throw new PayloadConfigException("'mongodb' configuration section missing when loading PayloadDatabase fromConfig.  See example database.yml for proper formatting.");
-        }
-    }
-
-    /**
-     * Same as {@link #fromConfigFile(File, String, ClassLoader)}, but uses the plugin's data folder and a file name
-     * Will create and copy default if it doesn't exist
-     * This is the recommended method to use for loading a database object from a config file
-     *
-     * @param plugin   Plugin
-     * @param fileName File name (ending in .yml) to load from
-     * @param name     A unique name for the Database, for debugging purposes etc.
-     * @return a new {@link PayloadDatabase} instance
-     * @throws PayloadConfigException If any errors occur during loading the config or parsing database information
-     */
-    public static PayloadDatabase fromConfigFile(Plugin plugin, String fileName, String name, ClassLoader classLoader) throws PayloadConfigException {
-        plugin.getDataFolder().mkdirs();
-        return fromConfigFile(new File(plugin.getDataFolder() + File.separator + fileName), name, classLoader);
-    }
-
-    /**
-     * Same as {@link #fromConfig(YamlConfiguration, String, ClassLoader)}, but instead uses a File: loads that file as a YamlConfiguration
-     * and then calls {@link #fromConfig(YamlConfiguration, String, ClassLoader)}
-     *
-     * @param file The file to load the config info from
-     * @param name A unique name for the Database, for debugging purposes etc.
-     * @return a new {@link PayloadDatabase} instance
-     * @throws PayloadConfigException If any errors occur during loading the config or parsing database information
-     */
-    public static PayloadDatabase loadConfigFile(File file, String name, ClassLoader classLoader) throws PayloadConfigException {
-        YamlConfiguration config = new YamlConfiguration();
-        try {
-            config.load(file);
-        } catch (FileNotFoundException ex) {
-            throw new PayloadConfigException("Cannot load Payload Database info from a file that does not exist", ex);
-        } catch (IOException ex) {
-            throw new PayloadConfigException("Could not load Payload Database info from file", ex);
-        } catch (InvalidConfigurationException ex) {
-            throw new PayloadConfigException("Could not load Payload Database info from file (invalid config!)", ex);
-        }
-        return PayloadDatabase.fromConfig(config, name, classLoader);
     }
 
     public boolean connectRedis() {
@@ -328,15 +240,15 @@ public class PayloadDatabase {
     }
 
     public void databaseError(Throwable ex, String msg) {
-        PayloadPlugin.get().getLogger().severe("[Database: " + this.getName() + "] " + msg + " - " + ex.getMessage());
+        payloadPlugin.getLogger().severe("[Database: " + this.getName() + "] " + msg + " - " + ex.getMessage());
         //PayloadPlugin.get().alert(PayloadPermission.DEBUG, "&c[Payload][Database: " + this.getName() + "] " + msg + " - " + ex.getMessage());
-        if (PayloadPlugin.get().isDebug()) {
+        if (payloadPlugin.isDebug()) {
             ex.printStackTrace();
         }
     }
 
     public void databaseDebug(String msg) {
-        PayloadPlugin.get().alert(PayloadPermission.DEBUG, PLang.DEBUG_DATABASE, this.getName(), msg);
+        payloadPlugin.alert(PayloadPermission.DEBUG, PLang.DEBUG_DATABASE, this.getName(), msg);
     }
 
 }
