@@ -10,6 +10,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.annotation.DatabaseName;
 import com.jonahseguin.payload.server.ServerManager;
 import org.bukkit.plugin.Plugin;
 
@@ -27,17 +28,14 @@ public class DatabaseModule extends AbstractModule {
 
     @Override
     protected void configure() {
+        bind(String.class).annotatedWith(DatabaseName.class).toInstance("Database");
         bind(PayloadDatabaseService.class).in(Singleton.class);
+        bind(ServerManager.class);
     }
 
     @Provides
     PayloadDatabase provideDatabase(PayloadDatabaseService databaseService) {
         return databaseService.fromConfigFile(plugin, "database.yml", "Database");
-    }
-
-    @Provides
-    ServerManager provideServerManager(PayloadDatabase database) {
-        return database.getServerManager();
     }
 
 }

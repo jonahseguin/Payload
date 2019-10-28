@@ -9,6 +9,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.annotation.DatabaseName;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.PLang;
@@ -16,7 +17,6 @@ import com.jonahseguin.payload.database.mongo.PayloadMongo;
 import com.jonahseguin.payload.database.mongo.PayloadMongoMonitor;
 import com.jonahseguin.payload.database.redis.PayloadRedis;
 import com.jonahseguin.payload.database.redis.PayloadRedisMonitor;
-import com.jonahseguin.payload.server.ServerManager;
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
@@ -54,7 +54,6 @@ public class PayloadDatabase {
     private final String uuid = UUID.randomUUID().toString();
     private final Set<PayloadCache> hooks = new HashSet<>();
     private final DatabaseState state = new DatabaseState();
-    private final ServerManager serverManager;
 
     private final PayloadMongo mongo;
     private final PayloadRedis redis;
@@ -71,14 +70,13 @@ public class PayloadDatabase {
     private PayloadRedisMonitor redisMonitor = null;
 
     @Inject
-    public PayloadDatabase(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, String name, PayloadMongo mongo, PayloadRedis redis) {
+    public PayloadDatabase(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, @DatabaseName String name, PayloadMongo mongo, PayloadRedis redis) {
         this.payloadPlugin = payloadPlugin;
         this.plugin = plugin;
         this.name = name;
         this.mongo = mongo;
         this.redis = redis;
         this.api = api;
-        this.serverManager = new ServerManager(this, api, payloadPlugin);
         this.morphia = new Morphia();
         api.registerDatabase(this);
 
@@ -173,7 +171,6 @@ public class PayloadDatabase {
     public boolean start() {
         boolean mongo = this.connectMongo();
         boolean redis = this.connectRedis();
-        this.serverManager.startup();
         this.started = true;
         return mongo && redis;
     }
@@ -218,7 +215,6 @@ public class PayloadDatabase {
     }
 
     public boolean stop() {
-        this.serverManager.shutdown();
         for (PayloadCache cache : this.getHooks()) {
             if (cache.isRunning()) {
                 // Still running... don't just close the DB connection w/o proper shutdown
