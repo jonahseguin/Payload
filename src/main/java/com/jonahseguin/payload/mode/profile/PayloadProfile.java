@@ -5,12 +5,11 @@
 
 package com.jonahseguin.payload.mode.profile;
 
+import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
-import dev.morphia.annotations.Id;
-import dev.morphia.annotations.Indexed;
-import dev.morphia.annotations.PostLoad;
+import dev.morphia.annotations.*;
 import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -20,13 +19,23 @@ import org.bson.types.ObjectId;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
 import java.util.UUID;
 
 // The implementing class of this abstract class must add an @Entity annotation (from MongoDB) with a collection name!
 @Getter
 @Setter
+@Indexes({
+        @Index(fields = @Field("username")),
+        @Index(fields = @Field("uniqueId"))
+})
 public abstract class PayloadProfile implements Payload<UUID> {
+
+    protected transient final PayloadAPI api;
+    protected transient final PayloadPlugin payloadPlugin;
+    protected transient final Plugin plugin;
+    protected transient final ProfileCache cache;
 
     @Id
     protected ObjectId objectId = new ObjectId();
@@ -54,21 +63,24 @@ public abstract class PayloadProfile implements Payload<UUID> {
     protected transient String loadingSource = null;
     protected transient Player player = null;
 
-    public PayloadProfile() {
-        this.payloadId = PayloadAPI.get().getPayloadID();
+    @Inject
+    public PayloadProfile(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ProfileCache cache) {
+        this.api = api;
+        this.payloadPlugin = payloadPlugin;
+        this.plugin = plugin;
+        this.cache = cache;
     }
 
-
-    public PayloadProfile(String username, UUID uniqueId, String loginIp) {
-        this();
+    public PayloadProfile(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ProfileCache cache, String username, UUID uniqueId, String loginIp) {
+        this(api, payloadPlugin, plugin, cache);
         this.username = username;
         this.uuid = uniqueId;
         this.uniqueId = uniqueId.toString();
         this.loginIp = loginIp;
     }
 
-    public PayloadProfile(ProfileData data) {
-        this(data.getUsername(), data.getUniqueId(), data.getIp());
+    public PayloadProfile(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ProfileCache cache, ProfileData data) {
+        this(api, payloadPlugin, plugin, cache, data.getUsername(), data.getUniqueId(), data.getIp());
     }
 
     @PostLoad
@@ -87,14 +99,20 @@ public abstract class PayloadProfile implements Payload<UUID> {
         return this.getUUID();
     }
 
-    public void initializePlayer(Player player) {
+    void initializePlayer(Player player) {
         Validate.notNull(player, "Player cannot be null for initializePlayer");
         this.player = player;
+        this.init();
     }
 
-    public void uninitializePlayer() {
-
+    void uninitializePlayer() {
+        this.uninit();
+        this.player = null;
     }
+
+    abstract void init();
+
+    abstract void uninit();
 
     public boolean isPlayerOnline() {
         if (this.player == null) {
@@ -211,7 +229,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
 
     @Override
     public void save() {
-        this.getCache().save(this);
+        this.cache.save(this);
     }
 
     @Override
@@ -224,7 +242,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
         return result;
     }
 
-    protected boolean canEqual(Object other) {
+    private boolean canEqual(Object other) {
         return other instanceof PayloadProfile;
     }
 

@@ -6,6 +6,8 @@
 package com.jonahseguin.payload.base;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
@@ -26,15 +28,16 @@ import com.jonahseguin.payload.base.task.PayloadCleanupTask;
 import com.jonahseguin.payload.base.type.*;
 import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.PayloadDatabase;
-import com.sun.istack.internal.Nullable;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -48,8 +51,12 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     protected final Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
     protected final PayloadPlugin payloadPlugin;
     protected final PayloadAPI api;
+    protected final Injector injector;
 
     protected String name; // The name for this payload cache
+    protected Class<K> keyType;
+    protected Class<X> payloadClass;
+
     protected final PayloadLangController langController;
     protected final ExecutorService pool = Executors.newCachedThreadPool();
     protected final PayloadTaskExecutor<K, X, D> executor;
@@ -59,8 +66,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     protected final PayloadAutoSaveTask<K, X, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
     protected final PayloadCleanupTask<K, X, D> cleanupTask = new PayloadCleanupTask<>(this);
     protected final SyncManager<K, X, D> syncManager = new SyncManager<>(this);
-    protected final Class<K> keyType;
-    protected final Class<X> payloadClass;
     protected boolean debug = false; // Debug for this cache
     protected Set<String> dependingCaches = new HashSet<>();
     protected PayloadErrorHandler errorHandler = new DefaultErrorHandler();
@@ -73,28 +78,37 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     /**
      * Creates an instance of a PayloadCache
      * This constructor should ONLY be used internally by Payload
-     * @param name The name of the cache.  Must be unique with no spaces or special characters (used in redis + mongo)
-     * @param keyType The key type for this cache.  This is defined within the different cache implementations
-     * @param payloadClass The class type for the object you will be caching.
      */
-    public PayloadCache(final Plugin plugin, final PayloadPlugin payloadPlugin, final PayloadAPI api, final String name, Class<K> keyType, Class<X> payloadClass) {
+    @Inject
+    public PayloadCache(@Nonnull Plugin plugin, @Nonnull PayloadPlugin payloadPlugin, @Nonnull PayloadAPI api, @Nonnull Injector injector) {
         Preconditions.checkNotNull(plugin);
         Preconditions.checkNotNull(payloadPlugin);
         Preconditions.checkNotNull(api);
-        Preconditions.checkNotNull(name);
-        Preconditions.checkNotNull(keyType);
-        Preconditions.checkNotNull(payloadClass);
-        this.keyType = keyType;
-        this.payloadClass = payloadClass;
+        Preconditions.checkNotNull(injector);
         this.plugin = plugin;
         this.payloadPlugin = payloadPlugin;
         this.api = api;
-        this.name = name;
+        this.injector = injector.createChildInjector(new CacheModule<>(this));
         this.executor = new PayloadTaskExecutor<>(this);
         this.state = new CacheState<>(this);
         this.langController = new PayloadLangController(payloadPlugin);
 
         this.langController.loadFromFile(name.toLowerCase().replaceAll(" ", "_") + ".yml");
+    }
+
+    public void name(@Nonnull String name) {
+        Preconditions.checkNotNull(name);
+        this.name = name;
+    }
+
+    public void keyType(@Nonnull Class<K> keyType) {
+        Preconditions.checkNotNull(keyType);
+        this.keyType = keyType;
+    }
+
+    public void payloadType(@Nonnull Class<X> payloadClass) {
+        Preconditions.checkNotNull(payloadClass);
+        this.payloadClass = payloadClass;
     }
 
     /**
@@ -198,19 +212,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     }
 
     /**
-     * Pass the database object for this cache.
-     * Called internally by Payload
-     *
-     * @param database PayloadDatabase
-     */
-    public final void setupDatabase(PayloadDatabase database) {
-        if (this.payloadDatabase != null) {
-            throw new IllegalStateException("Database has already been defined");
-        }
-        this.payloadDatabase = database;
-    }
-
-    /**
      * Get/create a controller for specific data
      *
      * @param data {@link PayloadData}
@@ -244,8 +245,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param key The key to use to get the object (i.e a string, number, etc.)
      * @return The object if available (else null)
      */
-    @Nullable
-    protected abstract X get(K key);
+    public abstract Optional<X> get(K key);
 
     /**
      * Get an object stored in this cache locally
@@ -253,16 +253,14 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param key The key to use to get the object
      * @return The object if available (else null)
      */
-    @Nullable
-    public abstract X getFromCache(K key);
+    public abstract Optional<X> getFromCache(K key);
 
     /**
      * Get an object stored in the first available database layer
      * @param key The key to use to get the object
      * @return The object if available (else null)
      */
-    @Nullable
-    public abstract X getFromDatabase(K key);
+    public abstract Optional<X> getFromDatabase(K key);
 
     /**
      * Check if an object is locally-cached

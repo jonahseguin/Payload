@@ -23,7 +23,7 @@ public class PayloadModule extends AbstractModule {
     private final PayloadAPI api;
     private final Plugin plugin;
 
-    public PayloadModule(@Nonnull PayloadPlugin payloadPlugin, @Nonnull Plugin plugin) {
+    PayloadModule(@Nonnull PayloadPlugin payloadPlugin, @Nonnull Plugin plugin) {
         Preconditions.checkNotNull(payloadPlugin);
         Preconditions.checkNotNull(plugin);
         this.payloadPlugin = payloadPlugin;
