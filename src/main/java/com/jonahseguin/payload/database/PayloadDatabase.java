@@ -17,6 +17,7 @@ import com.jonahseguin.payload.database.mongo.PayloadMongo;
 import com.jonahseguin.payload.database.mongo.PayloadMongoMonitor;
 import com.jonahseguin.payload.database.redis.PayloadRedis;
 import com.jonahseguin.payload.database.redis.PayloadRedisMonitor;
+import com.jonahseguin.payload.server.ServerManager;
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
@@ -70,7 +71,7 @@ public class PayloadDatabase {
     private PayloadRedisMonitor redisMonitor = null;
 
     @Inject
-    public PayloadDatabase(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, @DatabaseName String name, PayloadMongo mongo, PayloadRedis redis) {
+    public PayloadDatabase(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, String name, PayloadMongo mongo, PayloadRedis redis) {
         this.payloadPlugin = payloadPlugin;
         this.plugin = plugin;
         this.name = name;
@@ -97,7 +98,6 @@ public class PayloadDatabase {
 
     public void hookCache(PayloadCache cache) {
         if (!this.hooks.contains(cache)) {
-            cache.setupDatabase(this);
             this.hooks.add(cache);
         }
         else {

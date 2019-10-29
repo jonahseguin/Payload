@@ -10,7 +10,7 @@ import com.jonahseguin.payload.mode.object.PayloadObject;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 
-public interface PayloadCacheService {
+public interface CacheService {
 
     <X extends PayloadProfile> ProfileCache<X> createProfileCache(String name, Class<X> type);
 

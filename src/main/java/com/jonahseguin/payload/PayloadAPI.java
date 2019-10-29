@@ -127,6 +127,7 @@ public class PayloadAPI {
                 cache.updatePayloadID();
             }
             for (PayloadDatabase database : getDatabases().values()) {
+                
                 database.getServerManager().getPublisher().publishUpdateName(oldName, name);
             }
         } else {

@@ -15,7 +15,7 @@ import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import org.bukkit.plugin.Plugin;
 
-public class PayloadDatabaseCacheService implements PayloadCacheService {
+public class DatabaseCacheService implements CacheService {
 
     private final Plugin plugin;
     private final PayloadDatabase database;
@@ -23,7 +23,7 @@ public class PayloadDatabaseCacheService implements PayloadCacheService {
     private final PayloadAPI api;
 
     @Inject
-    public PayloadDatabaseCacheService(Plugin plugin, PayloadDatabase database, PayloadPlugin payloadPlugin, PayloadAPI api) {
+    public DatabaseCacheService(Plugin plugin, PayloadDatabase database, PayloadPlugin payloadPlugin, PayloadAPI api) {
         this.plugin = plugin;
         this.database = database;
         this.payloadPlugin = payloadPlugin;
