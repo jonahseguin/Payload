@@ -91,7 +91,7 @@ public class PayloadDatabase {
                 .build());
     }
 
-    public void enableGuice(Injector injector) {
+    void enableGuice(Injector injector) {
         new GuiceExtension(this.morphia, injector);
     }
 

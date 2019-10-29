@@ -12,7 +12,11 @@ import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.annotation.DatabaseName;
 import com.jonahseguin.payload.server.ServerManager;
+import com.mongodb.MongoClient;
+import dev.morphia.Datastore;
+import dev.morphia.Morphia;
 import org.bukkit.plugin.Plugin;
+import redis.clients.jedis.JedisPool;
 
 public class DatabaseModule extends AbstractModule {
 
@@ -34,8 +38,31 @@ public class DatabaseModule extends AbstractModule {
     }
 
     @Provides
+    @Singleton
     PayloadDatabase provideDatabase(PayloadDatabaseService databaseService) {
         return databaseService.fromConfigFile(plugin, "database.yml", "Database");
     }
+
+    @Provides
+    Morphia provideMorphia(PayloadDatabase database) {
+        return database.getMorphia();
+    }
+
+    @Provides
+    Datastore provideDatastore(PayloadDatabase database) {
+        return database.getDatastore();
+    }
+
+    @Provides
+    MongoClient provideMongoClient(PayloadDatabase database) {
+        return database.getMongoClient();
+    }
+
+    @Provides
+    JedisPool provideJedisPool(PayloadDatabase database) {
+        return database.getJedisPool();
+    }
+
+
 
 }

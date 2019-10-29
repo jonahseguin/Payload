@@ -43,6 +43,12 @@ public class PayloadDatabaseCacheService implements PayloadCacheService {
 
     @Override
     public <X extends PayloadObject> ObjectCache<X> createObjectCache(String name, Class<X> type) {
-        return null;
+        ObjectCache<X> cache = new ObjectCache<>(plugin, payloadPlugin, api, name, type);
+        database.hookCache(cache);
+        api.saveCache(cache);
+
+        database.getMorphia().map(type);
+        database.getDatastore().ensureIndexes();
+        return cache;
     }
 }
