@@ -7,7 +7,6 @@ package com.jonahseguin.payload.base.data;
 
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
-import com.jonahseguin.payload.base.lang.PLang;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Bukkit;

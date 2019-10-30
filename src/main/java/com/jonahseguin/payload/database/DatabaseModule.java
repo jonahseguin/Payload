@@ -7,7 +7,6 @@ package com.jonahseguin.payload.database;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.annotation.DatabaseName;
@@ -33,36 +32,33 @@ public class DatabaseModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(String.class).annotatedWith(DatabaseName.class).toInstance("Database");
-        bind(PayloadDatabaseService.class).in(Singleton.class);
-        bind(ServerManager.class);
+        bind(DatabaseService.class).to(PayloadDatabaseService.class);
     }
 
     @Provides
-    @Singleton
-    PayloadDatabase provideDatabase(PayloadDatabaseService databaseService) {
-        return databaseService.fromConfigFile(plugin, "database.yml", "Database");
-    }
-
-    @Provides
-    Morphia provideMorphia(PayloadDatabase database) {
+    Morphia provideMorphia(DatabaseService database) {
         return database.getMorphia();
     }
 
     @Provides
-    Datastore provideDatastore(PayloadDatabase database) {
+    Datastore provideDatastore(DatabaseService database) {
         return database.getDatastore();
     }
 
     @Provides
-    MongoClient provideMongoClient(PayloadDatabase database) {
+    MongoClient provideMongoClient(DatabaseService database) {
         return database.getMongoClient();
     }
 
     @Provides
-    JedisPool provideJedisPool(PayloadDatabase database) {
+    JedisPool provideJedisPool(DatabaseService database) {
         return database.getJedisPool();
     }
 
+    @Provides
+    ServerManager provideServerManager(DatabaseService database) {
+        return database.getServerManager();
+    }
 
 
 }

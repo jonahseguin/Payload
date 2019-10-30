@@ -11,7 +11,6 @@ import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.failsafe.FailedPayload;
-import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.type.Payload;
@@ -29,6 +28,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import redis.clients.jedis.Jedis;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
@@ -50,8 +50,8 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     private final ConcurrentMap<UUID, ProfileData> data = new ConcurrentHashMap<>();
     private Jedis subscriberJedis = null;
 
-    public ProfileCache(final Plugin plugin, final PayloadPlugin payloadPlugin, final PayloadAPI api, String name, Class<X> type) {
-        super(plugin, payloadPlugin, api, name, UUID.class, type);
+    public ProfileCache(@Nonnull Plugin plugin, @Nonnull PayloadPlugin payloadPlugin, @Nonnull PayloadAPI api, @Nonnull String name, @Nonnull Class<X> payloadClass) {
+        super(plugin, payloadPlugin, api, name, UUID.class, payloadClass);
     }
 
     /**

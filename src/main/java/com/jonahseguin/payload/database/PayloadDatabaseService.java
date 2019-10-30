@@ -13,21 +13,28 @@ import com.jonahseguin.payload.base.exception.runtime.PayloadConfigException;
 import com.jonahseguin.payload.database.mongo.PayloadMongo;
 import com.jonahseguin.payload.database.redis.PayloadRedis;
 import com.jonahseguin.payload.server.ServerManager;
+import com.mongodb.MongoClient;
+import dev.morphia.Datastore;
+import dev.morphia.Morphia;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class PayloadDatabaseService {
+public class PayloadDatabaseService implements DatabaseService {
 
     private final PayloadAPI api;
     private final PayloadPlugin payloadPlugin;
     private final Plugin plugin;
     private final Injector injector;
+    private PayloadDatabase database;
+    private ServerManager serverManager;
 
     @Inject
     public PayloadDatabaseService(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, Injector injector) {
@@ -35,6 +42,66 @@ public class PayloadDatabaseService {
         this.payloadPlugin = payloadPlugin;
         this.plugin = plugin;
         this.injector = injector;
+    }
+
+    private void init(PayloadDatabase database) {
+        this.database = database;
+        this.serverManager = new ServerManager(database, api, payloadPlugin);
+    }
+
+    @Override
+    public boolean start() {
+        return database.start();
+    }
+
+    @Override
+    public boolean shutdown() {
+        return database.shutdown();
+    }
+
+    @Override
+    public MongoClient getMongoClient() {
+        return database.getMongoClient();
+    }
+
+    @Override
+    public Morphia getMorphia() {
+        return database.getMorphia();
+    }
+
+    @Override
+    public Datastore getDatastore() {
+        return database.getDatastore();
+    }
+
+    @Override
+    public Jedis getJedisResource() {
+        return database.getResource();
+    }
+
+    @Override
+    public JedisPool getJedisPool() {
+        return database.getJedisPool();
+    }
+
+    @Override
+    public boolean isConnected() {
+        return this.database.getState().isDatabaseConnected();
+    }
+
+    @Override
+    public boolean canFunction(DatabaseDependent dependent) {
+        return this.database.getState().canCacheFunction(dependent);
+    }
+
+    @Override
+    public ServerManager getServerManager() {
+        return serverManager;
+    }
+
+    @Override
+    public void load(String fileName, String name) {
+        init(fromConfigFile(fileName, name));
     }
 
     /**
@@ -57,6 +124,7 @@ public class PayloadDatabaseService {
 
                 PayloadDatabase database = new PayloadDatabase(api, payloadPlugin, plugin, name, mongo, redis);
                 database.enableGuice(injector);
+                this.database = database;
                 return database;
             } else {
                 throw new PayloadConfigException("'redis' configuration section missing when loading PayloadDatabase fromConfig.  See example database.yml for proper formatting.");
@@ -101,13 +169,12 @@ public class PayloadDatabaseService {
      * Will create and copy default if it doesn't exist
      * This is the recommended method to use for loading a database object from a config file
      *
-     * @param plugin   Plugin
      * @param fileName File name (ending in .yml) to load from
      * @param name     A unique name for the Database, for debugging purposes etc.
      * @return a new {@link PayloadDatabase} instance
      * @throws PayloadConfigException If any errors occur during loading the config or parsing database information
      */
-    public PayloadDatabase fromConfigFile(Plugin plugin, String fileName, String name) throws PayloadConfigException {
+    public PayloadDatabase fromConfigFile(String fileName, String name) throws PayloadConfigException {
         plugin.getDataFolder().mkdirs();
         return fromConfigFile(new File(plugin.getDataFolder() + File.separator + fileName), name);
     }

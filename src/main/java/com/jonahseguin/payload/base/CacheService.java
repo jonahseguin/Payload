@@ -16,4 +16,8 @@ public interface CacheService {
 
     <X extends PayloadObject> ObjectCache<X> createObjectCache(String name, Class<X> type);
 
+    <X extends PayloadProfile> ProfileCache<X> getProfileCache(String name);
+
+    <X extends PayloadObject> ObjectCache<X> getObjectCache(String name);
+
 }

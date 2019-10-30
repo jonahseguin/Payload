@@ -5,13 +5,15 @@
 
 package com.jonahseguin.payload.database;
 
+import com.jonahseguin.payload.base.Service;
+import com.jonahseguin.payload.server.ServerManager;
 import com.mongodb.MongoClient;
 import dev.morphia.Datastore;
 import dev.morphia.Morphia;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
-public interface DatabaseService {
+public interface DatabaseService extends Service {
 
     MongoClient getMongoClient();
 
@@ -22,5 +24,13 @@ public interface DatabaseService {
     Jedis getJedisResource();
 
     JedisPool getJedisPool();
+
+    ServerManager getServerManager();
+
+    boolean isConnected();
+
+    boolean canFunction(DatabaseDependent dependent);
+
+    void load(String fileName, String name);
 
 }

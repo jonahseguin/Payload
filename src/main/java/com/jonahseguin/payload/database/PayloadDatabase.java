@@ -5,19 +5,15 @@
 
 package com.jonahseguin.payload.database;
 
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
-import com.jonahseguin.payload.annotation.DatabaseName;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.PayloadPermission;
-import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.database.mongo.PayloadMongo;
 import com.jonahseguin.payload.database.mongo.PayloadMongoMonitor;
 import com.jonahseguin.payload.database.redis.PayloadRedis;
 import com.jonahseguin.payload.database.redis.PayloadRedisMonitor;
-import com.jonahseguin.payload.server.ServerManager;
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
@@ -70,7 +66,6 @@ public class PayloadDatabase {
     private Jedis monitorJedis = null;
     private PayloadRedisMonitor redisMonitor = null;
 
-    @Inject
     public PayloadDatabase(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, String name, PayloadMongo mongo, PayloadRedis redis) {
         this.payloadPlugin = payloadPlugin;
         this.plugin = plugin;
@@ -214,7 +209,7 @@ public class PayloadDatabase {
         }
     }
 
-    public boolean stop() {
+    public boolean shutdown() {
         for (PayloadCache cache : this.getHooks()) {
             if (cache.isRunning()) {
                 // Still running... don't just close the DB connection w/o proper shutdown

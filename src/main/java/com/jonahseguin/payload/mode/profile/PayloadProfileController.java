@@ -8,7 +8,6 @@ package com.jonahseguin.payload.mode.profile;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
-import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.base.type.PayloadController;
 import com.jonahseguin.payload.server.PayloadServer;

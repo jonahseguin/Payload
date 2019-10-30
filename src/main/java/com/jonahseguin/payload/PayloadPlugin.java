@@ -5,12 +5,13 @@
 
 package com.jonahseguin.payload;
 
+import com.google.inject.Guice;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.data.PayloadLocal;
-import com.jonahseguin.payload.base.lang.PLang;
-import com.jonahseguin.payload.base.lang.PayloadLangController;
+import com.jonahseguin.payload.base.lang.LangService;
 import com.jonahseguin.payload.base.listener.LockListener;
 import com.jonahseguin.payload.command.PCommandHandler;
 import com.jonahseguin.payload.mode.profile.listener.ProfileListener;
@@ -42,7 +43,8 @@ public class PayloadPlugin extends JavaPlugin {
     private boolean locked = true;
     private PayloadLocal local = new PayloadLocal(this);
     private PCommandHandler commandHandler;
-    private PayloadLangController langController;
+    @Inject
+    private LangService lang;
 
     /**
      * Format a string with arguments
@@ -83,8 +85,11 @@ public class PayloadPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         plugin = this;
-        langController = new PayloadLangController(this);
-        commandHandler = new PCommandHandler(this, langController);
+
+        Injector injector = Guice.createInjector(PayloadAPI.install(this));
+        injector.injectMembers(this);
+
+        commandHandler = new PCommandHandler(this, lang);
 
         this.copyResources();
         if (!this.local.loadPayloadID()) {
@@ -184,8 +189,10 @@ public class PayloadPlugin extends JavaPlugin {
         }
     }
 
-    public void alert(PayloadPermission permission, PLang lang, Object... args) {
-        getLogger().info(langController.get(lang, args));
+    public void alert(PayloadPermission permission, String module, String key, Object... args) {
+        String l = lang.get(module, key, args);
+        getLogger().info(l);
+        getServer().getOnlinePlayers().stream().filter(p -> p.hasPermission(permission.getPermission())).forEach(p -> p.sendMessage(ChatColor.GRAY + PREFIX + l));
     }
 
 }

@@ -5,7 +5,7 @@
 
 package com.jonahseguin.payload.mode.profile.handshake;
 
-import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.PayloadProfileController;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
@@ -16,15 +16,18 @@ import redis.clients.jedis.Jedis;
 @Getter
 public class HandshakeManager<X extends PayloadProfile> {
 
+
     public static final String SOURCE_PAYLOAD_ID = "source-payloadId";
     public static final String TARGET_PAYLOAD_ID = "target-payloadId";
     public static final String CACHE_NAME = "cacheName";
     public static final String PLAYER_UUID = "uniqueId";
 
+    private final PayloadAPI api;
     private final ProfileCache<X> cache;
     private final HandshakeTimeoutTask<X> timeoutTask;
 
-    public HandshakeManager(ProfileCache<X> cache) {
+    public HandshakeManager(PayloadAPI api, ProfileCache<X> cache) {
+        this.api = api;
         this.cache = cache;
         this.timeoutTask = new HandshakeTimeoutTask<>(this);
     }
@@ -46,7 +49,7 @@ public class HandshakeManager<X extends PayloadProfile> {
 
     public void beginHandshake(PayloadProfileController<X> controller, String targetServerPayloadID) {
         // ** Should be called async only **
-        final String thisPayloadId = PayloadPlugin.get().getLocal().getPayloadID();
+        final String thisPayloadId = api.getPayloadID();
 
         Document data = new Document();
         data.append(SOURCE_PAYLOAD_ID, thisPayloadId);
@@ -57,7 +60,7 @@ public class HandshakeManager<X extends PayloadProfile> {
         controller.setHandshakeStartTime(System.currentTimeMillis());
 
         cache.runAsync(() -> {
-            try (Jedis jedis = this.cache.getPayloadDatabase().getResource()) {
+            try (Jedis jedis = this.cache.getDatabase().getJedisResource()) {
                 jedis.publish(HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(), data.toJson());
             } catch (Exception ex) {
                 controller.setTimedOut(true);

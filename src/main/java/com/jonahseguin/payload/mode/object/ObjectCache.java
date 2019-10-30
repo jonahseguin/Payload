@@ -17,8 +17,10 @@ import com.jonahseguin.payload.mode.object.settings.ObjectCacheSettings;
 import lombok.Getter;
 import org.bukkit.plugin.Plugin;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -38,8 +40,7 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
     private final ObjectLayerRedis<X> redisLayer = new ObjectLayerRedis<>(this);
     private final ObjectLayerMongo<X> mongoLayer = new ObjectLayerMongo<>(this);
 
-
-    public ObjectCache(Plugin plugin, PayloadPlugin payloadPlugin, PayloadAPI api, String name, Class<X> payloadClass) {
+    public ObjectCache(@Nonnull Plugin plugin, @Nonnull PayloadPlugin payloadPlugin, @Nonnull PayloadAPI api, @Nonnull String name, @Nonnull Class<X> payloadClass) {
         super(plugin, payloadPlugin, api, name, String.class, payloadClass);
     }
 
@@ -120,21 +121,21 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
     }
 
     @Override
-    public X getFromCache(String key) {
+    public Optional<X> getFromCache(String key) {
         return this.localLayer.get(key);
     }
 
     @Override
-    public X getFromDatabase(String key) {
+    public Optional<X> getFromDatabase(String key) {
         for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
             if (layer.isDatabase()) {
                 X payload = layer.get(key);
                 if (payload != null) {
-                    return payload;
+                    return Optional.of(payload);
                 }
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     @Override
@@ -157,10 +158,8 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
     }
 
     @Override
-    protected X get(String key) {
-        ObjectData data = this.createData(key);
-        PayloadObjectController<X> controller = this.controller(data);
-        return controller.cache();
+    public Optional<X> get(String key) {
+        return Optional.ofNullable(controller(createData(key)).cache());
     }
 
     @Override

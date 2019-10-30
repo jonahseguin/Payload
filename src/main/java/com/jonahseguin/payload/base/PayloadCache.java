@@ -6,8 +6,6 @@
 package com.jonahseguin.payload.base;
 
 import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
@@ -15,19 +13,15 @@ import com.jonahseguin.payload.base.error.DefaultErrorHandler;
 import com.jonahseguin.payload.base.error.PayloadErrorHandler;
 import com.jonahseguin.payload.base.exception.runtime.PayloadRuntimeException;
 import com.jonahseguin.payload.base.failsafe.FailureManager;
-import com.jonahseguin.payload.base.lang.PLang;
-import com.jonahseguin.payload.base.lang.PayloadLangController;
 import com.jonahseguin.payload.base.layer.LayerController;
 import com.jonahseguin.payload.base.settings.CacheSettings;
-import com.jonahseguin.payload.base.state.CacheState;
-import com.jonahseguin.payload.base.state.PayloadTaskExecutor;
 import com.jonahseguin.payload.base.sync.SyncManager;
 import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
 import com.jonahseguin.payload.base.task.PayloadCleanupTask;
 import com.jonahseguin.payload.base.type.*;
 import com.jonahseguin.payload.database.DatabaseDependent;
-import com.jonahseguin.payload.database.PayloadDatabase;
+import com.jonahseguin.payload.database.DatabaseService;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -51,25 +45,22 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     protected final Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
     protected final PayloadPlugin payloadPlugin;
     protected final PayloadAPI api;
-    protected final Injector injector;
 
-    protected String name; // The name for this payload cache
-    protected Class<K> keyType;
-    protected Class<X> payloadClass;
+    protected final String name; // The name for this payload cache
+    protected final Class<K> keyType;
+    protected final Class<X> payloadClass;
 
+    protected final DatabaseService database;
     protected final PayloadLangController langController;
     protected final ExecutorService pool = Executors.newCachedThreadPool();
-    protected final PayloadTaskExecutor<K, X, D> executor;
-    protected final CacheState<K, X, D> state;
     protected final LayerController<K, X, D> layerController = new LayerController<>();
-    protected final FailureManager<K, X, D> failureManager = new FailureManager<>(this);
+    protected final FailureManager<K, X, D> failureManager;
     protected final PayloadAutoSaveTask<K, X, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
     protected final PayloadCleanupTask<K, X, D> cleanupTask = new PayloadCleanupTask<>(this);
     protected final SyncManager<K, X, D> syncManager = new SyncManager<>(this);
     protected boolean debug = false; // Debug for this cache
     protected Set<String> dependingCaches = new HashSet<>();
     protected PayloadErrorHandler errorHandler = new DefaultErrorHandler();
-    protected PayloadDatabase payloadDatabase = null;
     protected PayloadMode mode = PayloadMode.STANDALONE; // Payload Mode for this cache
     protected SyncMode syncMode = SyncMode.UPDATE;
     protected PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
@@ -79,36 +70,25 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * Creates an instance of a PayloadCache
      * This constructor should ONLY be used internally by Payload
      */
-    @Inject
-    public PayloadCache(@Nonnull Plugin plugin, @Nonnull PayloadPlugin payloadPlugin, @Nonnull PayloadAPI api, @Nonnull Injector injector) {
+    public PayloadCache(@Nonnull Plugin plugin, @Nonnull PayloadPlugin payloadPlugin, @Nonnull PayloadAPI api, @Nonnull DatabaseService database, @Nonnull String name, @Nonnull Class<K> keyType, @Nonnull Class<X> payloadClass) {
         Preconditions.checkNotNull(plugin);
         Preconditions.checkNotNull(payloadPlugin);
         Preconditions.checkNotNull(api);
-        Preconditions.checkNotNull(injector);
+        Preconditions.checkNotNull(database);
+        Preconditions.checkNotNull(name);
+        Preconditions.checkNotNull(keyType);
+        Preconditions.checkNotNull(payloadClass);
         this.plugin = plugin;
         this.payloadPlugin = payloadPlugin;
         this.api = api;
-        this.injector = injector.createChildInjector(new CacheModule<>(this));
-        this.executor = new PayloadTaskExecutor<>(this);
-        this.state = new CacheState<>(this);
+        this.database = database;
+        this.name = name;
+        this.keyType = keyType;
+        this.payloadClass = payloadClass;
         this.langController = new PayloadLangController(payloadPlugin);
+        this.failureManager = new FailureManager<>(this, payloadPlugin);
 
         this.langController.loadFromFile(name.toLowerCase().replaceAll(" ", "_") + ".yml");
-    }
-
-    public void name(@Nonnull String name) {
-        Preconditions.checkNotNull(name);
-        this.name = name;
-    }
-
-    public void keyType(@Nonnull Class<K> keyType) {
-        Preconditions.checkNotNull(keyType);
-        this.keyType = keyType;
-    }
-
-    public void payloadType(@Nonnull Class<X> payloadClass) {
-        Preconditions.checkNotNull(payloadClass);
-        this.payloadClass = payloadClass;
     }
 
     /**
@@ -139,15 +119,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     }
 
     /**
-     * Check if the cache is locked (joinable?)
-     *
-     * @return Boolean locked
-     */
-    public final boolean isLocked() {
-        return this.state.isLocked() || payloadPlugin.isLocked();
-    }
-
-    /**
      * Start the Cache
      * Should be called by the external plugin during startup after the cache has been created
      * @return Boolean successful
@@ -155,7 +126,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     public final boolean start() {
         if (this.isRunning()) return true;
         if (this.instantiator instanceof NullPayloadInstantiator) {
-            this.getState().lock();
             throw new PayloadRuntimeException("Instantiator for cache " + this.getName() + " cannot be Null!  Call withInstantiator() before starting!");
         }
         this.init();
@@ -493,7 +463,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param update The newer version of said payload to replace the values of {@param payload} with.
      */
     public void updatePayloadFromNewer(X payload, X update) {
-        this.payloadDatabase.getDatastore().getMapper().getMappedClass(this.payloadClass).getPersistenceFields().forEach(mf -> {
+        this.database.getDatastore().getMapper().getMappedClass(this.payloadClass).getPersistenceFields().forEach(mf -> {
             mf.setFieldValue(payload, mf.getFieldValue(update));
         });
     }
@@ -503,7 +473,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     @Override
     public void onMongoDbDisconnect() {
-        this.getPayloadDatabase().getState().setMongoConnected(false);
+
     }
 
     /**
@@ -511,7 +481,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     @Override
     public void onRedisDisconnect() {
-        this.getPayloadDatabase().getState().setRedisConnected(false);
+
     }
 
     /**
@@ -519,7 +489,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     @Override
     public void onMongoDbReconnect() {
-        this.getPayloadDatabase().getState().setMongoConnected(true);
+
     }
 
     /**
@@ -527,7 +497,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     @Override
     public void onRedisReconnect() {
-        this.getPayloadDatabase().getState().setRedisConnected(true);
+
     }
 
     /**
@@ -535,12 +505,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     @Override
     public void onMongoDbInitConnect() {
-        this.getPayloadDatabase().getState().setMongoConnected(true);
-        this.getPayloadDatabase().getState().setMongoInitConnect(true);
-        if (this.getPayloadDatabase().getState().isDatabaseConnected()) {
-            // Both connected
-            this.getState().unlock();
-        }
+
     }
 
     /**
@@ -548,8 +513,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     @Override
     public void onRedisInitConnect() {
-        this.getPayloadDatabase().getState().setRedisConnected(true);
-        this.getPayloadDatabase().getState().setRedisInitConnect(true);
+
     }
 
     /**

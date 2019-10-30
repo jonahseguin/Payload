@@ -7,7 +7,6 @@ package com.jonahseguin.payload.base.failsafe;
 
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadController;
 import com.jonahseguin.payload.base.type.PayloadData;
@@ -22,14 +21,16 @@ import java.util.*;
 @Getter
 public class FailureManager<K, X extends Payload<K>, D extends PayloadData> implements Runnable {
 
+    private final PayloadPlugin payloadPlugin;
     private final Map<D, FailedPayload<X, D>> failures = new HashMap<>();
     private final PayloadCache<K, X, D> cache;
 
     private boolean running = false;
     private BukkitTask task = null;
 
-    public FailureManager(PayloadCache<K, X, D> cache) {
+    public FailureManager(PayloadCache<K, X, D> cache, PayloadPlugin payloadPlugin) {
         this.cache = cache;
+        this.payloadPlugin = payloadPlugin;
     }
 
     public void start() {
@@ -98,7 +99,7 @@ public class FailureManager<K, X extends Payload<K>, D extends PayloadData> impl
             // Special case for ProfileData
             if (failedPayload.getData() instanceof ProfileData) {
                 ProfileData profileData = (ProfileData) failedPayload.getData();
-                Player player = PayloadPlugin.get().getServer().getPlayer(profileData.getUniqueId());
+                Player player = payloadPlugin.getServer().getPlayer(profileData.getUniqueId());
                 if (player != null) {
                     failedPayload.setPlayer(player);
                     player.sendMessage(cache.getLangController().get(PLang.CACHE_FAILURE_PROFILE_ATTEMPT, cache.getName()));
@@ -136,7 +137,7 @@ public class FailureManager<K, X extends Payload<K>, D extends PayloadData> impl
 
                 if (failedPayload.getData() instanceof ProfileData) {
                     ProfileData profileData = (ProfileData) failedPayload.getData();
-                    Player player = PayloadPlugin.get().getServer().getPlayer(profileData.getUniqueId());
+                    Player player = payloadPlugin.getServer().getPlayer(profileData.getUniqueId());
                     if (player != null && player.isOnline()) {
                         player.sendMessage(cache.getLangController().get(PLang.CACHE_FAILURE_PROFILE_ATTEMPT_FAILURE, cache.getName(), cache.getSettings().getFailureRetryIntervalSeconds() + ""));
                     } else {

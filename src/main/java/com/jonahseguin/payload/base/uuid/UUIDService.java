@@ -24,7 +24,8 @@ public class UUIDService {
     private final BiMap<UUID, String> cache = HashBiMap.create();
 
     @Inject
-    public UUIDService(PayloadPlugin payloadPlugin) {
+    public UUIDService(@Nonnull PayloadPlugin payloadPlugin) {
+        Preconditions.checkNotNull(payloadPlugin);
         this.payloadPlugin = payloadPlugin;
     }
 
@@ -44,15 +45,18 @@ public class UUIDService {
         return Optional.ofNullable(cache.get(uuid));
     }
 
-    public boolean isCached(UUID uuid) {
+    public boolean isCached(@Nonnull UUID uuid) {
+        Preconditions.checkNotNull(uuid);
         return cache.containsKey(uuid);
     }
 
-    public boolean isCached(String name) {
+    public boolean isCached(@Nonnull String name) {
+        Preconditions.checkNotNull(name);
         return cache.inverse().containsKey(name);
     }
 
-    public Optional<String> getNameFromOfflinePlayer(UUID uuid) {
+    public Optional<String> getNameFromOfflinePlayer(@Nonnull UUID uuid) {
+        Preconditions.checkNotNull(uuid);
         OfflinePlayer offlinePlayer = payloadPlugin.getServer().getOfflinePlayer(uuid);
         if (offlinePlayer != null) {
             return Optional.ofNullable(offlinePlayer.getName());

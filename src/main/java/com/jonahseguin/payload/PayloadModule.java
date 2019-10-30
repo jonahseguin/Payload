@@ -9,7 +9,8 @@ import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.jonahseguin.payload.base.CacheModule;
 import com.jonahseguin.payload.base.data.PayloadLocal;
-import com.jonahseguin.payload.base.lang.PayloadLangController;
+import com.jonahseguin.payload.base.lang.LangService;
+import com.jonahseguin.payload.base.lang.PayloadLangService;
 import com.jonahseguin.payload.base.uuid.UUIDService;
 import com.jonahseguin.payload.command.PCommandHandler;
 import com.jonahseguin.payload.database.DatabaseModule;
@@ -34,12 +35,12 @@ public class PayloadModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(PayloadPlugin.class).toInstance(payloadPlugin);
-        bind(PayloadLangController.class).toInstance(payloadPlugin.getLangController());
         bind(Plugin.class).toInstance(plugin);
         bind(PayloadAPI.class).toInstance(api);
         bind(PCommandHandler.class).toInstance(payloadPlugin.getCommandHandler());
         bind(PayloadLocal.class).toInstance(payloadPlugin.getLocal());
         bind(UUIDService.class);
+        bind(LangService.class).to(PayloadLangService.class);
 
         install(new DatabaseModule(api, payloadPlugin, plugin));
         install(new CacheModule());

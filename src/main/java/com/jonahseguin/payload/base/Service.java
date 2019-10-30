@@ -5,13 +5,10 @@
 
 package com.jonahseguin.payload.base;
 
-import com.google.inject.AbstractModule;
+public interface Service {
 
-public class CacheModule extends AbstractModule {
+    boolean start();
 
-    @Override
-    protected void configure() {
-        bind(CacheService.class).to(DatabaseCacheService.class);
-    }
+    boolean shutdown();
 
 }

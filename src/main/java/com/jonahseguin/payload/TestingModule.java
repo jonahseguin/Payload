@@ -17,13 +17,13 @@ public class TestingModule extends AbstractModule {
 
     private final Testing testing;
 
-    public TestingModule(Testing testing) {
+    TestingModule(Testing testing) {
         this.testing = testing;
     }
 
     @Override
     protected void configure() {
-
+        bind(Testing.class).toInstance(testing);
     }
 
     @Provides @Singleton

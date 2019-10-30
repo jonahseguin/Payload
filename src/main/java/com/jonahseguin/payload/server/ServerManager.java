@@ -5,8 +5,6 @@
 
 package com.jonahseguin.payload.server;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.database.PayloadDatabase;
@@ -17,7 +15,6 @@ import redis.clients.jedis.Jedis;
 import java.util.concurrent.*;
 
 @Getter
-@Singleton
 public class ServerManager implements Runnable {
 
     public static final long ASSUME_OFFLINE_SECONDS = 60;
@@ -33,7 +30,6 @@ public class ServerManager implements Runnable {
     private ServerSubscriber subscriber = null;
     private BukkitTask pingTask = null;
 
-    @Inject
     public ServerManager(PayloadDatabase database, PayloadAPI api, PayloadPlugin payloadPlugin) {
         this.database = database;
         this.payloadPlugin = payloadPlugin;

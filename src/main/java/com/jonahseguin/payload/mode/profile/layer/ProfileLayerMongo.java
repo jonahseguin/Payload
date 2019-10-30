@@ -6,7 +6,6 @@
 package com.jonahseguin.payload.mode.profile.layer;
 
 import com.jonahseguin.payload.PayloadAPI;
-import com.jonahseguin.payload.base.lang.PLang;
 import com.jonahseguin.payload.base.type.PayloadQueryModifier;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
