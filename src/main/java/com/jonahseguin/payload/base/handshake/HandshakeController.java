@@ -1,0 +1,62 @@
+package com.jonahseguin.payload.base.handshake;
+
+import com.google.inject.Inject;
+import com.jonahseguin.payload.database.DatabaseService;
+import lombok.Getter;
+import redis.clients.jedis.Jedis;
+
+import javax.annotation.Nonnull;
+
+@Getter
+public abstract class HandshakeController {
+
+    @Inject
+    protected HandshakeService handshakeService;
+    @Inject
+    protected DatabaseService database;
+    protected HandshakeListener listener;
+    protected HandshakeHandler handler;
+
+    public HandshakeController() {
+
+    }
+
+    public abstract String channelPublish();
+
+    public abstract String channelReply();
+
+    public abstract void load(@Nonnull HandshakeData data);
+
+    public abstract void write(@Nonnull HandshakeData data);
+
+    /**
+     * Called when receiving this handshake from another server, before the reply is sent.  Async.
+     */
+    public abstract void receive();
+
+    void setHandler(HandshakeHandler handshakeHandler) {
+        this.handler = handshakeHandler;
+    }
+
+    void executeHandler(HandshakeData data) {
+        if (handler != null && handler.callback != null) {
+            handler.callback.callback(this);
+        }
+    }
+
+    void listen() {
+        listener = new HandshakeListener(handshakeService, this);
+        try (Jedis subscriber = database.getJedisResource()) {
+            subscriber.subscribe(listener, channelPublish(), channelReply());
+        } catch (Exception ex) {
+            database.getErrorService().capture(ex, "Error during listening for handshake " + this.getClass().getSimpleName());
+        }
+    }
+
+    void stopListening() {
+        if (listener != null) {
+            listener.unsubscribe();
+        }
+    }
+
+}
