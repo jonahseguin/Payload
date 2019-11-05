@@ -476,7 +476,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             x.setPayloadId(api.getPayloadID());
             getNetworked(x).ifPresent(np -> {
                 if (np.isOnlineThisServer()) {
-                    np.setLastSeenServer(serverService.getThisServer());
+                    np.setLastSeenServer(serverService.getThisServer().getName());
                     getNetworkService().save(np);
                 }
             });

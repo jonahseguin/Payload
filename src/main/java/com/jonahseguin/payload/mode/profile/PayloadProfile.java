@@ -6,7 +6,6 @@
 package com.jonahseguin.payload.mode.profile;
 
 import com.google.inject.Inject;
-import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.mode.profile.util.MsgBuilder;
@@ -20,8 +19,8 @@ import org.bson.types.ObjectId;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
+import javax.annotation.Nonnull;
 import java.util.UUID;
 
 // The implementing class of this abstract class must add an @Entity annotation (from MongoDB) with a collection name!
@@ -33,10 +32,7 @@ import java.util.UUID;
 })
 public abstract class PayloadProfile implements Payload<UUID> {
 
-    protected transient final PayloadAPI api;
-    protected transient final PayloadPlugin payloadPlugin;
-    protected transient final Plugin plugin;
-    protected transient final ProfileCache cache;
+    protected transient final ProfileService<PayloadProfile> cache;
 
     @Id
     protected ObjectId objectId = new ObjectId();
@@ -58,23 +54,21 @@ public abstract class PayloadProfile implements Payload<UUID> {
     protected transient long handshakeStartTimestamp = 0;
 
     @Inject
-    public PayloadProfile(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ProfileCache cache) {
-        this.api = api;
-        this.payloadPlugin = payloadPlugin;
-        this.plugin = plugin;
+    public PayloadProfile(ProfileService<PayloadProfile> cache) {
         this.cache = cache;
+        this.payloadId = cache.getApi().getPayloadID();
     }
 
-    public PayloadProfile(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ProfileCache cache, String username, UUID uniqueId, String loginIp) {
-        this(api, payloadPlugin, plugin, cache);
+    public PayloadProfile(ProfileService<PayloadProfile> cache, String username, UUID uniqueId, String loginIp) {
+        this(cache);
         this.username = username;
         this.uuid = uniqueId;
         this.uniqueId = uniqueId.toString();
         this.loginIp = loginIp;
     }
 
-    public PayloadProfile(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ProfileCache cache, ProfileData data) {
-        this(api, payloadPlugin, plugin, cache, data.getUsername(), data.getUniqueId(), data.getIp());
+    public PayloadProfile(ProfileService<PayloadProfile> cache, ProfileData data) {
+        this(cache, data.getUsername(), data.getUniqueId(), data.getIp());
     }
 
     @PostLoad
@@ -90,6 +84,12 @@ public abstract class PayloadProfile implements Payload<UUID> {
             return seconds < 10;
         }
         return false;
+    }
+
+    @Nonnull
+    @Override
+    public ProfileService<PayloadProfile> getCache() {
+        return cache;
     }
 
     public UUID getUUID() {
@@ -176,7 +176,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
         }
     }
 
-    public void msg(String msg, String... args) {
+    public void msg(String msg, Object... args) {
         this.msg(PayloadPlugin.format(msg, args));
     }
 
@@ -211,7 +211,6 @@ public abstract class PayloadProfile implements Payload<UUID> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void save() {
         this.cache.save(this);
     }

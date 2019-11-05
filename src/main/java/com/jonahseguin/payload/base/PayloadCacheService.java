@@ -5,6 +5,7 @@
 
 package com.jonahseguin.payload.base;
 
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.error.ErrorService;
 import com.jonahseguin.payload.base.network.NetworkPayload;
@@ -115,5 +116,8 @@ public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkP
     void addDepend(@Nonnull PayloadCache cache);
 
     boolean isDependentOn(@Nonnull PayloadCache cache);
+
+    @Nonnull
+    PayloadAPI getApi();
 
 }

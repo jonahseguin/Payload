@@ -6,41 +6,30 @@
 package com.jonahseguin.payload.mode.object;
 
 import com.google.inject.Inject;
-import com.jonahseguin.payload.PayloadAPI;
-import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
 import dev.morphia.annotations.Id;
 import lombok.Getter;
 import lombok.Setter;
 import org.bson.types.ObjectId;
-import org.bukkit.plugin.Plugin;
+
+import javax.annotation.Nonnull;
 
 @Getter
 @Setter
 public abstract class PayloadObject implements Payload<String> {
 
-    protected transient final PayloadAPI api;
-    protected transient final PayloadPlugin payloadPlugin;
-    protected transient final Plugin plugin;
-    protected transient final ObjectCache cache;
+    protected transient final ObjectService<PayloadObject> cache;
 
-    private String payloadId;
+    protected String payloadId;
     @Id
-    private ObjectId objectId = new ObjectId();
-    private long cachedTimestamp = System.currentTimeMillis();
-    private transient long handshakeStartTimestamp = 0;
+    protected ObjectId objectId = new ObjectId();
+    protected transient long cachedTimestamp = System.currentTimeMillis();
+    protected transient long handshakeStartTimestamp = 0;
 
     @Inject
-    public PayloadObject(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ObjectCache cache) {
-        this.api = api;
-        this.payloadPlugin = payloadPlugin;
-        this.plugin = plugin;
+    public PayloadObject(ObjectService<PayloadObject> cache) {
         this.cache = cache;
-    }
-
-    public PayloadObject(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ObjectCache cache, ObjectId objectId) {
-        this(api, payloadPlugin, plugin, cache);
-        this.objectId = objectId;
+        this.payloadId = cache.getApi().getPayloadID();
     }
 
     @Override
@@ -76,6 +65,12 @@ public abstract class PayloadObject implements Payload<String> {
     @Override
     public void save() {
         this.cache.save(this);
+    }
+
+    @Nonnull
+    @Override
+    public ObjectService<PayloadObject> getCache() {
+        return cache;
     }
 
     @Override
