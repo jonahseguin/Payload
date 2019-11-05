@@ -65,7 +65,7 @@ public class PayloadDatabaseService implements DatabaseService {
     private PayloadRedisMonitor redisMonitor = null;
 
     @Inject
-    public PayloadDatabaseService(PayloadPlugin payloadPlugin, PayloadAPI api, Plugin plugin, Injector injector, ServerService serverService, @Database String name, ErrorService error) {
+    public PayloadDatabaseService(PayloadPlugin payloadPlugin, PayloadAPI api, Plugin plugin, Injector injector, ServerService serverService, @Database String name, @Database ErrorService error) {
         this.payloadPlugin = payloadPlugin;
         this.plugin = plugin;
         this.serverService = serverService;

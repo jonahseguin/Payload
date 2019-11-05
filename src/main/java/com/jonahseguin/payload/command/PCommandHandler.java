@@ -6,6 +6,7 @@
 package com.jonahseguin.payload.command;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.jonahseguin.lang.LangDefinitions;
 import com.jonahseguin.lang.LangModule;
@@ -32,6 +33,7 @@ public class PCommandHandler implements CommandExecutor, LangModule {
     private final LangDefinitions lang;
     private final Map<String, PayloadCommand> commands = new HashMap<>();
 
+    @Inject
     public PCommandHandler(@Nonnull PayloadPlugin plugin, @Nonnull LangService langService, @Nonnull Injector injector) {
         Preconditions.checkNotNull(plugin);
         Preconditions.checkNotNull(langService);

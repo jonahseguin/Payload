@@ -1,5 +1,11 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.command.commands;
 
+import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
@@ -9,6 +15,7 @@ public class CmdDebug implements PayloadCommand {
 
     private final PayloadPlugin payloadPlugin;
 
+    @Inject
     public CmdDebug(PayloadPlugin payloadPlugin) {
         this.payloadPlugin = payloadPlugin;
     }

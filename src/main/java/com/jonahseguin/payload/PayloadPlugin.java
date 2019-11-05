@@ -39,8 +39,9 @@ public class PayloadPlugin extends JavaPlugin {
     private final PayloadAPI api = new PayloadAPI(this);
     private static PayloadPlugin plugin;
     private Injector injector = null;
-    private boolean locked = true;
+    private boolean locked = false;
     private PayloadLocal local = new PayloadLocal(this);
+    @Inject
     private PCommandHandler commandHandler;
     @Inject
     private LangService lang;
@@ -85,10 +86,8 @@ public class PayloadPlugin extends JavaPlugin {
     public void onEnable() {
         plugin = this;
 
-        Injector injector = Guice.createInjector(PayloadAPI.install(this, "PayloadDatabase"));
+        injector = Guice.createInjector(PayloadAPI.install(this, "PayloadDatabase"));
         injector.injectMembers(this);
-
-        commandHandler = new PCommandHandler(this, lang, injector);
 
         this.copyResources();
         if (!this.local.loadPayloadID()) {

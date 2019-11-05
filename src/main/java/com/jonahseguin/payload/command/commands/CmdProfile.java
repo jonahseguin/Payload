@@ -5,6 +5,7 @@
 
 package com.jonahseguin.payload.command.commands;
 
+import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.PayloadPermission;
@@ -23,6 +24,7 @@ public class CmdProfile implements PayloadCommand {
 
     private final PayloadAPI api;
 
+    @Inject
     public CmdProfile(PayloadAPI api) {
         this.api = api;
     }

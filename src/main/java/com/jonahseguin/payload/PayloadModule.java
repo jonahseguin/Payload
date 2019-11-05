@@ -9,8 +9,6 @@ import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.jonahseguin.payload.base.CacheService;
 import com.jonahseguin.payload.base.DatabaseCacheService;
-import com.jonahseguin.payload.base.lang.LangService;
-import com.jonahseguin.payload.base.lang.PayloadLangService;
 import com.jonahseguin.payload.base.uuid.UUIDService;
 import com.jonahseguin.payload.database.DatabaseModule;
 import org.bukkit.plugin.Plugin;
@@ -31,11 +29,10 @@ public class PayloadModule extends AbstractModule {
 
     @Override
     protected void configure() {
+        bind(Plugin.class).toInstance(plugin);
         install(new PayloadCoreModule(PayloadPlugin.getPlugin(), PayloadPlugin.getPlugin().getApi()));
         install(databaseModule);
-        bind(Plugin.class).toInstance(plugin);
         bind(UUIDService.class);
-        bind(LangService.class).to(PayloadLangService.class);
         bind(CacheService.class).to(DatabaseCacheService.class);
     }
 
