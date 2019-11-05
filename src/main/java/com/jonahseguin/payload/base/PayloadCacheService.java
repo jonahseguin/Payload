@@ -8,6 +8,7 @@ package com.jonahseguin.payload.base;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.error.ErrorService;
+import com.jonahseguin.payload.base.lang.LangService;
 import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.network.NetworkService;
 import com.jonahseguin.payload.base.settings.CacheSettings;
@@ -126,4 +127,14 @@ public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkP
     @Nonnull
     <T> Future<T> runAsync(@Nonnull Callable<T> callable);
 
+    @Nonnull
+    LangService getLang();
+
+    boolean isDebug();
+
+    void setDebug(boolean debug);
+
+    void alert(@Nonnull PayloadPermission required, @Nonnull String msg);
+
 }
+

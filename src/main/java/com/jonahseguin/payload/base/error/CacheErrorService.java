@@ -8,7 +8,7 @@ package com.jonahseguin.payload.base.error;
 import com.google.inject.Inject;
 import com.jonahseguin.lang.LangDefinitions;
 import com.jonahseguin.lang.LangModule;
-import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.PayloadCacheService;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.LangService;
 import com.jonahseguin.payload.base.network.NetworkPayload;
@@ -20,11 +20,11 @@ import javax.annotation.Nullable;
 
 public class CacheErrorService<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> implements ErrorService, LangModule {
 
-    protected final PayloadCache<K, X, N, D> cache;
+    protected final PayloadCacheService<K, X, N, D> cache;
     protected final LangService lang;
 
     @Inject
-    public CacheErrorService(PayloadCache<K, X, N, D> cache, LangService lang) {
+    public CacheErrorService(PayloadCacheService<K, X, N, D> cache, LangService lang) {
         this.cache = cache;
         this.lang = lang;
         cache.getLang().register(this);

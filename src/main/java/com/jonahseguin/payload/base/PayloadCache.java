@@ -245,6 +245,11 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
         return name;
     }
 
+    @Override
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+    }
+
     /**
      * Internal method used by payload to provide a server-specific name for this cache, if server-specific caching is enabled.
      * This is primarily used by Redis layers for naming the redis key.

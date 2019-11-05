@@ -114,9 +114,9 @@ public abstract class PayloadProfile implements Payload<UUID> {
         this.player = null;
     }
 
-    abstract void init();
+    protected abstract void init();
 
-    abstract void uninit();
+    protected abstract void uninit();
 
     public boolean isOnline() {
         if (this.player == null) {
