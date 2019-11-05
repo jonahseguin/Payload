@@ -6,7 +6,6 @@
 package com.jonahseguin.payload.base.network;
 
 import com.google.inject.Inject;
-import com.jonahseguin.payload.server.PayloadServer;
 import com.jonahseguin.payload.server.ServerService;
 import dev.morphia.annotations.Embedded;
 import dev.morphia.annotations.Entity;
@@ -30,25 +29,25 @@ public abstract class NetworkPayload<K> {
     protected Date lastSaved = new Date();
     protected boolean loaded = false;
     @Embedded
-    protected Set<PayloadServer> loadedServers = new HashSet<>();
-    protected PayloadServer mostRecentServer;
+    protected Set<String> loadedServers = new HashSet<>();
+    protected String mostRecentServer;
 
     @Inject
     public NetworkPayload(ServerService serverService) {
         this.serverService = serverService;
-        this.mostRecentServer = serverService.getThisServer();
+        this.mostRecentServer = serverService.getThisServer().getName();
     }
 
     public NetworkPayload(ServerService serverService, K identifier, ObjectId objectId) {
         this.serverService = serverService;
         this.identifier = identifier;
         this.objectId = objectId;
-        this.mostRecentServer = serverService.getThisServer();
+        this.mostRecentServer = serverService.getThisServer().getName();
     }
 
     public boolean isThisMostRelevantServer() {
         if (mostRecentServer != null) {
-            return mostRecentServer.getName().equalsIgnoreCase(serverService.getThisServer().getName()) && loadedServers.contains(serverService.getThisServer()) && loaded;
+            return mostRecentServer.equalsIgnoreCase(serverService.getThisServer().getName()) && loadedServers.contains(serverService.getThisServer().getName()) && loaded;
         }
         return false;
     }

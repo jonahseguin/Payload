@@ -56,6 +56,7 @@ public class ObjectHandshake<X extends PayloadObject> extends Handshake {
         Optional<X> o = cache.getFromCache(identifier);
         if (o.isPresent()) {
             X object = o.get();
+            object.setHandshakeStartTimestamp(System.currentTimeMillis());
             if (!cache.save(object)) {
                 cache.getErrorService().capture("Failed to save during handshake for object " + object.getIdentifier());
             }

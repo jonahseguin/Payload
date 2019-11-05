@@ -82,6 +82,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
         this.uuid = UUID.fromString(this.uniqueId);
     }
 
+    @Override
     public boolean hasValidHandshake() {
         if (handshakeStartTimestamp > 0) {
             long ago = System.currentTimeMillis() - handshakeStartTimestamp;

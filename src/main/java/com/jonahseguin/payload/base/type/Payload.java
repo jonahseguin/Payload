@@ -76,4 +76,6 @@ public interface Payload<K> {
 
     ObjectId getObjectId();
 
+    boolean hasValidHandshake();
+
 }

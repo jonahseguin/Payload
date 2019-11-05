@@ -20,18 +20,18 @@ public class NetworkObject extends NetworkPayload<String> {
 
     public void markLoaded() {
         loaded = true;
-        loadedServers.add(serverService.getThisServer());
+        loadedServers.add(serverService.getThisServer().getName());
         lastCached = new Date();
-        mostRecentServer = serverService.getThisServer();
+        mostRecentServer = serverService.getThisServer().getName();
     }
 
     public void markUnloaded() {
-        loadedServers.remove(serverService.getThisServer());
+        loadedServers.remove(serverService.getThisServer().getName());
         loaded = loadedServers.size() > 0;
     }
 
     public void markSaved() {
-        mostRecentServer = serverService.getThisServer();
+        mostRecentServer = serverService.getThisServer().getName();
         lastSaved = new Date();
     }
 

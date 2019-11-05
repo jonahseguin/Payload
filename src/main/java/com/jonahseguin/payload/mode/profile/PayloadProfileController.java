@@ -9,6 +9,7 @@ import com.google.common.base.Preconditions;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.handshake.HandshakeHandler;
 import com.jonahseguin.payload.base.type.PayloadController;
+import com.jonahseguin.payload.server.PayloadServer;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.ChatColor;
@@ -164,8 +165,9 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         NetworkProfile networkProfile = null;
         if (oNP.isPresent()) {
             networkProfile = oNP.get();
-            if (networkProfile.isOnline() && !networkProfile.getLastSeenServer().getName().equalsIgnoreCase(cache.getServerService().getThisServer().getName())) {
-                if (networkProfile.getLastSeenServer().isOnline()) {
+            if (networkProfile.isOnlineThisServer()) {
+                PayloadServer server = cache.getServerService().get(networkProfile.getLastSeenServer()).orElse(null);
+                if (server != null && server.isOnline()) {
                     // Handshake
                     HandshakeHandler<ProfileHandshake<X>> handshake = cache.getHandshakeService().publish(new ProfileHandshake<>(cache, data.getUniqueId()));
                     Optional<ProfileHandshake<X>> o = handshake.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
@@ -198,6 +200,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             NetworkProfile finalNetworkProfile = networkProfile;
             cache.runAsync(() -> cache.getNetworkService().save(finalNetworkProfile));
         }
+
         if (payload != null) {
             if (!payload.getUsername().equalsIgnoreCase(data.getUsername())) {
                 cache.getErrorService().debug("Updated username: " + payload.getUsername() + " to " + data.getUsername());
@@ -205,9 +208,9 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 if (!cache.save(payload)) {
                     cache.getErrorService().capture("Error saving Payload during caching after username update: " + payload.getUsername());
                 }
-                if (login || cache.getSettings().isAlwaysCacheOnLoadNetworkNode()) {
-                    cache.cache(payload);
-                }
+            }
+            if (login || cache.getSettings().isAlwaysCacheOnLoadNetworkNode()) {
+                cache.cache(payload);
             }
         }
         return Optional.ofNullable(payload);

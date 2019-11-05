@@ -28,6 +28,7 @@ public abstract class PayloadObject implements Payload<String> {
     @Id
     private ObjectId objectId = new ObjectId();
     private long cachedTimestamp = System.currentTimeMillis();
+    private transient long handshakeStartTimestamp = 0;
 
     @Inject
     public PayloadObject(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ObjectCache cache) {
@@ -40,6 +41,16 @@ public abstract class PayloadObject implements Payload<String> {
     public PayloadObject(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ObjectCache cache, ObjectId objectId) {
         this(api, payloadPlugin, plugin, cache);
         this.objectId = objectId;
+    }
+
+    @Override
+    public boolean hasValidHandshake() {
+        if (handshakeStartTimestamp > 0) {
+            long ago = System.currentTimeMillis() - handshakeStartTimestamp;
+            long seconds = ago / 1000;
+            return seconds < 10;
+        }
+        return false;
     }
 
     @Override
