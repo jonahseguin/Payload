@@ -35,7 +35,6 @@ import java.net.InetAddress;
 @Getter
 public class PayloadPlugin extends JavaPlugin {
 
-    public static final String PREFIX = "[Payload] ";
     private final PayloadAPI api = new PayloadAPI(this);
     private static PayloadPlugin plugin;
     private Injector injector = null;
@@ -190,7 +189,12 @@ public class PayloadPlugin extends JavaPlugin {
     public void alert(PayloadPermission permission, String module, String key, Object... args) {
         String l = lang.get(module, key, args);
         getLogger().info(l);
-        getServer().getOnlinePlayers().stream().filter(p -> p.hasPermission(permission.getPermission())).forEach(p -> p.sendMessage(ChatColor.GRAY + PREFIX + l));
+        getServer().getOnlinePlayers().stream().filter(p -> p.hasPermission(permission.getPermission())).forEach(p -> p.sendMessage(l));
+    }
+
+    public void alert(PayloadPermission permission, String msg) {
+        getLogger().info(msg);
+        getServer().getOnlinePlayers().stream().filter(p -> p.hasPermission(permission.getPermission())).forEach(p -> p.sendMessage(msg));
     }
 
 }
