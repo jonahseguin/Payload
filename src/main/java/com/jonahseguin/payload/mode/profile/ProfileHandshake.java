@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.profile;
 
 import com.google.common.base.Preconditions;
@@ -29,12 +34,12 @@ public class ProfileHandshake<X extends PayloadProfile> extends Handshake {
 
     @Override
     public String channelPublish() {
-        return "payload-profile-handshake";
+        return "payload-profile-handshake-" + cache.getName();
     }
 
     @Override
     public String channelReply() {
-        return "payload-profile-handshake-reply";
+        return "payload-profile-handshake-" + cache.getName() + "-reply";
     }
 
     @Override
@@ -60,13 +65,8 @@ public class ProfileHandshake<X extends PayloadProfile> extends Handshake {
     }
 
     @Override
-    public boolean shouldAccept(@Nonnull HandshakeData data) {
-        String uuidString = data.getDocument().getString(KEY_UUID);
-        if (uuidString != null) {
-            UUID uuid = UUID.fromString(uuidString);
-            Optional<X> o = cache.getLocalStore().get(uuid);
-            return o.isPresent() && o.get().isOnline();
-        }
-        return false;
+    public boolean shouldAccept() {
+        Optional<X> o = cache.getLocalStore().get(uuid);
+        return o.isPresent() && o.get().isOnline();
     }
 }

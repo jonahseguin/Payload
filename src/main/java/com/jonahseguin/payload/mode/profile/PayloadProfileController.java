@@ -167,8 +167,8 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             if (networkProfile.isOnline() && !networkProfile.getLastSeenServer().getName().equalsIgnoreCase(cache.getServerService().getThisServer().getName())) {
                 if (networkProfile.getLastSeenServer().isOnline()) {
                     // Handshake
-                    HandshakeHandler<ProfileHandshake<X>> handshake = cache.getHandshakeService().publish(new ProfileHandshake<>(cache));
-                    Optional<ProfileHandshake<X>> o = handshake.waitForReply(10);
+                    HandshakeHandler<ProfileHandshake<X>> handshake = cache.getHandshakeService().publish(new ProfileHandshake<>(cache, data.getUniqueId()));
+                    Optional<ProfileHandshake<X>> o = handshake.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
                     if (o.isPresent()) {
                         load(false);
                     } else {

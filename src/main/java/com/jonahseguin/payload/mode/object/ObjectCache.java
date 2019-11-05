@@ -7,6 +7,7 @@ package com.jonahseguin.payload.mode.object;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Injector;
+import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.CacheModule;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.store.PayloadStore;
@@ -84,7 +85,7 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
         if (!mongoStore.save(payload)) {
             success = false;
         }
-        if (success) {
+        if (success && mode.equals(PayloadMode.NETWORK_NODE)) {
             Optional<NetworkObject> o = networkService.get(payload);
             if (o.isPresent()) {
                 NetworkObject no = o.get();

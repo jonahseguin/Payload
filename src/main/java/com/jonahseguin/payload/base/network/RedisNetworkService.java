@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base.network;
 
 import com.google.common.base.Preconditions;
@@ -19,6 +24,7 @@ public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPaylo
     private final DatabaseService database;
     private final Injector injector;
     private final Class<N> type;
+    private boolean running = false;
 
     @Inject
     public RedisNetworkService(PayloadCache<K, X, N, D> cache, Class<N> type, DatabaseService database, Injector injector) {
@@ -49,7 +55,7 @@ public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPaylo
         Preconditions.checkNotNull(payload);
         try (Jedis jedis = database.getJedisResource()) {
             String json = jedis.hget(cache.getServerSpecificName(), cache.keyToString(payload.getIdentifier()));
-            if (json != null) {
+            if (json != null && json.length() > 0) {
                 BasicDBObject dbObject = BasicDBObject.parse(json);
                 N np = database.getMorphia().fromDBObject(database.getDatastore(), type, dbObject);
                 return Optional.ofNullable(np);
@@ -86,6 +92,7 @@ public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPaylo
             String json = object.toJson();
             try (Jedis jedis = database.getJedisResource()) {
                 jedis.hset(cache.getServerSpecificName(), cache.keyToString(payload.getIdentifier()), json);
+                return true;
             } catch (Exception ex) {
                 cache.getErrorService().capture(ex, "Error checking if hexists() in Redis Network Service");
             }
@@ -110,16 +117,18 @@ public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPaylo
 
     @Override
     public boolean start() {
+        running = true;
         return true;
     }
 
     @Override
     public boolean shutdown() {
+        running = false;
         return true;
     }
 
     @Override
     public boolean isRunning() {
-        return true;
+        return running;
     }
 }

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base.handshake;
 
 import com.google.inject.Inject;
@@ -35,7 +40,11 @@ public abstract class Handshake {
      */
     public abstract void receive();
 
-    public abstract boolean shouldAccept(@Nonnull HandshakeData data);
+    public abstract boolean shouldAccept();
+
+    public boolean shouldReply() {
+        return true;
+    }
 
     void setHandler(HandshakeHandler handshakeHandler) {
         this.handler = handshakeHandler;

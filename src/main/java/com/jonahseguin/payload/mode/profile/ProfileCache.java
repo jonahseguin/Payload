@@ -8,12 +8,13 @@ package com.jonahseguin.payload.mode.profile;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import com.jonahseguin.lang.LangDefinitions;
 import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.CacheModule;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.PayloadCallback;
 import com.jonahseguin.payload.base.failsafe.FailedPayload;
 import com.jonahseguin.payload.base.store.PayloadStore;
 import com.jonahseguin.payload.base.sync.SyncService;
@@ -76,6 +77,8 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         boolean success = true;
         if (!localStore.start()) success = false;
         if (!mongoStore.start()) success = false;
+        handshakeService.subscribe(Key.get(new TypeLiteral<ProfileHandshake<X>>() {
+        }));
         return success;
     }
 
@@ -143,20 +146,6 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         Preconditions.checkNotNull(payload);
         getLocalStore().remove(payload);
         getDatabaseStore().remove(payload);
-    }
-
-    @Override
-    public void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<X> callback) {
-        Preconditions.checkNotNull(payload);
-        Preconditions.checkNotNull(callback);
-        sync.prepareUpdate(payload, callback);
-    }
-
-    @Override
-    public void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<X> callback) {
-        Preconditions.checkNotNull(payload);
-        Preconditions.checkNotNull(callback);
-        runAsync(() -> sync.prepareUpdate(payload, callback));
     }
 
     @Nonnull

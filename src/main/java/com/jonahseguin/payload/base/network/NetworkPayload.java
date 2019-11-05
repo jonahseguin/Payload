@@ -31,16 +31,26 @@ public abstract class NetworkPayload<K> {
     protected boolean loaded = false;
     @Embedded
     protected Set<PayloadServer> loadedServers = new HashSet<>();
+    protected PayloadServer mostRecentServer;
 
     @Inject
     public NetworkPayload(ServerService serverService) {
         this.serverService = serverService;
+        this.mostRecentServer = serverService.getThisServer();
     }
 
     public NetworkPayload(ServerService serverService, K identifier, ObjectId objectId) {
         this.serverService = serverService;
         this.identifier = identifier;
         this.objectId = objectId;
+        this.mostRecentServer = serverService.getThisServer();
+    }
+
+    public boolean isThisMostRelevantServer() {
+        if (mostRecentServer != null) {
+            return mostRecentServer.getName().equalsIgnoreCase(serverService.getThisServer().getName()) && loadedServers.contains(serverService.getThisServer()) && loaded;
+        }
+        return false;
     }
 
 }

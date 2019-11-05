@@ -14,6 +14,8 @@ import com.jonahseguin.payload.base.error.CacheErrorService;
 import com.jonahseguin.payload.base.error.ErrorService;
 import com.jonahseguin.payload.base.handshake.HandshakeModule;
 import com.jonahseguin.payload.base.network.NetworkPayload;
+import com.jonahseguin.payload.base.sync.CacheSyncService;
+import com.jonahseguin.payload.base.sync.SyncService;
 import com.jonahseguin.payload.base.type.GuicePayloadInstantiator;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
@@ -38,6 +40,9 @@ public class CacheModule<K, X extends Payload<K>, N extends NetworkPayload<K>, D
         install(new HandshakeModule());
         bind(ErrorService.class).to(new TypeLiteral<CacheErrorService<K, X, N, D>>() {
         }).in(Singleton.class);
+        bind(new TypeLiteral<SyncService<K, X, N, D>>() {
+        }).to(new TypeLiteral<CacheSyncService<K, X, N, D>>() {
+        });
     }
 
     @Provides

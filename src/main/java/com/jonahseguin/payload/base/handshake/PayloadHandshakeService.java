@@ -1,8 +1,14 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base.handshake;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.jonahseguin.payload.database.DatabaseService;
 import org.bson.Document;
 import redis.clients.jedis.Jedis;
@@ -85,13 +91,15 @@ public class PayloadHandshakeService implements HandshakeService {
             HandshakeContainer container = containers.get(channel);
             Handshake controller = container.createInstance();
             executor.submit(() -> {
-                if (controller.shouldAccept(data)) {
-                    controller.load(data);
+                controller.load(data);
+                if (controller.shouldAccept()) {
                     controller.receive();
-                    try (Jedis jedis = database.getJedisResource()) {
-                        jedis.publish(controller.channelReply(), data.getDocument().toJson());
-                    } catch (Exception ex) {
-                        database.getErrorService().capture(ex, "Error with Jedis resource during handshake receive (sending reply) for " + controller.getClass().getSimpleName());
+                    if (controller.shouldReply()) {
+                        try (Jedis jedis = database.getJedisResource()) {
+                            jedis.publish(controller.channelReply(), data.getDocument().toJson());
+                        } catch (Exception ex) {
+                            database.getErrorService().capture(ex, "Error with Jedis resource during handshake receive (sending reply) for " + controller.getClass().getSimpleName());
+                        }
                     }
                 }
             });
@@ -99,9 +107,9 @@ public class PayloadHandshakeService implements HandshakeService {
     }
 
     @Override
-    public <H extends Handshake> void subscribe(@Nonnull Class<H> type) {
-        Preconditions.checkNotNull(type);
-        HandshakeContainer<H> container = new HandshakeContainer<>(type, injector);
+    public <H extends Handshake> void subscribe(@Nonnull Key<H> key) {
+        Preconditions.checkNotNull(key);
+        HandshakeContainer<H> container = new HandshakeContainer<>(key, injector);
         H controller = container.getSubscriberController();
         containers.put(controller.channelPublish(), container);
         containers.put(controller.channelReply(), container);

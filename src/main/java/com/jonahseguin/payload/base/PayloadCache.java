@@ -119,7 +119,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
      */
     @Override
     public final boolean start() {
-        if (running) return true;
+        Preconditions.checkState(!running, "Cache " + name + " is already started!");
         Preconditions.checkNotNull(instantiator, "Instantiator must be set before calling start()");
         Preconditions.checkState(database.isRunning(), "Database must be started before starting cache");
         boolean success = true;
@@ -154,7 +154,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
      * @return Boolean successful
      */
     public final boolean shutdown() {
-        if (!running) return true;
+        Preconditions.checkState(running, "Cache " + name + " is not running!");
 
         int failedSaves = saveAll(); // First, save everything.
 
@@ -411,7 +411,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     }
 
     @Override
-    public void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<X> callback) {
+    public void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback) {
         Preconditions.checkState(getSettings().isEnableSync(), "Cannot prepare update when sync is disabled!");
         Preconditions.checkNotNull(payload);
         Preconditions.checkNotNull(callback);
@@ -419,11 +419,17 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     }
 
     @Override
-    public void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<X> callback) {
+    public void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback) {
         Preconditions.checkState(getSettings().isEnableSync(), "Cannot prepare update when sync is disabled!");
         Preconditions.checkNotNull(payload);
         Preconditions.checkNotNull(callback);
         runAsync(() -> sync.prepareUpdate(payload, callback));
+    }
+
+    @Override
+    public void setErrorService(@Nonnull ErrorService errorService) {
+        Preconditions.checkNotNull(errorService);
+        this.errorService = errorService;
     }
 
     @Override

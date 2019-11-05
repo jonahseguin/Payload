@@ -11,12 +11,15 @@ import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
 
+import javax.annotation.Nonnull;
+import java.util.Optional;
+
 public interface SyncService<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> extends Service {
 
-    void prepareUpdate(X payload, PayloadCallback<X> callback);
+    void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback);
 
-    void update(K key);
+    void update(@Nonnull K key);
 
-    void uncache(K key);
+    void uncache(@Nonnull K key);
 
 }
