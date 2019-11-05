@@ -17,7 +17,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.annotation.Nonnull;
-import java.util.Optional;
 
 @Getter
 @Setter
@@ -65,13 +64,13 @@ public class SyncHandshake<K, X extends Payload<K>, N extends NetworkPayload<K>,
 
     @Override
     public void receive() {
-        Optional<X> o = cache.getFromCache(identifier);
-        if (o.isPresent()) {
-            X payload = o.get();
-            if (mode.equals(SyncHandshakeMode.UPDATE)) {
+        if (mode.equals(SyncHandshakeMode.UNCACHE)) {
+            if (cache.isCached(identifier)) {
+                cache.uncache(identifier);
+            }
+        } else if (mode.equals(SyncHandshakeMode.UPDATE)) {
+            if (cache.isCached(identifier) || cache.getSyncMode().equals(SyncMode.ALWAYS)) {
                 cache.getFromDatabase(identifier).ifPresent(cache::cache);
-            } else if (mode.equals(SyncHandshakeMode.UNCACHE)) {
-                cache.uncache(payload);
             }
         }
     }

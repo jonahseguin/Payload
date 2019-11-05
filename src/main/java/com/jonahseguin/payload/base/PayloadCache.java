@@ -17,6 +17,7 @@ import com.jonahseguin.payload.base.handshake.HandshakeService;
 import com.jonahseguin.payload.base.lang.LangService;
 import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.network.NetworkService;
+import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.sync.SyncService;
 import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
 import com.jonahseguin.payload.base.type.*;
@@ -51,28 +52,18 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     protected final FailureManager<K, X, N, D> failureManager;
     protected final PayloadAutoSaveTask<K, X, N, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
     protected final Set<String> dependingCaches = new HashSet<>();
-    @Inject
-    protected Plugin plugin;
-    @Inject
-    protected PayloadPlugin payloadPlugin;
-    @Inject
-    protected PayloadAPI api;
-    @Inject
-    protected DatabaseService database;
-    @Inject
-    protected LangService lang;
-    @Inject
-    protected ErrorService errorService;
-    @Inject
-    protected PayloadInstantiator<K, X, D> instantiator;
-    @Inject
-    protected SyncService<K, X, N, D> sync;
-    @Inject
-    protected HandshakeService handshakeService;
-    @Inject
-    protected NetworkService<K, X, N, D> networkService;
-    @Inject
-    protected ServerService serverService;
+    @Inject protected Plugin plugin;
+    @Inject protected PayloadPlugin payloadPlugin;
+    @Inject protected PayloadAPI api;
+    @Inject protected DatabaseService database;
+    @Inject protected LangService lang;
+    @Inject protected ErrorService errorService;
+    @Inject protected PayloadInstantiator<K, X, D> instantiator;
+    @Inject protected SyncService<K, X, N, D> sync;
+    @Inject protected HandshakeService handshakeService;
+    @Inject protected NetworkService<K, X, N, D> networkService;
+    @Inject protected ServerService serverService;
+    protected SyncMode syncMode = SyncMode.IF_CACHED;
     protected boolean debug = false;
     protected PayloadMode mode = PayloadMode.STANDALONE;
     protected boolean running = false;
@@ -248,6 +239,12 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     @Override
     public void setDebug(boolean debug) {
         this.debug = debug;
+    }
+
+    @Override
+    public void setSyncMode(@Nonnull SyncMode mode) {
+        Preconditions.checkNotNull(mode);
+        this.syncMode = mode;
     }
 
     /**

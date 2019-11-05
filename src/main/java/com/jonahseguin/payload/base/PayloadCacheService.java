@@ -13,6 +13,7 @@ import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.network.NetworkService;
 import com.jonahseguin.payload.base.settings.CacheSettings;
 import com.jonahseguin.payload.base.store.PayloadStore;
+import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.sync.SyncService;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
@@ -135,6 +136,11 @@ public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkP
     void setDebug(boolean debug);
 
     void alert(@Nonnull PayloadPermission required, @Nonnull String msg);
+
+    @Nonnull
+    SyncMode getSyncMode();
+
+    void setSyncMode(@Nonnull SyncMode mode);
 
 }
 
