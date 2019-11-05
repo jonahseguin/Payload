@@ -68,8 +68,10 @@ public class SyncHandshake<K, X extends Payload<K>, N extends NetworkPayload<K>,
         Optional<X> o = cache.getFromCache(identifier);
         if (o.isPresent()) {
             X payload = o.get();
-            if (!cache.saveNoSync(payload)) {
-                cache.getErrorService().capture("Error saving payload during sync for " + cache.keyToString(payload.getIdentifier()));
+            if (mode.equals(SyncHandshakeMode.UPDATE)) {
+                cache.controller(identifier).cache();
+            } else if (mode.equals(SyncHandshakeMode.UNCACHE)) {
+                cache.uncache(payload);
             }
         }
     }

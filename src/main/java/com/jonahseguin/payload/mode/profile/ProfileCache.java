@@ -77,8 +77,10 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         boolean success = true;
         if (!localStore.start()) success = false;
         if (!mongoStore.start()) success = false;
-        handshakeService.subscribe(Key.get(new TypeLiteral<ProfileHandshake<X>>() {
-        }));
+        if (mode.equals(PayloadMode.NETWORK_NODE)) {
+            handshakeService.subscribe(Key.get(new TypeLiteral<ProfileHandshake<X>>() {
+            }));
+        }
         return success;
     }
 

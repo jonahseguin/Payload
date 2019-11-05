@@ -54,9 +54,7 @@ public class CacheSyncService<K, X extends Payload<K>, N extends NetworkPayload<
     @Override
     public void update(@Nonnull K key) {
         Preconditions.checkNotNull(key);
-        handshakeService.publish(new SyncHandshake<>(cache, key, SyncHandshakeMode.UPDATE)).afterReply(h -> {
-            cache.controller(key).cache();
-        });
+        handshakeService.publish(new SyncHandshake<>(cache, key, SyncHandshakeMode.UPDATE));
     }
 
     @Override

@@ -7,6 +7,8 @@ package com.jonahseguin.payload.mode.object;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.CacheModule;
 import com.jonahseguin.payload.base.PayloadCache;
@@ -53,6 +55,10 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
             if (!mongoStore.start()) {
                 success = false;
             }
+        }
+        if (mode.equals(PayloadMode.NETWORK_NODE)) {
+            handshakeService.subscribe(Key.get(new TypeLiteral<ObjectHandshake<X>>() {
+            }));
         }
         return success;
     }
