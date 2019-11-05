@@ -18,7 +18,7 @@ import javax.annotation.Nonnull;
 @Setter
 public abstract class PayloadObject implements Payload<String> {
 
-    protected transient final ObjectService<PayloadObject> cache;
+    protected transient final ObjectService cache;
 
     protected String payloadId;
     @Id
@@ -27,7 +27,7 @@ public abstract class PayloadObject implements Payload<String> {
     protected transient long handshakeStartTimestamp = 0;
 
     @Inject
-    public PayloadObject(ObjectService<PayloadObject> cache) {
+    public PayloadObject(ObjectService cache) {
         this.cache = cache;
         this.payloadId = cache.getApi().getPayloadID();
     }
@@ -64,12 +64,12 @@ public abstract class PayloadObject implements Payload<String> {
 
     @Override
     public void save() {
-        this.cache.save(this);
+        this.getCache().save(this);
     }
 
     @Nonnull
     @Override
-    public ObjectService<PayloadObject> getCache() {
+    public ObjectService getCache() {
         return cache;
     }
 
