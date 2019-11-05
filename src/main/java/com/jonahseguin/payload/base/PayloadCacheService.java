@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> extends Service {
@@ -119,5 +120,10 @@ public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkP
 
     @Nonnull
     PayloadAPI getApi();
+
+    void runAsync(@Nonnull Runnable runnable);
+
+    @Nonnull
+    <T> Future<T> runAsync(@Nonnull Callable<T> callable);
 
 }
