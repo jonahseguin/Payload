@@ -69,7 +69,7 @@ public class SyncHandshake<K, X extends Payload<K>, N extends NetworkPayload<K>,
         if (o.isPresent()) {
             X payload = o.get();
             if (mode.equals(SyncHandshakeMode.UPDATE)) {
-                cache.controller(identifier).cache();
+                cache.getFromDatabase(identifier).ifPresent(cache::cache);
             } else if (mode.equals(SyncHandshakeMode.UNCACHE)) {
                 cache.uncache(payload);
             }
