@@ -5,18 +5,26 @@
 
 package com.jonahseguin.payload.command.commands;
 
+import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
 import com.jonahseguin.payload.command.PayloadCommand;
-import com.jonahseguin.payload.database.PayloadDatabase;
+import com.jonahseguin.payload.database.DatabaseService;
 
 public class CmdDatabase implements PayloadCommand {
+
+    private final PayloadAPI api;
+
+    @Inject
+    public CmdDatabase(PayloadAPI api) {
+        this.api = api;
+    }
 
     @Override
     public void execute(CmdArgs args) {
         String dbName = args.joinArgs();
-        PayloadDatabase database = PayloadAPI.get().getDatabase(dbName);
+        DatabaseService database = api.getDatabase(dbName);
         if (database == null) {
             args.msg("4");
             args.msg("&cA database with the name '{0}' does not exist.  Type /payload databases for a list of databases.", dbName);
@@ -27,7 +35,7 @@ public class CmdDatabase implements PayloadCommand {
         args.msg("&7Connected: {0}", (database.getState().isDatabaseConnected() ? "&aYes" : "&cNo"));
         args.msg("&7MongoDB: {0}", (database.getState().isMongoConnected() ? "&aConnected" : "&cDisconnected"));
         args.msg("&7Redis: {0}", (database.getState().isRedisConnected() ? "&aConnected" : "&cDisconnected"));
-        args.msg("&7Registered Servers: &6{0}", database.getServerManager().getServers().values().size() + "");
+        args.msg("&7Registered Servers: &6{0}", database.getServerService().getServers().size() + "");
         args.msg("&7Use '/payload servers {0}' to view a list of registered servers in this database for this network", database.getName());
     }
 

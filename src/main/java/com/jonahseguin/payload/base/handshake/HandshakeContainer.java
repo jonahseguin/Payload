@@ -4,7 +4,7 @@ import com.google.inject.Injector;
 import lombok.Getter;
 
 @Getter
-public class HandshakeContainer<H extends HandshakeController> {
+public class HandshakeContainer<H extends Handshake> {
 
     private final Class<H> type;
     private final Injector injector;

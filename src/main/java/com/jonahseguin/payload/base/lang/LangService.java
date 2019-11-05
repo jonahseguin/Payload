@@ -23,4 +23,6 @@ public interface LangService {
 
     Lang lang();
 
+    void register(LangModule module);
+
 }

@@ -5,11 +5,15 @@
 
 package com.jonahseguin.payload.mode.object;
 
+import com.google.common.base.Preconditions;
+import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.failsafe.FailedPayload;
-import com.jonahseguin.payload.base.layer.PayloadLayer;
 import com.jonahseguin.payload.base.type.PayloadController;
 import lombok.Getter;
 import lombok.Setter;
+
+import javax.annotation.Nonnull;
+import java.util.Optional;
 
 @Getter
 @Setter
@@ -21,26 +25,23 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
     private boolean failure = false;
     private X payload = null;
 
-    public PayloadObjectController(ObjectCache<X> cache, ObjectData data) {
+    PayloadObjectController(@Nonnull ObjectCache<X> cache, @Nonnull ObjectData data) {
+        Preconditions.checkNotNull(cache);
+        Preconditions.checkNotNull(data);
         this.cache = cache;
         this.data = data;
     }
 
     @Override
-    public X cache() {
-        for (PayloadLayer<String, X, ObjectData> layer : this.cache.getLayerController().getLayers()) {
-            try {
-                if (layer.has(this.data)) {
-                    this.cache.getErrorHandler().debug(this.cache, "Loading object " + this.data.getIdentifier() + " from layer " + layer.layerName());
-                    payload = layer.get(this.data);
-                    if (payload != null) {
-                        break;
-                    }
-                }
-            } catch (Exception ex) {
-                failure = true;
-                this.cache.getErrorHandler().exception(this.cache, ex, "Failed to load object " + this.data.getIdentifier() + " from layer " + layer.layerName());
-            }
+    public Optional<X> cache() {
+        Optional<X> local = cache.getFromCache(data.getIdentifier());
+        boolean fromLocal = false;
+        if (local.isPresent()) {
+            payload = local.get();
+            fromLocal = true;
+        } else {
+            Optional<X> db = cache.getFromDatabase(data.getIdentifier());
+            db.ifPresent(x -> payload = x);
         }
 
         if (payload == null && this.failure) {
@@ -52,14 +53,28 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
             if (failedPayload.getTemporaryPayload() == null) {
                 failedPayload.setTemporaryPayload(this.cache.getInstantiator().instantiate(data));
             }
-            return failedPayload.getTemporaryPayload();
+            return Optional.ofNullable(failedPayload.getTemporaryPayload());
         }
 
-        if (payload != null) {
+        if (payload != null && !fromLocal) {
             this.cache.cache(payload);
-            this.cache.getErrorHandler().debug(this.cache, "Cached payload " + payload.getIdentifier());
+            this.cache.getErrorService().debug("Cached payload " + payload.getIdentifier());
         }
 
-        return payload;
+        return Optional.ofNullable(payload);
+    }
+
+    @Override
+    public void uncache(@Nonnull X payload, boolean switchingServers) {
+        if (cache.isCached(payload.getIdentifier())) {
+            cache.uncache(payload);
+        }
+        if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
+            Optional<NetworkObject> o = cache.getNetworkService().get(payload.getIdentifier());
+            if (o.isPresent()) {
+                NetworkObject networkObject = o.get();
+                networkObject.markUnloaded();
+            }
+        }
     }
 }

@@ -5,31 +5,29 @@
 
 package com.jonahseguin.payload.mode.profile;
 
-import com.jonahseguin.payload.PayloadAPI;
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.jonahseguin.lang.LangDefinitions;
+import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.PayloadMode;
-import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.base.CacheModule;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.PayloadPermission;
+import com.jonahseguin.payload.base.PayloadCallback;
 import com.jonahseguin.payload.base.failsafe.FailedPayload;
-import com.jonahseguin.payload.base.layer.PayloadLayer;
-import com.jonahseguin.payload.base.sync.SyncMode;
-import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
-import com.jonahseguin.payload.mode.profile.handshake.HandshakeEvent;
-import com.jonahseguin.payload.mode.profile.handshake.HandshakeListener;
-import com.jonahseguin.payload.mode.profile.handshake.HandshakeManager;
-import com.jonahseguin.payload.mode.profile.layer.ProfileLayerLocal;
-import com.jonahseguin.payload.mode.profile.layer.ProfileLayerMongo;
-import com.jonahseguin.payload.mode.profile.layer.ProfileLayerRedis;
+import com.jonahseguin.payload.base.store.PayloadStore;
+import com.jonahseguin.payload.base.sync.SyncService;
+import com.jonahseguin.payload.base.uuid.UUIDService;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
+import com.jonahseguin.payload.mode.profile.store.ProfileStoreLocal;
+import com.jonahseguin.payload.mode.profile.store.ProfileStoreMongo;
 import lombok.Getter;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
-import redis.clients.jedis.Jedis;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,320 +36,330 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @Getter
-public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X, ProfileData> {
+public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X, NetworkProfile, ProfileData> implements LangModule, ProfileService<X> {
 
     private final ProfileCacheSettings settings = new ProfileCacheSettings();
     private final ConcurrentMap<UUID, PayloadProfileController<X>> controllers = new ConcurrentHashMap<>();
-    private final HandshakeManager<X> handshakeManager = new HandshakeManager<>(this);
-    private final HandshakeListener<X> handshakeListener = new HandshakeListener<>(this);
-    private final ProfileLayerLocal<X> localLayer = new ProfileLayerLocal<>(this);
-    private final ProfileLayerRedis<X> redisLayer = new ProfileLayerRedis<>(this);
-    private final ProfileLayerMongo<X> mongoLayer = new ProfileLayerMongo<>(this);
+    private final ProfileStoreLocal<X> localStore = new ProfileStoreLocal<>(this);
+    private final ProfileStoreMongo<X> mongoStore = new ProfileStoreMongo<>(this);
     private final ConcurrentMap<UUID, ProfileData> data = new ConcurrentHashMap<>();
-    private Jedis subscriberJedis = null;
+    private final CacheModule<UUID, X, NetworkProfile, ProfileData> module = new ProfileCacheModule<>(this);
+    @Inject
+    private UUIDService uuidService;
 
-    public ProfileCache(@Nonnull Plugin plugin, @Nonnull PayloadPlugin payloadPlugin, @Nonnull PayloadAPI api, @Nonnull String name, @Nonnull Class<X> payloadClass) {
-        super(plugin, payloadPlugin, api, name, UUID.class, payloadClass);
+    public ProfileCache(@Nonnull Injector injector, @Nonnull String name, @Nonnull Class<X> payloadClass) {
+        super(injector, name, UUID.class, payloadClass);
+        this.injector.injectMembers(this);
+        lang.register(this);
     }
 
-    /**
-     * Called internally by {@link PayloadCache#start()}
-     */
     @Override
-    protected void init() {
-        // Startup!
-        if (this.mode.equals(PayloadMode.NETWORK_NODE)) {
-            this.handshakeManager.getTimeoutTask().start();
-        }
-
-        this.layerController.register(this.localLayer);
-        this.layerController.register(this.redisLayer);
-        this.layerController.register(this.mongoLayer);
-
-        this.layerController.init();
+    public void define(LangDefinitions l) {
+        l.define("deny-join-database", "&cThe database is currently offline.  We are working on resolving this issue as soon as possible, please try again soon.");
+        l.define("no-profile", "&cYour profile is not loaded.  Please wait as we will continue to attempt to load it.");
+        l.define("shutdown", "&cThe server has shutdown.");
     }
 
-    /**
-     * Called internally by {@link PayloadCache#stop()}
-     */
     @Override
-    protected void shutdown() {
-        // close layers in order, save all objects, etc.
-
-        for (Player player : this.getPlugin().getServer().getOnlinePlayers()) {
-            X payload = this.getLocalProfile(player);
-            if (payload != null) {
-                payload.setOnline(false);
-                payload.setLastSeenTimestamp(System.currentTimeMillis());
-            }
-        }
-        // ^ they will be saved in the superclass's shutdown impl
-
-        if (this.mode.equals(PayloadMode.NETWORK_NODE)) {
-            this.handshakeManager.getTimeoutTask().stop();
-        }
-        this.layerController.shutdown();
-        if (this.handshakeListener.isSubscribed()) {
-            this.handshakeListener.unsubscribe();
-        }
-        if (this.subscriberJedis != null) {
-            this.subscriberJedis.close();
-        }
-        this.subscriberJedis = null;
-        this.data.clear();
-        this.controllers.clear();
+    public String langModule() {
+        return "profile-cache";
     }
 
-    /**
-     * See superclass for documentation {@link PayloadCache}
-     * @param payload Payload to cache (save locally)
-     */
+    @Nonnull
     @Override
-    public void cache(X payload) {
-        if (this.hasProfileLocal(payload.getUniqueId())) {
-            this.updatePayloadFromNewer(this.getLocalLayer().get(payload.getUniqueId()), payload);
-            this.syncManager.updateHooks(this.getFromCache(payload.getUniqueId()));
+    protected CacheModule<UUID, X, NetworkProfile, ProfileData> module() {
+        return module;
+    }
+
+    @Override
+    protected boolean initialize() {
+        boolean success = true;
+        if (!localStore.start()) success = false;
+        if (!mongoStore.start()) success = false;
+        return success;
+    }
+
+    @Override
+    protected boolean terminate() {
+        boolean success = true;
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            player.kickPlayer(lang.module(this).format("shutdown"));
+        }
+        data.clear();
+        controllers.clear();
+        if (!localStore.shutdown()) {
+            success = false;
+        }
+        if (!mongoStore.shutdown()) {
+            success = false;
+        }
+        return success;
+    }
+
+    @Override
+    public Optional<NetworkProfile> getNetworked(@Nonnull UUID key) {
+        Preconditions.checkNotNull(key);
+        return networkService.get(key);
+    }
+
+    @Override
+    public Optional<NetworkProfile> getNetworked(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        return networkService.get(payload);
+    }
+
+    @Override
+    public Future<Optional<X>> getAsync(@Nonnull UUID key) {
+        Preconditions.checkNotNull(key);
+        return runAsync(() -> get(key));
+    }
+
+    @Override
+    public Future<Optional<X>> getAsync(@Nonnull String username) {
+        Preconditions.checkNotNull(username);
+        return runAsync(() -> get(username));
+    }
+
+    @Override
+    public Future<Optional<X>> getAsync(@Nonnull Player player) {
+        Preconditions.checkNotNull(player);
+        return runAsync(() -> get(player));
+    }
+
+    @Override
+    public void uncache(@Nonnull UUID key) {
+        Preconditions.checkNotNull(key);
+        getLocalStore().remove(key);
+    }
+
+    @Override
+    public void uncache(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        getLocalStore().remove(payload);
+    }
+
+    @Override
+    public void delete(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        getLocalStore().remove(payload);
+        getDatabaseStore().remove(payload);
+    }
+
+    @Override
+    public void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<X> callback) {
+        Preconditions.checkNotNull(payload);
+        Preconditions.checkNotNull(callback);
+        sync.prepareUpdate(payload, callback);
+    }
+
+    @Override
+    public void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<X> callback) {
+        Preconditions.checkNotNull(payload);
+        Preconditions.checkNotNull(callback);
+        runAsync(() -> sync.prepareUpdate(payload, callback));
+    }
+
+    @Nonnull
+    @Override
+    public Collection<X> getCached() {
+        return localStore.getAll();
+    }
+
+    @Nonnull
+    @Override
+    public SyncService<UUID, X, NetworkProfile, ProfileData> getSyncService() {
+        return sync;
+    }
+
+    @Nonnull
+    @Override
+    public PayloadStore<UUID, X, ProfileData> getDatabaseStore() {
+        return mongoStore;
+    }
+
+    @Override
+    public Optional<X> get(@Nonnull String username) {
+        Preconditions.checkNotNull(username);
+        Preconditions.checkState(username.length() > 1, "Username length must be > 1");
+        Player player = plugin.getServer().getPlayerExact(username);
+        if (player != null && player.isOnline()) {
+            return get(player);
+        }
+        return mongoStore.getByUsername(username);
+    }
+
+    @Override
+    public boolean isCached(@Nonnull String username) {
+        Preconditions.checkNotNull(username);
+        Player player = plugin.getServer().getPlayerExact(username);
+        if (player != null && player.isOnline()) {
+            return isCached(player);
+        }
+        return uuidService.get(username).filter(this::isCached).isPresent();
+    }
+
+    @Override
+    public void cache(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        Optional<X> o = getLocalStore().get(payload.getUniqueId());
+        if (o.isPresent()) {
+            updatePayloadFromNewer(o.get(), payload);
         } else {
-            this.saveToLocal(payload);
+            getLocalStore().save(payload);
         }
     }
 
-    /**
-     * See superclass for documentation {@link PayloadCache}
-     * @param payload the Payload to save
-     */
     @Override
-    public void saveToLocal(X payload) {
-        this.localLayer.save(payload);
+    public Optional<X> get(@Nonnull Player player) {
+        Preconditions.checkNotNull(player);
+        return get(player.getUniqueId());
     }
 
-    /**
-     * Get a profile by username
-     * This uses either an online matching player or the UUID cache to determine a unique ID based on the username.
-     * If no unique id can be found, we will revert to the Mongo Layer
-     * @param username The player's username
-     * @return {@link PayloadProfile}
-     */
-    public X getProfileByName(String username) {
-        UUID uuid = payloadPlugin.getUUIDs().get(username.toLowerCase());
-        if (uuid != null) {
-            return this.getProfile(uuid);
-        }
-        Player exact = Bukkit.getPlayerExact(username);
-        if (exact != null) {
-            return this.getProfile(exact);
-        } else {
-            // Manually get from MongoDB
-            return this.mongoLayer.getByUsername(username);
-        }
-    }
-
-    public X getLocalProfileByName(String username) {
-        UUID uuid = PayloadPlugin.get().getUUID(username);
-        if (uuid != null) {
-            return this.getProfile(uuid);
-        }
-        Player exact = Bukkit.getPlayerExact(username);
-        if (exact != null) {
-            return this.getProfile(exact);
-        }
-        return null;
-    }
-
-
-    public X getProfile(UUID uuid) {
-        return this.get(uuid);
-    }
-
-    public X getProfile(Player player) {
-        return this.get(player.getUniqueId());
-    }
-
-    public boolean hasProfileLocal(UUID uuid) {
-        return this.localLayer.has(uuid);
-    }
-
-    public boolean hasProfileLocal(Player player) {
-        return this.hasProfileLocal(player.getUniqueId());
-    }
-
-    /**
-     * See superclass for documentation {@link PayloadCache}
-     * @param uniqueId {@link UUID} of the player to get a Profile for
-     * @return {@link PayloadProfile}
-     */
     @Override
-    protected X get(UUID uniqueId) {
+    public boolean isCached(@Nonnull Player player) {
+        Preconditions.checkNotNull(player);
+        return isCached(player.getUniqueId());
+    }
+
+    @Override
+    public Optional<X> get(@Nonnull UUID uniqueId) {
+        Preconditions.checkNotNull(uniqueId);
         if (this.getFailureManager().hasFailure(uniqueId)) {
             // They are attempting to be cached
             FailedPayload<X, ProfileData> failedPayload = this.getFailureManager().getFailedPayload(uniqueId);
             if (failedPayload.getTemporaryPayload() == null) {
-                if (failedPayload.getPlayer() != null && failedPayload.getPlayer().isOnline()) {
+                if (failedPayload.getPlayer() != null) {
                     failedPayload.setTemporaryPayload(this.instantiator.instantiate(this.createData(failedPayload.getPlayer().getName(), uniqueId, failedPayload.getPlayer().getAddress().getAddress().getHostAddress())));
                 }
             }
-            return failedPayload.getTemporaryPayload();
+            return Optional.of(failedPayload.getTemporaryPayload());
         }
-
         ProfileData data = this.createData(null, uniqueId, null);
         PayloadProfileController<X> controller = this.controller(data);
         controller.setLogin(false);
         return controller.cache();
     }
 
-    public X getLocalProfile(Player player) {
-        return this.localLayer.getLocalCache().get(player.getUniqueId());
-    }
-
-    public Future<X> getProfileAsync(Player player) {
-        return this.pool.submit(() -> this.getProfile(player));
-    }
-
-    public Future<X> getProfileAsync(UUID uuid) {
-        return this.pool.submit(() -> this.getProfile(uuid));
-    }
-
-    public Future<X> getProfileByNameAsync(String username) {
-        return this.pool.submit(() -> this.getProfileByName(username));
-    }
-
-    public Set<X> getOnlineProfiles() {
-        return this.localLayer.getLocalCache().values().stream()
-                .filter(PayloadProfile::isPlayerOnline)
+    @Nonnull
+    @Override
+    public Set<X> getOnline() {
+        return this.localStore.getLocalCache().values().stream()
+                .filter(PayloadProfile::isOnline)
                 .collect(Collectors.toSet());
     }
 
-    /**
-     * See superclass for documentation {@link PayloadCache#isCached(Object)}
-     * @param key Key
-     * @return
-     */
     @Override
-    public boolean isCached(UUID key) {
-        return this.localLayer.has(key);
+    public boolean isCached(@Nonnull UUID key) {
+        Preconditions.checkNotNull(key);
+        return this.localStore.has(key);
     }
 
-    /**
-     * See superclass for documentation {@link PayloadCache#uncache(Object)}
-     * @param key The key for the object to remove (identifier)
-     * @return
-     */
     @Override
-    public boolean uncache(UUID key) {
-        if (this.getSyncMode().equals(SyncMode.CACHE_ALL) && !this.settings.isServerSpecific()) {
-            if (this.getSettings().isEnableSync()) {
-                this.syncManager.publishUncache(key);
+    public Optional<X> getFromCache(@Nonnull UUID key) {
+        Preconditions.checkNotNull(key);
+        return this.localStore.get(key);
+    }
+
+    @Override
+    public Optional<X> getFromDatabase(@Nonnull UUID key) {
+        Preconditions.checkNotNull(key);
+        return mongoStore.get(key);
+    }
+
+    @Override
+    public Optional<X> getFromCache(@Nonnull String username) {
+        Preconditions.checkNotNull(username);
+        UUID uuid = null;
+        Player player = plugin.getServer().getPlayerExact(username);
+        if (player != null) {
+            uuid = player.getUniqueId();
+        } else {
+            Optional<UUID> o = uuidService.get(username);
+            if (o.isPresent()) {
+                uuid = o.get();
             }
         }
-        return this.uncacheLocal(key);
-    }
-
-    /**
-     * See superclass for documentation {@link PayloadCache#uncacheLocal(Object)}
-     * @param key The key for the object to remove (identifier)
-     * @return
-     */
-    @Override
-    public boolean uncacheLocal(UUID key) {
-        if (this.localLayer.has(key)) {
-            this.localLayer.remove(key);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * See superclass for documentation {@link PayloadCache#getFromCache(Object)}
-     * @param key The key to use to get the object
-     * @return
-     */
-    @Override
-    public X getFromCache(UUID key) {
-        return this.localLayer.get(key);
-    }
-
-    /**
-     * See superclass for documentation {@link PayloadCache#getFromDatabase(Object)}
-     * @param key The key to use to get the object
-     * @return
-     */
-    @Override
-    public X getFromDatabase(UUID key) {
-        for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
-            if (layer.isDatabase()) {
-                X payload = layer.get(key);
-                if (payload != null) {
-                    return payload;
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * See superclass for documentation {@link PayloadCache#delete(Object)} )
-     * @param key Key of payload to delete
-     */
-    @Override
-    public void delete(UUID key) {
-        for (PayloadLayer<UUID, X, ProfileData> layer : this.getLayerController().getLayers()) {
-            layer.remove(key);
-        }
-        if (this.settings.isEnableSync()) {
-            this.syncManager.publishUncache(key);
+        if (uuid != null) {
+            return getFromCache(uuid);
+        } else {
+            return Optional.empty();
         }
     }
 
-    /**
-     * See superclass for documentation {@link PayloadCache#cacheAll()}
-     */
+    @Override
+    public Optional<X> getFromCache(@Nonnull Player player) {
+        Preconditions.checkNotNull(player);
+        return getFromCache(player.getUniqueId());
+    }
+
+    @Override
+    public Optional<X> getFromDatabase(@Nonnull String username) {
+        Preconditions.checkNotNull(username);
+        return mongoStore.getByUsername(username);
+    }
+
+    @Override
+    public Optional<X> getFromDatabase(@Nonnull Player player) {
+        Preconditions.checkNotNull(player);
+        return mongoStore.get(player.getUniqueId());
+    }
+
+    @Override
+    public void delete(@Nonnull UUID key) {
+        Preconditions.checkNotNull(key);
+        localStore.remove(key);
+        mongoStore.remove(key);
+    }
+
     @Override
     public void cacheAll() {
         this.getAll().forEach(this::cache);
     }
 
-    public ProfileData createData(String username, UUID uniqueId, String ip) {
+    public ProfileData createData(@Nullable String username, @Nonnull UUID uniqueId, @Nullable String ip) {
+        Preconditions.checkNotNull(uniqueId);
         ProfileData data = new ProfileData(username, uniqueId, ip);
         this.data.put(uniqueId, data);
         return data;
     }
 
-    public ProfileData getData(UUID uuid) {
+    @Override
+    public ProfileData getData(@Nonnull UUID uuid) {
+        Preconditions.checkNotNull(uuid);
         return this.data.get(uuid);
     }
 
-    public boolean hasData(UUID uuid) {
+    public boolean hasData(@Nonnull UUID uuid) {
+        Preconditions.checkNotNull(uuid);
         return this.data.containsKey(uuid);
     }
 
-    public void removeData(UUID uuid) {
+    public void removeData(@Nonnull UUID uuid) {
+        Preconditions.checkNotNull(uuid);
         this.data.remove(uuid);
     }
 
-    /**
-     * See superclass for documentation {@link PayloadCache#keyFromString(String)}
-     * @param key String key
-     * @return
-     */
     @Override
-    public UUID keyFromString(String key) {
+    public UUID keyFromString(@Nonnull String key) {
+        Preconditions.checkNotNull(key);
         return UUID.fromString(key);
     }
 
+    @Override
+    public String keyToString(@Nonnull UUID key) {
+        return key.toString();
+    }
+
+    @Nonnull
     public Set<X> getAll() {
-        final Set<X> all = this.localLayer.getAll().stream().filter(PayloadProfile::isOnlineThisServer).collect(Collectors.toSet());
-        all.addAll(this.redisLayer.getAll().stream().filter(x -> all.stream().noneMatch(x2 -> x.getUniqueId().equals(x2.getUniqueId()))).collect(Collectors.toSet()));
-        all.addAll(this.mongoLayer.getAll().stream().filter(x -> all.stream().noneMatch(x2 -> x.getUniqueId().equals(x2.getUniqueId()))).collect(Collectors.toSet()));
+        final Set<X> all = this.localStore.getAll().stream().filter(PayloadProfile::isOnline).collect(Collectors.toSet());
+        all.addAll(this.mongoStore.getAll().stream().filter(x -> all.stream().noneMatch(x2 -> x.getUniqueId().equals(x2.getUniqueId()))).collect(Collectors.toSet()));
         return all;
     }
 
-    /**
-     * See superclass for documentation {@link PayloadCache#controller(PayloadData)}
-     * @param data {@link PayloadData}
-     * @return
-     */
     @Override
-    public PayloadProfileController<X> controller(ProfileData data) {
+    public PayloadProfileController<X> controller(@Nonnull ProfileData data) {
+        Preconditions.checkNotNull(data);
         if (this.controllers.containsKey(data.getUniqueId())) {
             return this.controllers.get(data.getUniqueId());
         }
@@ -360,97 +368,76 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return controller;
     }
 
-    /**
-     * See superclass for documentation {@link PayloadCache#saveAsync(Payload)}
-     * @param payload Payload to save
-     * @return
-     */
     @Override
-    public Future<X> saveAsync(X payload) {
-        this.cache(payload);
-        return this.runAsync(() -> {
-            this.save(payload);
-            return payload;
-        });
+    public PayloadProfileController<X> controller(@Nonnull UUID key) {
+        Preconditions.checkNotNull(key);
+        if (this.controllers.containsKey(key)) {
+            return this.controllers.get(key);
+        }
+        ProfileData data = createData(null, key, null);
+        PayloadProfileController<X> controller = new PayloadProfileController<>(this, data);
+        this.controllers.put(data.getUniqueId(), controller);
+        return controller;
     }
 
-    /**
-     * See superclass for documentation {@link PayloadCache#save(Payload)}
-     * @param payload Payload to save
-     * @return
-     */
     @Override
-    public boolean save(X payload) {
-        this.getErrorHandler().debug(this, "Saving payload: " + payload.getIdentifier().toString());
-        if (this.saveNoSync(payload)) {
-            if (!payload.isSwitchingServers()) {
-                if (this.settings.isEnableSync() && !this.settings.isServerSpecific()) {
-                    this.syncManager.publishUpdate(payload); // Publish the update to other servers
-                }
-            }
-            return true;
-        }
-        return false;
+    public Future<Boolean> saveAsync(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        this.cache(payload);
+        return this.runAsync(() -> this.save(payload));
     }
 
-    /**
-     * See superclass for documentation {@link PayloadCache#saveNoSync(Payload)}
-     * @param payload Payload to save
-     * @return
-     */
     @Override
-    public boolean saveNoSync(X payload) {
-        boolean x = true;
-        payload.setLastInteractionTimestamp(System.currentTimeMillis());
-        this.cache(payload);
-        for (PayloadLayer<UUID, X, ProfileData> layer : this.layerController.getLayers()) {
-            if (layer.isDatabase()) {
-                if (!layer.save(payload)) {
-                    x = false;
+    public boolean save(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        if (mode.equals(PayloadMode.NETWORK_NODE)) {
+            Optional<NetworkProfile> onp = networkService.get(payload);
+            if (onp.isPresent()) {
+                NetworkProfile np = onp.get();
+                if (this.saveNoSync(payload)) {
+                    np.markSaved();
+                    if (networkService.save(np)) {
+                        if (settings.isEnableSync()) {
+                            sync.update(payload.getIdentifier());
+                        }
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
                 }
+            } else {
+                return false;
             }
-        }
-        if (!x) {
-            payload.setSaveFailed(true); // save failed
-            payload.sendMessage(this.getLangController().get(PLang.SAVE_FAILED_NOTIFY_PLAYER, this.getName()));
-            this.alert(PayloadPermission.ADMIN, PLang.SAVE_FAILED_NOTIFY_ADMIN, this.getName(), payload.getUsername());
-            this.getErrorHandler().debug(this, "Failed to save Payload: " + payload.getUsername());
         } else {
-            payload.setLastSaveTimestamp(System.currentTimeMillis());
-            if (payload.isSaveFailed()) {
-                // They previously had failed to save
-                // but now we are successful.
-                // let them know that they are free to switch servers / logout / etc. without data loss now.
-                payload.sendMessage(this.getLangController().get(PLang.SAVE_SUCCESS_NOTIFY_PLAYER, this.getName()));
-                this.alert(PayloadPermission.ADMIN, PLang.SAVE_SUCCESS_NOTIFY_ADMIN, this.getName(), payload.getUsername());
-                this.getErrorHandler().debug(this, "Successfully saved Payload: " + payload.getUsername());
-            }
+            return saveNoSync(payload);
+        }
+    }
+
+    @Override
+    public boolean saveNoSync(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        cache(payload);
+        if (mongoStore.save(payload)) {
             payload.setSaveFailed(false);
+            payload.setLastSaveTimestamp(System.currentTimeMillis());
+            payload.interact();
+            return true;
+        } else {
+            payload.setSaveFailed(true);
+            return false;
         }
-        return x;
     }
 
-    public boolean save(Player player) {
-        X x = getProfile(player);
-        if (x != null) {
-            return this.save(x);
-        }
-        return false;
-    }
-
-    /**
-     * See superclass for documentation {@link PayloadCache#saveAll()}
-     * @return
-     */
     @Override
     public int saveAll() {
         int failures = 0;
         for (Player p : this.getPlugin().getServer().getOnlinePlayers()) {
-            X payload = this.getLocalProfile(p);
-            if (payload != null) {
-                payload.setLastSeenTimestamp(System.currentTimeMillis());
-                payload.setLastSeenServer(PayloadAPI.get().getPayloadID());
-                payload.setLastInteractionTimestamp(System.currentTimeMillis());
+            Optional<X> o = this.get(p);
+            if (o.isPresent()) {
+                X payload = o.get();
+                payload.interact();
                 if (!this.save(payload)) {
                     failures++;
                 }
@@ -461,11 +448,13 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return failures;
     }
 
-    public PayloadProfileController<X> getController(UUID uuid) {
+    public PayloadProfileController<X> getController(@Nonnull UUID uuid) {
+        Preconditions.checkNotNull(uuid);
         return this.controllers.get(uuid);
     }
 
-    public void removeController(UUID uuid) {
+    public void removeController(@Nonnull UUID uuid) {
+        Preconditions.checkNotNull(uuid);
         this.controllers.remove(uuid);
     }
 
@@ -479,6 +468,7 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
         return true;
     }
 
+    @Nonnull
     @Override
     public ProfileCacheSettings getSettings() {
         return this.settings;
@@ -486,47 +476,19 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
 
     @Override
     public long cachedObjectCount() {
-        return this.localLayer.size();
+        return this.localStore.size();
     }
 
-    @Override
-    public void onRedisInitConnect() {
-        // Allocate Jedis resources for Publishing and Subscribing
-        if (this.payloadDatabase != null && this.payloadDatabase.getJedisPool() != null) {
-            if (this.subscriberJedis == null) {
-                this.getErrorHandler().debug(this, "Subscribing to pub/sub events");
-                this.getPool().submit(() -> {
-                    this.subscriberJedis = this.payloadDatabase.getResource();
-                    this.subscriberJedis.subscribe(this.handshakeListener,
-                            HandshakeEvent.PAYLOAD_NOT_CACHED_CONTINUE.getName(),
-                            HandshakeEvent.REQUEST_PAYLOAD_SAVE.getName(),
-                            HandshakeEvent.SAVED_PAYLOAD.getName(),
-                            HandshakeEvent.SAVING_PAYLOAD.getName());
-                });
-            }
-        }
-        super.onRedisInitConnect();
-    }
-
-    /**
-     * See superclass for documentation {@link PayloadCache#getCachedObjects()}
-     * @return
-     */
-    @Override
-    public Collection<X> getCachedObjects() {
-        return this.localLayer.getLocalCache().values();
-    }
-
-    /**
-     * See superclass for documentation {@link PayloadCache#updatePayloadID()}
-     */
     @Override
     public void updatePayloadID() {
-        for (X x : this.getCachedObjects()) {
-            x.setPayloadId(PayloadAPI.get().getPayloadID());
-            if (x.isPlayerOnline()) {
-                x.setLastSeenServer(PayloadAPI.get().getPayloadID());
-            }
+        for (X x : this.getCached()) {
+            x.setPayloadId(api.getPayloadID());
+            getNetworked(x).ifPresent(np -> {
+                if (np.isOnlineThisServer()) {
+                    np.setLastSeenServer(serverService.getThisServer());
+                    getNetworkService().save(np);
+                }
+            });
         }
         this.pool.submit(this::saveAll);
     }

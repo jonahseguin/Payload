@@ -8,6 +8,7 @@ package com.jonahseguin.payload.server;
 import com.jonahseguin.payload.base.Service;
 
 import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.Optional;
 
 public interface ServerService extends Service {
@@ -21,5 +22,10 @@ public interface ServerService extends Service {
 
     @Nonnull
     PayloadServer getThisServer();
+
+    @Nonnull
+    ServerPublisher getPublisher();
+
+    Collection<PayloadServer> getServers();
 
 }

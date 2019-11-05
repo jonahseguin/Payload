@@ -1,0 +1,125 @@
+package com.jonahseguin.payload.base.network;
+
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadData;
+import com.jonahseguin.payload.database.DatabaseService;
+import com.mongodb.BasicDBObject;
+import redis.clients.jedis.Jedis;
+
+import javax.annotation.Nonnull;
+import java.util.Optional;
+
+public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> implements NetworkService<K, X, N, D> {
+
+    private final PayloadCache<K, X, N, D> cache;
+    private final DatabaseService database;
+    private final Injector injector;
+    private final Class<N> type;
+
+    @Inject
+    public RedisNetworkService(PayloadCache<K, X, N, D> cache, Class<N> type, DatabaseService database, Injector injector) {
+        this.cache = cache;
+        this.database = database;
+        this.injector = injector;
+        this.type = type;
+    }
+
+    @Override
+    public Optional<N> get(@Nonnull K key) {
+        Preconditions.checkNotNull(key);
+        try (Jedis jedis = database.getJedisResource()) {
+            String json = jedis.hget(cache.getServerSpecificName(), cache.keyToString(key));
+            if (json != null) {
+                BasicDBObject dbObject = BasicDBObject.parse(json);
+                N np = database.getMorphia().fromDBObject(database.getDatastore(), type, dbObject);
+                return Optional.ofNullable(np);
+            }
+        } catch (Exception ex) {
+            cache.getErrorService().capture(ex, "Error getting network payload in Redis Network Service");
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<N> get(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        try (Jedis jedis = database.getJedisResource()) {
+            String json = jedis.hget(cache.getServerSpecificName(), cache.keyToString(payload.getIdentifier()));
+            if (json != null) {
+                BasicDBObject dbObject = BasicDBObject.parse(json);
+                N np = database.getMorphia().fromDBObject(database.getDatastore(), type, dbObject);
+                return Optional.ofNullable(np);
+            } else {
+                N np = create(payload);
+                if (save(np)) {
+                    return Optional.of(np);
+                } else {
+                    cache.getErrorService().capture("Failed to save after creation of network payload " + cache.keyToString(payload.getIdentifier()));
+                }
+            }
+        } catch (Exception ex) {
+            cache.getErrorService().capture(ex, "Error getting network payload in Redis Network Service");
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public boolean has(@Nonnull K key) {
+        Preconditions.checkNotNull(key);
+        try (Jedis jedis = database.getJedisResource()) {
+            return jedis.hexists(cache.getServerSpecificName(), cache.keyToString(key));
+        } catch (Exception ex) {
+            cache.getErrorService().capture(ex, "Error checking if hexists() in Redis Network Service");
+        }
+        return false;
+    }
+
+    @Override
+    public boolean save(@Nonnull N payload) {
+        Preconditions.checkNotNull(payload);
+        BasicDBObject object = (BasicDBObject) database.getMorphia().toDBObject(payload);
+        if (object != null) {
+            String json = object.toJson();
+            try (Jedis jedis = database.getJedisResource()) {
+                jedis.hset(cache.getServerSpecificName(), cache.keyToString(payload.getIdentifier()), json);
+            } catch (Exception ex) {
+                cache.getErrorService().capture(ex, "Error checking if hexists() in Redis Network Service");
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public Optional<X> get(@Nonnull N payload) {
+        Preconditions.checkNotNull(payload);
+        return cache.get(payload.getIdentifier());
+    }
+
+    @Override
+    public N create(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        N np = injector.getInstance(type);
+        np.setIdentifier(payload.getIdentifier());
+        np.setObjectId(payload.getObjectId());
+        return np;
+    }
+
+    @Override
+    public boolean start() {
+        return true;
+    }
+
+    @Override
+    public boolean shutdown() {
+        return true;
+    }
+
+    @Override
+    public boolean isRunning() {
+        return true;
+    }
+}

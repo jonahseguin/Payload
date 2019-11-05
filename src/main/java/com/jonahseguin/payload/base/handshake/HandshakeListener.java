@@ -5,10 +5,10 @@ import redis.clients.jedis.JedisPubSub;
 
 public class HandshakeListener extends JedisPubSub {
 
-    private final HandshakeController controller;
+    private final Handshake controller;
     private final HandshakeService service;
 
-    public HandshakeListener(HandshakeService service, HandshakeController controller) {
+    public HandshakeListener(HandshakeService service, Handshake controller) {
         this.service = service;
         this.controller = controller;
     }

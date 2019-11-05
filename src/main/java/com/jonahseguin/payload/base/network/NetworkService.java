@@ -5,21 +5,26 @@
 
 package com.jonahseguin.payload.base.network;
 
+import com.jonahseguin.payload.base.Service;
 import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadData;
 
 import javax.annotation.Nonnull;
 import java.util.Optional;
 
-public interface NetworkService<K, X extends Payload<K>, N extends NetworkPayload> {
+public interface NetworkService<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> extends Service {
 
     Optional<N> get(@Nonnull K key);
 
+    Optional<N> get(@Nonnull X payload);
+
     boolean has(@Nonnull K key);
 
-    void save(@Nonnull N payload);
-
-    N save(@Nonnull X payload);
+    boolean save(@Nonnull N payload);
 
     Optional<X> get(@Nonnull N payload);
+
+    N create(@Nonnull X payload);
+
 
 }

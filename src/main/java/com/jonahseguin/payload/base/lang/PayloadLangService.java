@@ -29,6 +29,11 @@ public class PayloadLangService implements LangService {
         this.lang = new Lang(plugin);
     }
 
+    @Override
+    public void register(LangModule module) {
+        lang.register(module);
+    }
+
     @Nullable
     @Override
     public String get(@Nonnull String module, @Nonnull String key, @Nullable Object... args) {

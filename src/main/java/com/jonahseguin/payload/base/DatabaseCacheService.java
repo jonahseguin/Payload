@@ -5,27 +5,31 @@
 
 package com.jonahseguin.payload.base;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
-import com.jonahseguin.payload.database.PayloadDatabase;
+import com.jonahseguin.payload.database.DatabaseService;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.PayloadObject;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import org.bukkit.plugin.Plugin;
 
+import javax.annotation.Nonnull;
+
 public class DatabaseCacheService implements CacheService {
 
     private final Plugin plugin;
-    private final PayloadDatabase database;
+    private final DatabaseService database;
     private final PayloadPlugin payloadPlugin;
     private final PayloadAPI api;
     private final Injector injector;
+    private boolean running = false;
 
     @Inject
-    public DatabaseCacheService(Plugin plugin, PayloadDatabase database, PayloadPlugin payloadPlugin, PayloadAPI api, Injector injector) {
+    public DatabaseCacheService(Plugin plugin, DatabaseService database, PayloadPlugin payloadPlugin, PayloadAPI api, Injector injector) {
         this.plugin = plugin;
         this.database = database;
         this.payloadPlugin = payloadPlugin;
@@ -34,26 +38,46 @@ public class DatabaseCacheService implements CacheService {
     }
 
     @Override
-    public <X extends PayloadProfile> ProfileCache<X> createProfileCache(String name, Class<X> type) {
-        ProfileCache<X> cache = new ProfileCache<>(plugin, payloadPlugin, api, name, type);
-        injector.injectMembers(cache);
-        database.hookCache(cache);
-        api.saveCache(cache);
-
-        database.getMorphia().map(type);
-        database.getDatastore().ensureIndexes();
+    public <X extends PayloadProfile> ProfileCache<X> createProfileCache(@Nonnull String name, @Nonnull Class<X> type) {
+        Preconditions.checkNotNull(name);
+        Preconditions.checkNotNull(type);
+        ProfileCache<X> cache = new ProfileCache<>(injector, name, type);
+        setup(cache);
         return cache;
     }
 
     @Override
-    public <X extends PayloadObject> ObjectCache<X> createObjectCache(String name, Class<X> type) {
-        ObjectCache<X> cache = new ObjectCache<>(plugin, payloadPlugin, api, name, type);
-        injector.injectMembers(cache);
-        database.hookCache(cache);
+    public <X extends PayloadObject> ObjectCache<X> createObjectCache(@Nonnull String name, @Nonnull Class<X> type) {
+        Preconditions.checkNotNull(name);
+        Preconditions.checkNotNull(type);
+        ObjectCache<X> cache = new ObjectCache<>(injector, name, type);
+        setup(cache);
+        return cache;
+    }
+
+    private void setup(@Nonnull PayloadCache cache) {
+        Preconditions.checkNotNull(cache);
+        database.hook(cache);
         api.saveCache(cache);
 
-        database.getMorphia().map(type);
+        database.getMorphia().map(cache.getPayloadClass());
         database.getDatastore().ensureIndexes();
-        return cache;
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running;
+    }
+
+    @Override
+    public boolean start() {
+        running = true;
+        return true;
+    }
+
+    @Override
+    public boolean shutdown() {
+        running = false;
+        return true;
     }
 }

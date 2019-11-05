@@ -10,38 +10,38 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.jonahseguin.payload.database.DatabaseService;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
-import com.jonahseguin.payload.mode.profile.ProfileCache;
+import com.jonahseguin.payload.mode.profile.ProfileService;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class Testing extends JavaPlugin {
 
     @Inject
-    ProfileCache<PayloadProfile> profileCache;
+    ProfileService<PayloadProfile> cache;
     @Inject
     DatabaseService database;
 
     @Override
     public void onEnable() {
-        Injector injector = Guice.createInjector(PayloadAPI.install(this), new TestingModule(this));
+        Injector injector = Guice.createInjector(PayloadAPI.install(this, "Database"), new TestingModule(this));
         injector.injectMembers(this);
-        database.load("database.yml", "Database");
+
         if (!database.start()) {
             getLogger().severe("Failed to start database");
             return;
         }
 
-        if (!profileCache.start()) {
+        if (!cache.start()) {
             getLogger().severe("Failed to start profile cache");
             return;
         }
 
-        PayloadProfile jo19 = profileCache.getProfileByName("jo19");
-        jo19.msg("Hey!");
+        cache.get("jo19").ifPresent(profile -> profile.msg("Hi!"));
     }
 
     @Override
     public void onDisable() {
-
+        cache.shutdown();
+        database.shutdown();
     }
 
 }

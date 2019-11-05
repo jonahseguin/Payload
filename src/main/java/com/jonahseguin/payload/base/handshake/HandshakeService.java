@@ -1,12 +1,14 @@
 package com.jonahseguin.payload.base.handshake;
 
+import com.jonahseguin.payload.base.Service;
+
 import javax.annotation.Nonnull;
 
-public interface HandshakeService {
+public interface HandshakeService extends Service {
 
-    <H extends HandshakeController> void subscribe(@Nonnull Class<H> type);
+    <H extends Handshake> void subscribe(@Nonnull Class<H> type);
 
-    <H extends HandshakeController> HandshakeHandler<H> publish(@Nonnull H packet);
+    <H extends Handshake> HandshakeHandler<H> publish(@Nonnull H packet);
 
     void receiveReply(@Nonnull String channel, @Nonnull HandshakeData data);
 

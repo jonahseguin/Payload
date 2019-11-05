@@ -6,6 +6,9 @@
 package com.jonahseguin.payload.base.type;
 
 import com.jonahseguin.payload.base.PayloadCache;
+import org.bson.types.ObjectId;
+
+import javax.annotation.Nonnull;
 
 /**
  * A Payload is an object that can be cached, saved, or loaded within the payload system.  Is it the functional
@@ -26,6 +29,7 @@ public interface Payload<K> {
      *
      * @return String: identifier field name
      */
+    @Nonnull
     String identifierFieldName();
 
     /**
@@ -33,6 +37,7 @@ public interface Payload<K> {
      * Every Payload object must have their matching cache stored in their object locally (non-persistent / transient)
      * @return PayloadCache
      */
+    @Nonnull
     PayloadCache getCache();
 
     /**
@@ -63,25 +68,12 @@ public interface Payload<K> {
      */
     void setPayloadServer(String payloadID);
 
-    /**
-     * Whether this object/profile should be saved
-     * I.e only return true if a profile is online
-     *
-     * @return True if should save
-     */
-    boolean shouldSave();
-
-    /**
-     * Whether this object/profile needs to prepare (i.e be saved elsewhere) before an update/save
-     *
-     * @return true if should prepare before an update/save
-     */
-    boolean shouldPrepareUpdate();
-
     void save();
 
     int hashCode();
 
     boolean equals(Object object);
+
+    ObjectId getObjectId();
 
 }

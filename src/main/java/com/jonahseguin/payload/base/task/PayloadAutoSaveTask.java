@@ -1,17 +1,22 @@
 package com.jonahseguin.payload.base.task;
 
+import com.google.common.base.Preconditions;
 import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
 import org.bukkit.scheduler.BukkitTask;
 
-public class PayloadAutoSaveTask<K, X extends Payload<K>, D extends PayloadData> implements Runnable {
+import javax.annotation.Nonnull;
 
-    private final PayloadCache<K, X, D> cache;
+public class PayloadAutoSaveTask<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> implements Runnable {
+
+    private final PayloadCache<K, X, N, D> cache;
 
     private BukkitTask task = null;
 
-    public PayloadAutoSaveTask(PayloadCache<K, X, D> cache) {
+    public PayloadAutoSaveTask(@Nonnull PayloadCache<K, X, N, D> cache) {
+        Preconditions.checkNotNull(cache);
         this.cache = cache;
     }
 
@@ -19,9 +24,9 @@ public class PayloadAutoSaveTask<K, X extends Payload<K>, D extends PayloadData>
     public void run() {
         int failures = cache.saveAll();
         if (failures > 0) {
-            cache.getErrorHandler().error(cache, failures + " Payload objects failed to save during auto-save.");
+            cache.getErrorService().capture(failures + " Payload objects failed to save during auto-save.");
         } else {
-            cache.getErrorHandler().debug(cache, "Auto-save completed successfully with 0 failures.");
+            cache.getErrorService().debug("Auto-save completed successfully with 0 failures.");
         }
     }
 

@@ -9,9 +9,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.jonahseguin.payload.base.CacheService;
-import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
-import com.jonahseguin.payload.mode.profile.ProfileCache;
+import com.jonahseguin.payload.mode.profile.ProfileService;
 
 public class TestingModule extends AbstractModule {
 
@@ -27,9 +26,10 @@ public class TestingModule extends AbstractModule {
     }
 
     @Provides @Singleton
-    ProfileCache<PayloadProfile> provideProfileCache(CacheService cacheService) {
-        ProfileCache<PayloadProfile> cache = cacheService.createProfileCache("Test", PayloadProfile.class);
-        cache.setSyncMode(SyncMode.CACHE_ALL);
+    ProfileService<PayloadProfile> provideProfileCache(CacheService cacheService) {
+        ProfileService<PayloadProfile> cache = cacheService.createProfileCache("Test", PayloadProfile.class);
+        cache.setMode(PayloadMode.NETWORK_NODE);
+        cache.getSettings().setEnableSync(true);
         return cache;
     }
 

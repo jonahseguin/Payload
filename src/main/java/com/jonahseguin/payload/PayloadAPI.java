@@ -5,16 +5,19 @@
 
 package com.jonahseguin.payload;
 
-import com.google.inject.Inject;
+import com.google.common.base.Preconditions;
 import com.google.inject.Singleton;
 import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
-import com.jonahseguin.payload.database.PayloadDatabase;
+import com.jonahseguin.payload.database.DatabaseModule;
+import com.jonahseguin.payload.database.DatabaseService;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.plugin.Plugin;
 
+import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -26,19 +29,25 @@ public class PayloadAPI {
 
     private final PayloadPlugin plugin;
     private final ConcurrentMap<String, PayloadCache> caches = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, PayloadDatabase> databases = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, DatabaseService> databases = new ConcurrentHashMap<>();
     private final Set<String> requested = new HashSet<>();
 
     private List<PayloadCache> _sortedCaches = null;
     private List<PayloadCache> _sortedCachesReversed = null;
 
-    @Inject
     PayloadAPI(PayloadPlugin plugin) {
         this.plugin = plugin;
     }
 
-    public static PayloadModule install(Plugin plugin) {
-        return new PayloadModule(PayloadPlugin.getPlugin(), plugin);
+    public static PayloadModule install(@Nonnull Plugin plugin, @Nonnull DatabaseModule databaseModule) {
+        Preconditions.checkNotNull(plugin);
+        Preconditions.checkNotNull(databaseModule);
+        return new PayloadModule(plugin, databaseModule);
+    }
+
+    public static PayloadModule install(@Nonnull Plugin plugin, @Nonnull String databaseName) {
+        Preconditions.checkNotNull(databaseName);
+        return install(plugin, new DatabaseModule(plugin, databaseName));
     }
 
     /**
@@ -62,7 +71,7 @@ public class PayloadAPI {
         this.caches.putIfAbsent(convertCacheName(cache.getName()), cache);
     }
 
-    public void registerDatabase(PayloadDatabase database) {
+    public void registerDatabase(DatabaseService database) {
         if (!isDatabaseRegistered(database.getName())) {
             this.databases.putIfAbsent(database.getName().toLowerCase(), database);
         } else {
@@ -70,7 +79,7 @@ public class PayloadAPI {
         }
     }
 
-    public PayloadDatabase getDatabase(String name) {
+    public DatabaseService getDatabase(String name) {
         return this.databases.get(name.toLowerCase());
     }
 
@@ -86,8 +95,8 @@ public class PayloadAPI {
      * @return The Cache
      */
     @SuppressWarnings("unchecked") // bad, oops
-    public <K, X extends Payload<K>, D extends PayloadData> PayloadCache<K, X, D> getCache(String name) {
-        return (PayloadCache<K, X, D>) this.caches.get(convertCacheName(name));
+    public <K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> PayloadCache<K, X, N, D> getCache(String name) {
+        return (PayloadCache<K, X, N, D>) this.caches.get(convertCacheName(name));
     }
 
     public List<PayloadCache> getSortedCachesByDepends() {
@@ -126,9 +135,8 @@ public class PayloadAPI {
             for (PayloadCache cache : getCaches().values()) {
                 cache.updatePayloadID();
             }
-            for (PayloadDatabase database : getDatabases().values()) {
-                
-                database.getServerManager().getPublisher().publishUpdateName(oldName, name);
+            for (DatabaseService database : getDatabases().values()) {
+                database.getServerService().getPublisher().publishUpdateName(oldName, name);
             }
         } else {
             throw new IllegalArgumentException("Payload ID must be alphanumeric, '" + name + "' is not valid.");

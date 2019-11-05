@@ -10,7 +10,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
 import com.jonahseguin.payload.base.PayloadPermission;
-import com.jonahseguin.payload.base.data.PayloadLocal;
 import com.jonahseguin.payload.base.lang.LangService;
 import com.jonahseguin.payload.base.listener.LockListener;
 import com.jonahseguin.payload.command.PCommandHandler;
@@ -86,10 +85,10 @@ public class PayloadPlugin extends JavaPlugin {
     public void onEnable() {
         plugin = this;
 
-        Injector injector = Guice.createInjector(PayloadAPI.install(this));
+        Injector injector = Guice.createInjector(PayloadAPI.install(this, "PayloadDatabase"));
         injector.injectMembers(this);
 
-        commandHandler = new PCommandHandler(this, lang);
+        commandHandler = new PCommandHandler(this, lang, injector);
 
         this.copyResources();
         if (!this.local.loadPayloadID()) {
@@ -99,8 +98,8 @@ public class PayloadPlugin extends JavaPlugin {
         if (this.local.isFirstStartup()) {
             this.getLogger().info("This is the first startup for Payload on this server instance.  Files created.");
         }
-        this.getServer().getPluginManager().registerEvents(new LockListener(), this);
-        this.getServer().getPluginManager().registerEvents(new ProfileListener(), this);
+        this.getServer().getPluginManager().registerEvents(new LockListener(this), this);
+        this.getServer().getPluginManager().registerEvents(new ProfileListener(api), this);
         this.getCommand("payload").setExecutor(this.commandHandler);
         this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", getDescription().getVersion()));
     }

@@ -5,16 +5,21 @@
 
 package com.jonahseguin.payload.server;
 
+import dev.morphia.annotations.Embedded;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+@Embedded
 public class PayloadServer {
 
     private String name;
     private long lastPing = 0;
     private boolean online = false;
+
+    public PayloadServer() {
+    }
 
     public PayloadServer(String name) {
         this.name = name;

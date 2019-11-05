@@ -1,7 +1,7 @@
 package com.jonahseguin.payload.database.mongo;
 
 import com.jonahseguin.payload.database.DatabaseDependent;
-import com.jonahseguin.payload.database.PayloadDatabase;
+import com.jonahseguin.payload.database.DatabaseService;
 import com.mongodb.event.ServerHeartbeatFailedEvent;
 import com.mongodb.event.ServerHeartbeatStartedEvent;
 import com.mongodb.event.ServerHeartbeatSucceededEvent;
@@ -9,10 +9,10 @@ import com.mongodb.event.ServerMonitorListener;
 
 public class PayloadMongoMonitor implements ServerMonitorListener {
 
-    private final PayloadDatabase database;
+    private final DatabaseService database;
     private boolean connected = false;
 
-    public PayloadMongoMonitor(PayloadDatabase database) {
+    public PayloadMongoMonitor(DatabaseService database) {
         this.database = database;
     }
 
@@ -20,7 +20,7 @@ public class PayloadMongoMonitor implements ServerMonitorListener {
     public void serverHearbeatStarted(ServerHeartbeatStartedEvent event) {
         if (!this.connected && !this.database.getState().isMongoInitConnect()) {
             // MongoDB connection attempting for first time
-            this.database.databaseDebug("Attempting MongoDB initial connection");
+            this.database.getErrorService().debug("Attempting MongoDB initial connection");
         }
     }
 
@@ -31,12 +31,12 @@ public class PayloadMongoMonitor implements ServerMonitorListener {
         if (!this.database.getState().isMongoInitConnect()) {
             this.database.getHooks().forEach(DatabaseDependent::onMongoDbInitConnect);
             this.database.getState().setMongoInitConnect(true);
-            this.database.databaseDebug("MongoDB initial connection succeeded");
+            this.database.getErrorService().debug("MongoDB initial connection succeeded");
         }
         else {
             if (!this.connected) {
                 this.database.getHooks().forEach(DatabaseDependent::onMongoDbReconnect);
-                this.database.databaseDebug("MongoDB re-connection succeeded");
+                this.database.getErrorService().debug("MongoDB re-connection succeeded");
             }
         }
         this.connected = true;
@@ -48,7 +48,7 @@ public class PayloadMongoMonitor implements ServerMonitorListener {
         this.database.getState().setMongoConnected(false);
         if (this.connected) {
             this.database.getHooks().forEach(DatabaseDependent::onMongoDbDisconnect);
-            this.database.databaseDebug("MongoDB disconnected");
+            this.database.getErrorService().debug("MongoDB disconnected");
         }
         this.connected = false;
     }

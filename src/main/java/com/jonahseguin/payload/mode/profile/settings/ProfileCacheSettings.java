@@ -7,10 +7,12 @@ package com.jonahseguin.payload.mode.profile.settings;
 
 import com.jonahseguin.payload.base.settings.CacheSettings;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class ProfileCacheSettings extends CacheSettings {
 
     private int localExpiryTimeSeconds = 7200;

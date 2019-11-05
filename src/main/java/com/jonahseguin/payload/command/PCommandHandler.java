@@ -6,6 +6,7 @@
 package com.jonahseguin.payload.command;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Injector;
 import com.jonahseguin.lang.LangDefinitions;
 import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.PayloadPlugin;
@@ -31,25 +32,25 @@ public class PCommandHandler implements CommandExecutor, LangModule {
     private final LangDefinitions lang;
     private final Map<String, PayloadCommand> commands = new HashMap<>();
 
-    public PCommandHandler(@Nonnull PayloadPlugin plugin, @Nonnull LangService langService) {
+    public PCommandHandler(@Nonnull PayloadPlugin plugin, @Nonnull LangService langService, @Nonnull Injector injector) {
         Preconditions.checkNotNull(plugin);
         Preconditions.checkNotNull(langService);
+        Preconditions.checkNotNull(injector);
         this.plugin = plugin;
         this.langService = langService;
         this.lang = langService.module(this);
-        register(new CmdHelp());
-        register(new CmdCache());
-        register(new CmdCacheList());
-        register(new CmdCacheLayers());
-        register(new CmdDebug());
-        register(new CmdProfile());
-        register(new CmdSaveall());
-        register(new CmdServer());
-        register(new CmdSetID());
-        register(new CmdResetHandshake());
-        register(new CmdDatabaseList());
-        register(new CmdDatabase());
-        register(new CmdServers());
+        register(injector.getInstance(CmdHelp.class));
+        register(injector.getInstance(CmdCache.class));
+        register(injector.getInstance(CmdCacheList.class));
+        register(injector.getInstance(CmdCacheStores.class));
+        register(injector.getInstance(CmdDebug.class));
+        register(injector.getInstance(CmdProfile.class));
+        register(injector.getInstance(CmdSaveall.class));
+        register(injector.getInstance(CmdServer.class));
+        register(injector.getInstance(CmdSetID.class));
+        register(injector.getInstance(CmdDatabaseList.class));
+        register(injector.getInstance(CmdDatabase.class));
+        register(injector.getInstance(CmdServers.class));
     }
 
     @Override

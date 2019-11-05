@@ -8,15 +8,14 @@ import org.bson.Document;
 import redis.clients.jedis.Jedis;
 
 import javax.annotation.Nonnull;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
+import java.util.function.Function;
 
 public class PayloadHandshakeService implements HandshakeService {
 
+    private final ConcurrentMap<String, Handshake> replyControllers = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, HandshakeContainer> containers = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, HandshakeController> replyControllers = new ConcurrentHashMap<>();
+    private boolean running = false;
     private final Injector injector;
     private final DatabaseService database;
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -28,13 +27,49 @@ public class PayloadHandshakeService implements HandshakeService {
     }
 
     @Override
+    public boolean start() {
+        running = true;
+        return database.isConnected();
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running;
+    }
+
+    @Override
+    public boolean shutdown() {
+        this.containers.values().stream()
+                .map((Function<HandshakeContainer, Handshake>) HandshakeContainer::getSubscriberController)
+                .forEach(Handshake::stopListening);
+        shutdownExecutor();
+        this.containers.clear();
+        this.replyControllers.clear();
+        running = false;
+        return true;
+    }
+
+    private void shutdownExecutor() {
+        try {
+            executor.shutdown();
+            executor.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            database.getErrorService().capture(ex, "Interrupted during shutdown of handshake service's executor service");
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Override
     public void receiveReply(@Nonnull String channel, @Nonnull HandshakeData data) {
+        Preconditions.checkNotNull(channel);
+        Preconditions.checkNotNull(data);
         if (replyControllers.containsKey(data.getID())) {
-            HandshakeController controller = replyControllers.get(data.getID());
+            Handshake controller = replyControllers.get(data.getID());
             if (controller != null) {
                 executor.submit(() -> {
                     controller.load(data);
-                    controller.executeHandler(data);
+                    controller.executeHandler();
                 });
             }
             replyControllers.remove(data.getID());
@@ -43,22 +78,28 @@ public class PayloadHandshakeService implements HandshakeService {
 
     @Override
     public void receive(@Nonnull String channel, @Nonnull HandshakeData data) {
+        Preconditions.checkNotNull(channel);
+        Preconditions.checkNotNull(data);
         // Receiving before sending reply
-        HandshakeContainer container = containers.get(channel);
-        HandshakeController controller = container.createInstance();
-        executor.submit(() -> {
-            controller.load(data);
-            controller.receive();
-            try (Jedis jedis = database.getJedisResource()) {
-                jedis.publish(controller.channelReply(), data.getDocument().toJson());
-            } catch (Exception ex) {
-                database.getErrorService().capture(ex, "Error with Jedis resource during handshake receive (sending reply) for " + controller.getClass().getSimpleName());
-            }
-        });
+        if (containers.containsKey(channel)) {
+            HandshakeContainer container = containers.get(channel);
+            Handshake controller = container.createInstance();
+            executor.submit(() -> {
+                if (controller.shouldAccept(data)) {
+                    controller.load(data);
+                    controller.receive();
+                    try (Jedis jedis = database.getJedisResource()) {
+                        jedis.publish(controller.channelReply(), data.getDocument().toJson());
+                    } catch (Exception ex) {
+                        database.getErrorService().capture(ex, "Error with Jedis resource during handshake receive (sending reply) for " + controller.getClass().getSimpleName());
+                    }
+                }
+            });
+        }
     }
 
     @Override
-    public <H extends HandshakeController> void subscribe(@Nonnull Class<H> type) {
+    public <H extends Handshake> void subscribe(@Nonnull Class<H> type) {
         Preconditions.checkNotNull(type);
         HandshakeContainer<H> container = new HandshakeContainer<>(type, injector);
         H controller = container.getSubscriberController();
@@ -68,7 +109,7 @@ public class PayloadHandshakeService implements HandshakeService {
     }
 
     @Override
-    public <H extends HandshakeController> HandshakeHandler<H> publish(@Nonnull H controller) {
+    public <H extends Handshake> HandshakeHandler<H> publish(@Nonnull H controller) {
         Preconditions.checkNotNull(controller);
         HandshakeData data = new HandshakeData(new Document());
         data.writeID();
@@ -76,13 +117,11 @@ public class PayloadHandshakeService implements HandshakeService {
         HandshakeHandler<H> handler = new HandshakeHandler<>(data);
         controller.setHandler(handler);
         replyControllers.put(data.getID(), controller);
-        executor.submit(() -> {
-            try (Jedis jedis = database.getJedisResource()) {
-                jedis.publish(controller.channelPublish(), data.getDocument().toJson());
-            } catch (Exception ex) {
-                database.getErrorService().capture(ex, "Error with Jedis resource during handshake publish for " + controller.getClass().getSimpleName());
-            }
-        });
+        try (Jedis jedis = database.getJedisResource()) {
+            jedis.publish(controller.channelPublish(), data.getDocument().toJson());
+        } catch (Exception ex) {
+            database.getErrorService().capture(ex, "Error with Jedis resource during handshake publish for " + controller.getClass().getSimpleName());
+        }
         return handler;
     }
 }

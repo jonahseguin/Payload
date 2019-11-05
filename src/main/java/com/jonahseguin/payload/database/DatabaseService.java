@@ -6,12 +6,16 @@
 package com.jonahseguin.payload.database;
 
 import com.jonahseguin.payload.base.Service;
-import com.jonahseguin.payload.server.ServerManager;
+import com.jonahseguin.payload.base.error.ErrorService;
+import com.jonahseguin.payload.server.ServerService;
 import com.mongodb.MongoClient;
 import dev.morphia.Datastore;
 import dev.morphia.Morphia;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+
+import javax.annotation.Nonnull;
+import java.util.Set;
 
 public interface DatabaseService extends Service {
 
@@ -23,14 +27,28 @@ public interface DatabaseService extends Service {
 
     Jedis getJedisResource();
 
+    Jedis getMonitorJedis();
+
     JedisPool getJedisPool();
 
-    ServerManager getServerManager();
+    ServerService getServerService();
 
     boolean isConnected();
 
-    boolean canFunction(DatabaseDependent dependent);
+    boolean canFunction(@Nonnull DatabaseDependent dependent);
 
-    void load(String fileName, String name);
+    String getName();
+
+    void hook(DatabaseDependent dependent);
+
+    Set<DatabaseDependent> getHooks();
+
+    ErrorService getErrorService();
+
+    DatabaseState getState();
+
+    boolean connectRedis();
+
+
 
 }

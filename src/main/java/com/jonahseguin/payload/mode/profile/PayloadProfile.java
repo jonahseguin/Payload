@@ -9,6 +9,7 @@ import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.mode.profile.util.MsgBuilder;
 import dev.morphia.annotations.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -39,29 +40,22 @@ public abstract class PayloadProfile implements Payload<UUID> {
 
     @Id
     protected ObjectId objectId = new ObjectId();
-
     @Indexed
     protected String username;
     @Indexed
     protected String uniqueId;
     protected String loginIp = null; // IP the profile logged in with
-
-    protected String lastSeenServer = null; // The Payload ID of the server they last joined
-    protected long lastSeenTimestamp = 0;
-    protected boolean online = false; // is the profile online anywhere in the network, can be true even if they aren't online on this server instance
     protected String payloadId; // The ID of the Payload instance that currently holds this profile
-
     protected transient UUID uuid = null;
     protected transient long cachedTimestamp = System.currentTimeMillis();
     protected transient long lastInteractionTimestamp = System.currentTimeMillis();
-    protected transient long redisCacheTimestamp = System.currentTimeMillis();
     protected transient long lastSaveTimestamp = 0;
-    protected transient boolean switchingServers = false; // set to true when an incoming handshake requests their profile be saved
     protected transient boolean saveFailed = false; // If the player's profile failed to auto-save/save on shutdown,
     // This will be set to true, and we will notify the player once their
     // Profile has been saved successfully
     protected transient String loadingSource = null;
     protected transient Player player = null;
+    protected transient long handshakeStartTimestamp = 0;
 
     @Inject
     public PayloadProfile(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ProfileCache cache) {
@@ -88,6 +82,15 @@ public abstract class PayloadProfile implements Payload<UUID> {
         this.uuid = UUID.fromString(this.uniqueId);
     }
 
+    public boolean hasValidHandshake() {
+        if (handshakeStartTimestamp > 0) {
+            long ago = System.currentTimeMillis() - handshakeStartTimestamp;
+            long seconds = ago / 1000;
+            return seconds < 10;
+        }
+        return false;
+    }
+
     public UUID getUUID() {
         if (this.uuid == null) {
             this.uuid = UUID.fromString(this.uniqueId);
@@ -99,13 +102,13 @@ public abstract class PayloadProfile implements Payload<UUID> {
         return this.getUUID();
     }
 
-    void initializePlayer(Player player) {
+    public void initializePlayer(Player player) {
         Validate.notNull(player, "Player cannot be null for initializePlayer");
         this.player = player;
         this.init();
     }
 
-    void uninitializePlayer() {
+    public void uninitializePlayer() {
         this.uninit();
         this.player = null;
     }
@@ -114,22 +117,15 @@ public abstract class PayloadProfile implements Payload<UUID> {
 
     abstract void uninit();
 
-    public boolean isPlayerOnline() {
+    public boolean isOnline() {
         if (this.player == null) {
             Player player = Bukkit.getPlayer(this.getUUID());
             if (player != null && player.isOnline()) {
                 this.player = player;
+                return true;
             }
         }
         return this.player != null && this.player.isOnline();
-    }
-
-    public boolean isOnlineThisServer() {
-        return this.isPlayerOnline();
-    }
-
-    public boolean isOnlineOtherServer() {
-        return !this.isPlayerOnline() && this.online;
     }
 
     public String getCurrentIP() {
@@ -142,10 +138,6 @@ public abstract class PayloadProfile implements Payload<UUID> {
     @Override
     public void interact() {
         this.lastInteractionTimestamp = System.currentTimeMillis();
-    }
-
-    public void interactRedis() {
-        this.redisCacheTimestamp = System.currentTimeMillis();
     }
 
     @Override
@@ -218,16 +210,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
     }
 
     @Override
-    public boolean shouldSave() {
-        return this.isOnlineThisServer();
-    }
-
-    @Override
-    public boolean shouldPrepareUpdate() {
-        return this.isOnlineOtherServer();
-    }
-
-    @Override
+    @SuppressWarnings("unchecked")
     public void save() {
         this.cache.save(this);
     }
@@ -258,7 +241,12 @@ public abstract class PayloadProfile implements Payload<UUID> {
                 return false;
             } else {
                 if (this.objectId != null && other.objectId != null) {
-                    return this.objectId.equals(other.objectId);
+                    if (this.uniqueId != null && other.uniqueId != null) {
+                        return this.objectId.equals(other.objectId)
+                                && this.uniqueId.equalsIgnoreCase(other.uniqueId);
+                    } else {
+                        return false;
+                    }
                 } else {
                     return false;
                 }

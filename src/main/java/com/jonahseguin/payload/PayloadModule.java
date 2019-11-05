@@ -7,12 +7,11 @@ package com.jonahseguin.payload;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
-import com.jonahseguin.payload.base.CacheModule;
-import com.jonahseguin.payload.base.data.PayloadLocal;
+import com.jonahseguin.payload.base.CacheService;
+import com.jonahseguin.payload.base.DatabaseCacheService;
 import com.jonahseguin.payload.base.lang.LangService;
 import com.jonahseguin.payload.base.lang.PayloadLangService;
 import com.jonahseguin.payload.base.uuid.UUIDService;
-import com.jonahseguin.payload.command.PCommandHandler;
 import com.jonahseguin.payload.database.DatabaseModule;
 import org.bukkit.plugin.Plugin;
 
@@ -20,30 +19,24 @@ import javax.annotation.Nonnull;
 
 public class PayloadModule extends AbstractModule {
 
-    private final PayloadPlugin payloadPlugin;
-    private final PayloadAPI api;
     private final Plugin plugin;
+    private final DatabaseModule databaseModule;
 
-    PayloadModule(@Nonnull PayloadPlugin payloadPlugin, @Nonnull Plugin plugin) {
-        Preconditions.checkNotNull(payloadPlugin);
+    PayloadModule(@Nonnull Plugin plugin, @Nonnull DatabaseModule databaseModule) {
         Preconditions.checkNotNull(plugin);
-        this.payloadPlugin = payloadPlugin;
-        this.api = payloadPlugin.getApi();
+        Preconditions.checkNotNull(databaseModule);
         this.plugin = plugin;
+        this.databaseModule = databaseModule;
     }
 
     @Override
     protected void configure() {
-        bind(PayloadPlugin.class).toInstance(payloadPlugin);
+        install(new PayloadCoreModule(PayloadPlugin.getPlugin(), PayloadPlugin.getPlugin().getApi()));
+        install(databaseModule);
         bind(Plugin.class).toInstance(plugin);
-        bind(PayloadAPI.class).toInstance(api);
-        bind(PCommandHandler.class).toInstance(payloadPlugin.getCommandHandler());
-        bind(PayloadLocal.class).toInstance(payloadPlugin.getLocal());
         bind(UUIDService.class);
         bind(LangService.class).to(PayloadLangService.class);
-
-        install(new DatabaseModule(api, payloadPlugin, plugin));
-        install(new CacheModule());
+        bind(CacheService.class).to(DatabaseCacheService.class);
     }
 
 }

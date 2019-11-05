@@ -7,17 +7,23 @@ import com.jonahseguin.payload.command.PayloadCommand;
 
 public class CmdDebug implements PayloadCommand {
 
+    private final PayloadPlugin payloadPlugin;
+
+    public CmdDebug(PayloadPlugin payloadPlugin) {
+        this.payloadPlugin = payloadPlugin;
+    }
+
     @Override
     public void execute(CmdArgs args) {
         if (args.length() == 0) {
-            args.msg("&7Payload: Debug is {0} &7(use &e/payload debug [on/off]&7 to toggle)", (PayloadPlugin.get().isDebug() ? "&aon" : "&coff"));
+            args.msg("&7Payload: Debug is {0} &7(use &e/payload debug [on/off]&7 to toggle)", (payloadPlugin.isDebug() ? "&aon" : "&coff"));
         } else {
             String toggle = args.arg(0).toLowerCase();
             if (toggle.startsWith("on")) {
-                PayloadPlugin.get().setDebug(true);
+                payloadPlugin.setDebug(true);
                 args.msg("&7Payload: Debug &aon");
             } else if (toggle.startsWith("off")) {
-                PayloadPlugin.get().setDebug(true);
+                payloadPlugin.setDebug(false);
                 args.msg("&7Payload: Debug &coff");
             }
         }

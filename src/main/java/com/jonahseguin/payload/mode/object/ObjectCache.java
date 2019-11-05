@@ -5,17 +5,15 @@
 
 package com.jonahseguin.payload.mode.object;
 
-import com.jonahseguin.payload.PayloadAPI;
-import com.jonahseguin.payload.PayloadPlugin;
+import com.google.common.base.Preconditions;
+import com.google.inject.Injector;
+import com.jonahseguin.payload.base.CacheModule;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.layer.PayloadLayer;
-import com.jonahseguin.payload.base.sync.SyncMode;
-import com.jonahseguin.payload.mode.object.layer.ObjectLayerLocal;
-import com.jonahseguin.payload.mode.object.layer.ObjectLayerMongo;
-import com.jonahseguin.payload.mode.object.layer.ObjectLayerRedis;
+import com.jonahseguin.payload.base.store.PayloadStore;
 import com.jonahseguin.payload.mode.object.settings.ObjectCacheSettings;
+import com.jonahseguin.payload.mode.object.store.ObjectStoreLocal;
+import com.jonahseguin.payload.mode.object.store.ObjectStoreMongo;
 import lombok.Getter;
-import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -24,177 +22,34 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @Getter
-public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X, ObjectData> {
+public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X, NetworkObject, ObjectData> implements ObjectService<X> {
 
-    private transient final ObjectCacheSettings settings = new ObjectCacheSettings();
-    private transient final ConcurrentMap<String, PayloadObjectController<X>> controllers = new ConcurrentHashMap<>();
+    private final ObjectCacheSettings settings = new ObjectCacheSettings();
+    private final ConcurrentMap<String, PayloadObjectController<X>> controllers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, ObjectData> data = new ConcurrentHashMap<>();
+    private final ObjectStoreLocal<X> localStore = new ObjectStoreLocal<>(this);
+    private final ObjectStoreMongo<X> mongoStore = new ObjectStoreMongo<>(this);
+    private final CacheModule<String, X, NetworkObject, ObjectData> module = new ObjectCacheModule<>(this);
 
-    private transient final ConcurrentMap<String, ObjectData> data = new ConcurrentHashMap<>();
+    public ObjectCache(@Nonnull Injector injector, @Nonnull String name, @Nonnull Class<X> payloadClass) {
+        super(injector, name, String.class, payloadClass);
+        this.injector.injectMembers(this);
+    }
 
-    // Layers
-    private final ObjectLayerLocal<X> localLayer = new ObjectLayerLocal<>(this);
-    private final ObjectLayerRedis<X> redisLayer = new ObjectLayerRedis<>(this);
-    private final ObjectLayerMongo<X> mongoLayer = new ObjectLayerMongo<>(this);
-
-    public ObjectCache(@Nonnull Plugin plugin, @Nonnull PayloadPlugin payloadPlugin, @Nonnull PayloadAPI api, @Nonnull String name, @Nonnull Class<X> payloadClass) {
-        super(plugin, payloadPlugin, api, name, String.class, payloadClass);
+    @Nonnull
+    @Override
+    protected CacheModule<String, X, NetworkObject, ObjectData> module() {
+        return module;
     }
 
     @Override
-    public PayloadObjectController<X> controller(ObjectData data) {
-        if (controllers.containsKey(data.getIdentifier())) {
-            return controllers.get(data.getIdentifier());
-        }
-        PayloadObjectController<X> controller = new PayloadObjectController<>(this, data);
-        this.controllers.put(data.getIdentifier(), controller);
-        return controller;
-    }
-
-    @Override
-    public ObjectCacheSettings getSettings() {
-        return this.settings;
-    }
-
-    @Override
-    protected void init() {
-        this.layerController.register(this.localLayer);
-        if (this.settings.isUseRedis()) {
-            this.layerController.register(this.redisLayer);
-        }
-        if (this.settings.isUseMongo()) {
-            this.layerController.register(this.mongoLayer);
-        }
-
-        this.layerController.init();
-    }
-
-    @Override
-    protected void shutdown() {
-        this.data.clear();
-        this.controllers.clear();
-        this.layerController.shutdown();
-    }
-
-    public X getLocalObject(String key) {
-        return this.localLayer.get(key);
-    }
-
-    public X getObject(String key) {
-        return this.get(key);
-    }
-
-    public boolean hasObjectLocal(String key) {
-        return this.localLayer.has(key);
-    }
-
-    public void removeObjectLocal(String key) {
-        this.localLayer.remove(key);
-    }
-
-    @Override
-    public String keyFromString(String key) {
-        return key;
-    }
-
-    @Override
-    public void cacheAll() {
-        this.getAll().forEach(this::cache);
-    }
-
-    @Override
-    public boolean isCached(String key) {
-        return this.localLayer.has(key);
-    }
-
-    @Override
-    public boolean uncache(String key) {
-        if (this.getSyncMode().equals(SyncMode.CACHE_ALL) && !this.settings.isServerSpecific()) {
-            if (this.getSettings().isEnableSync()) {
-                this.syncManager.publishUncache(key);
-            }
-        }
-        return this.uncacheLocal(key);
-    }
-
-    @Override
-    public Optional<X> getFromCache(String key) {
-        return this.localLayer.get(key);
-    }
-
-    @Override
-    public Optional<X> getFromDatabase(String key) {
-        for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
-            if (layer.isDatabase()) {
-                X payload = layer.get(key);
-                if (payload != null) {
-                    return Optional.of(payload);
-                }
-            }
-        }
-        return Optional.empty();
-    }
-
-    @Override
-    public boolean uncacheLocal(String key) {
-        if (this.localLayer.has(key)) {
-            this.localLayer.remove(key);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public void delete(String key) {
-        for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
-            layer.remove(key);
-        }
-        if (this.settings.isEnableSync()) {
-            this.syncManager.publishUncache(key);
-        }
-    }
-
-    @Override
-    public Optional<X> get(String key) {
-        return Optional.ofNullable(controller(createData(key)).cache());
-    }
-
-    @Override
-    public Set<X> getAll() {
-        final Set<X> all = new HashSet<>(this.localLayer.getAll());
-        if (this.settings.isUseRedis()) {
-            all.addAll(this.redisLayer.getAll().stream().filter(x -> all.stream().noneMatch(x2 -> x.getObjectId().equals(x2.getObjectId()))).collect(Collectors.toSet()));
-        }
-        if (this.settings.isUseMongo()) {
-            all.addAll(this.mongoLayer.getAll().stream().filter(x -> all.stream().noneMatch(x2 -> x.getObjectId().equals(x2.getObjectId()))).collect(Collectors.toSet()));
-        }
-        return all;
-    }
-
-    @Override
-    public long cachedObjectCount() {
-        return this.localLayer.size();
-    }
-
-    @Override
-    public boolean save(X payload) {
-        if (this.saveNoSync(payload)) {
-            if (this.settings.isEnableSync() && !this.settings.isServerSpecific()) {
-                this.syncManager.publishUpdate(payload);
-            }
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public boolean saveNoSync(X payload) {
+    protected boolean initialize() {
         boolean success = true;
-        for (PayloadLayer<String, X, ObjectData> layer : this.layerController.getLayers()) {
-            if (!layer.save(payload)) {
+        if (settings.isUseMongo()) {
+            if (!mongoStore.start()) {
                 success = false;
             }
         }
@@ -202,33 +57,99 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
     }
 
     @Override
-    public Future<X> saveAsync(X payload) {
-        this.localLayer.save(payload);
-        return this.runAsync(() -> {
-            this.save(payload);
-            return payload;
-        });
+    protected boolean terminate() {
+        data.clear();
+        controllers.clear();
+        return true;
     }
 
     @Override
-    public void cache(X payload) {
-        if (this.hasObjectLocal(payload.getIdentifier())) {
-            this.updatePayloadFromNewer(this.getLocalObject(payload.getIdentifier()), payload);
-        } else {
-            this.saveToLocal(payload);
+    public PayloadObjectController<X> controller(@Nonnull String key) {
+        Preconditions.checkNotNull(key);
+        if (controllers.containsKey(key)) {
+            return controllers.get(key);
         }
+        ObjectData data = createData(key);
+        PayloadObjectController<X> controller = new PayloadObjectController<>(this, data);
+        controllers.put(key, controller);
+        return controller;
     }
 
     @Override
-    public void saveToLocal(X payload) {
-        this.localLayer.save(payload);
+    public boolean saveNoSync(@Nonnull X payload) {
+        boolean success = true;
+        if (!localStore.save(payload)) {
+            success = false;
+        }
+        if (!mongoStore.save(payload)) {
+            success = false;
+        }
+        if (success) {
+            Optional<NetworkObject> o = networkService.get(payload);
+            if (o.isPresent()) {
+                NetworkObject no = o.get();
+                no.markSaved();
+                if (!networkService.save(no)) {
+                    success = false;
+                }
+            }
+        }
+        return success;
+    }
+
+    @Nonnull
+    @Override
+    public PayloadStore<String, X, ObjectData> getDatabaseStore() {
+        return mongoStore;
+    }
+
+    @Override
+    public String keyToString(@Nonnull String key) {
+        return key;
+    }
+
+    @Override
+    public PayloadObjectController<X> controller(@Nonnull ObjectData data) {
+        Preconditions.checkNotNull(data);
+        return controller(data.getIdentifier());
+    }
+
+    @Nonnull
+    @Override
+    public ObjectCacheSettings getSettings() {
+        return settings;
+    }
+
+    @Override
+    public String keyFromString(@Nonnull String key) {
+        return key;
+    }
+
+    @Override
+    public void cacheAll() {
+        getAll().forEach(this::cache);
+    }
+
+    @Nonnull
+    @Override
+    public Set<X> getAll() {
+        final Set<X> all = new HashSet<>(localStore.getAll());
+        if (settings.isUseMongo()) {
+            all.addAll(mongoStore.getAll().stream().filter(x -> all.stream().noneMatch(x2 -> x.getObjectId().equals(x2.getObjectId()))).collect(Collectors.toSet()));
+        }
+        return all;
+    }
+
+    @Override
+    public long cachedObjectCount() {
+        return localStore.size();
     }
 
     @Override
     public int saveAll() {
         int failures = 0;
-        for (X object : this.localLayer.getLocalCache().values()) {
-            if (!this.save(object)) {
+        for (X object : localStore.getLocalCache().values()) {
+            if (!save(object)) {
                 failures++;
             }
         }
@@ -237,17 +158,17 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
 
     @Override
     public boolean requireRedis() {
-        return this.settings.isUseRedis();
+        return settings.isUseRedis();
     }
 
     @Override
     public boolean requireMongoDb() {
-        return this.settings.isUseMongo();
+        return settings.isUseMongo();
     }
 
     public ObjectData createData(String identifier) {
-        if (this.data.containsKey(identifier)) {
-            return this.data.get(identifier);
+        if (data.containsKey(identifier)) {
+            return data.get(identifier);
         }
         ObjectData data = new ObjectData(identifier);
         this.data.put(identifier, data);
@@ -255,16 +176,17 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
     }
 
     public ObjectData getData(String identifier) {
-        return this.data.getOrDefault(identifier, null);
+        return data.getOrDefault(identifier, null);
     }
 
+    @Nonnull
     @Override
-    public Collection<X> getCachedObjects() {
-        return this.localLayer.getLocalCache().values();
+    public Collection<X> getCached() {
+        return localStore.getLocalCache().values();
     }
 
     @Override
     public void updatePayloadID() {
-        this.getCachedObjects().forEach(o -> o.setPayloadId(api.getPayloadID()));
+        getCached().forEach(o -> o.setPayloadId(api.getPayloadID()));
     }
 }

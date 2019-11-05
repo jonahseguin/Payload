@@ -5,6 +5,8 @@
 
 package com.jonahseguin.payload.base.listener;
 
+import com.jonahseguin.lang.LangDefinitions;
+import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
 import org.bukkit.entity.Player;
@@ -14,12 +16,24 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 
-public class LockListener implements Listener {
+public class LockListener implements Listener, LangModule {
 
     private final PayloadPlugin payloadPlugin;
 
     public LockListener(PayloadPlugin payloadPlugin) {
         this.payloadPlugin = payloadPlugin;
+        payloadPlugin.getLang().register(this);
+    }
+
+    @Override
+    public void define(LangDefinitions l) {
+        l.define("kick", "&cThe server is currently locked for maintenance.  Please try again soon.  If the server just started up, wait a few seconds for startup to complete and try again.");
+        l.define("bypassed", "&c[Payload] Locked for maintenance, but you bypassed this lock because you have admin privileges.");
+    }
+
+    @Override
+    public String langModule() {
+        return "lock";
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -27,7 +41,7 @@ public class LockListener implements Listener {
         if (payloadPlugin.isLocked()) {
             Player player = event.getPlayer();
             if (!PayloadPermission.ADMIN.has(player)) {
-                event.disallow(PlayerLoginEvent.Result.KICK_WHITELIST, payloadPlugin.getLangController().get(PLang.KICK_MESSAGE_LOCKED));
+                event.disallow(PlayerLoginEvent.Result.KICK_WHITELIST, payloadPlugin.getLang().module(this).format("kick"));
             }
         }
     }
@@ -39,7 +53,7 @@ public class LockListener implements Listener {
             if (PayloadPermission.ADMIN.has(player)) {
                 player.sendMessage(" ");
                 player.sendMessage(" ");
-                player.sendMessage(payloadPlugin.getLangController().get(PLang.KICK_MESSAGE_ADMIN_LOCKED));
+                player.sendMessage(payloadPlugin.getLang().module(this).format("bypassed"));
             }
         }
     }

@@ -17,13 +17,20 @@ import org.bukkit.entity.Player;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Optional;
 
 public class CmdProfile implements PayloadCommand {
+
+    private final PayloadAPI api;
+
+    public CmdProfile(PayloadAPI api) {
+        this.api = api;
+    }
 
     @Override
     public void execute(CmdArgs args) {
         String cacheName = args.joinArgs(0, args.length() - 1);
-        PayloadCache cache = PayloadAPI.get().getCache(cacheName);
+        PayloadCache cache = api.getCache(cacheName);
         if (cache == null) {
             args.msg("&cA cache with the name '{0}' does not exist.  Type /payload caches for a list of caches.", cacheName);
             return;
@@ -37,14 +44,12 @@ public class CmdProfile implements PayloadCommand {
                 playerName = player.getName();
             }
 
-            PayloadProfile profile = pc.getProfileByName(playerName);
-            if (profile != null) {
+            Optional<PayloadProfile> o = pc.get(playerName);
+            if (o.isPresent()) {
+                PayloadProfile profile = o.get();
                 args.msg("&7***** &6Payload Profile: {0} &7*****", playerName);
                 args.msg("&7UUID: &6{0}", profile.getUniqueId().toString());
                 args.msg("&7Online: {0}", (profile.isOnline() ? "&aYes" : "&cNo"));
-                args.msg("&7Last Seen On: {0}", (profile.getLastSeenServer() != null ? "&6" + profile.getLastSeenServer() : "&cN/A"));
-                args.msg("&7Last Seen At: {0}", (profile.isOnline() ? "&aNow" : "&6" + formatDateTime(profile.getLastSeenTimestamp())));
-                args.msg("&7Last Saved: {0}", (profile.getLastSaveTimestamp() > 0 ? "&6" + formatDateTime(profile.getLastSeenTimestamp()) : "&cNever"));
                 args.msg("&7Last Save Status: {0}", (profile.isSaveFailed() ? "&cFailed" : "&aSuccessful"));
                 args.msg("&7Loading Source: &6{0}", profile.getLoadingSource());
                 args.msg("&7Login IP: {0}", (profile.getLoginIp() != null ? "&6" + profile.getLoginIp() : "&cN/A"));

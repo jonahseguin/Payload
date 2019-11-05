@@ -1,5 +1,6 @@
 package com.jonahseguin.payload.command.commands;
 
+import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
@@ -7,11 +8,18 @@ import com.jonahseguin.payload.command.PayloadCommand;
 
 public class CmdServer implements PayloadCommand {
 
+    private final PayloadAPI api;
+
+    @Inject
+    public CmdServer(PayloadAPI api) {
+        this.api = api;
+    }
+
     @Override
     public void execute(CmdArgs args) {
         args.msg("&7***** &6Payload &7*****");
         args.msg("&7Unique Payload-ID for this server:");
-        args.msg("&6{0}", PayloadAPI.get().getPayloadID());
+        args.msg("&6{0}", api.getPayloadID());
         args.msg("&7To set the server name/Payload-ID for this server, use /payload setid <name>");
     }
 

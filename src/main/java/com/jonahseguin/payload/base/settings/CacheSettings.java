@@ -6,10 +6,12 @@
 package com.jonahseguin.payload.base.settings;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public abstract class CacheSettings {
 
     private int failureRetryIntervalSeconds = 30;

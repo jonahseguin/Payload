@@ -5,30 +5,40 @@
 
 package com.jonahseguin.payload.mode.object;
 
+import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
+import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
 import dev.morphia.annotations.Id;
 import lombok.Getter;
 import lombok.Setter;
 import org.bson.types.ObjectId;
+import org.bukkit.plugin.Plugin;
 
 @Getter
 @Setter
 public abstract class PayloadObject implements Payload<String> {
 
-    private String payloadId;
+    protected transient final PayloadAPI api;
+    protected transient final PayloadPlugin payloadPlugin;
+    protected transient final Plugin plugin;
+    protected transient final ObjectCache cache;
 
+    private String payloadId;
     @Id
     private ObjectId objectId = new ObjectId();
-
     private long cachedTimestamp = System.currentTimeMillis();
 
-    public PayloadObject() {
-        this.payloadId = PayloadAPI.get().getPayloadID();
+    @Inject
+    public PayloadObject(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ObjectCache cache) {
+        this.api = api;
+        this.payloadPlugin = payloadPlugin;
+        this.plugin = plugin;
+        this.cache = cache;
     }
 
-    public PayloadObject(ObjectId objectId) {
-        this();
+    public PayloadObject(PayloadAPI api, PayloadPlugin payloadPlugin, Plugin plugin, ObjectCache cache, ObjectId objectId) {
+        this(api, payloadPlugin, plugin, cache);
         this.objectId = objectId;
     }
 
@@ -53,19 +63,8 @@ public abstract class PayloadObject implements Payload<String> {
     }
 
     @Override
-    public boolean shouldSave() {
-        return this.getCache().getSettings().isEnableSync() || this.getCache().getSettings().isServerSpecific();
-    }
-
-    @Override
-    public boolean shouldPrepareUpdate() {
-        return this.getCache().getSettings().isEnableSync() && !this.getCache().getSettings().isServerSpecific();
-    }
-
-
-    @Override
     public void save() {
-        this.getCache().save(this);
+        this.cache.save(this);
     }
 
     @Override

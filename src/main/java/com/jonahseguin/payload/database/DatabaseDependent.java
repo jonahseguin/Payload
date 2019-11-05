@@ -1,39 +1,42 @@
 package com.jonahseguin.payload.database;
 
-import com.jonahseguin.payload.base.error.PayloadErrorHandler;
-import com.jonahseguin.payload.base.type.Payload;
-
 public interface DatabaseDependent {
 
     /**
      * Called when MongoDB loses an active connection
      */
-    void onMongoDbDisconnect();
+    default void onMongoDbDisconnect() {
+    }
 
     /**
      * Called when Redis loses an active connection
      */
-    void onRedisDisconnect();
+    default void onRedisDisconnect() {
+    }
 
     /**
      * Called when MongoDB regains a connection after it was previously lost
      */
-    void onMongoDbReconnect();
+    default void onMongoDbReconnect() {
+    }
 
     /**
      * Called when Redis regains a connection after it was previously lost
      */
-    void onRedisReconnect();
+    default void onRedisReconnect() {
+    }
 
     /**
      * Called when MongoDB connects for this first time (ex. during startup)
      */
-    void onMongoDbInitConnect();
+    default void onMongoDbInitConnect() {
+    }
 
     /**
      * Called when Redis connects for this first time (ex. during startup)
      */
-    void onRedisInitConnect();
+    default void onRedisInitConnect() {
+    }
 
     /**
      * Does this database-dependent object depend on Redis for functionality?
@@ -47,6 +50,5 @@ public interface DatabaseDependent {
      */
     boolean requireMongoDb();
 
-    PayloadErrorHandler getErrorHandler();
 
 }

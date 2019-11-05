@@ -6,22 +6,23 @@
 package com.jonahseguin.payload.base;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
-import com.jonahseguin.payload.base.error.DefaultErrorHandler;
-import com.jonahseguin.payload.base.error.PayloadErrorHandler;
-import com.jonahseguin.payload.base.exception.runtime.PayloadRuntimeException;
+import com.jonahseguin.payload.base.error.ErrorService;
 import com.jonahseguin.payload.base.failsafe.FailureManager;
-import com.jonahseguin.payload.base.layer.LayerController;
-import com.jonahseguin.payload.base.settings.CacheSettings;
-import com.jonahseguin.payload.base.sync.SyncManager;
-import com.jonahseguin.payload.base.sync.SyncMode;
+import com.jonahseguin.payload.base.handshake.HandshakeService;
+import com.jonahseguin.payload.base.lang.LangService;
+import com.jonahseguin.payload.base.network.NetworkPayload;
+import com.jonahseguin.payload.base.network.NetworkService;
+import com.jonahseguin.payload.base.sync.SyncService;
 import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
-import com.jonahseguin.payload.base.task.PayloadCleanupTask;
 import com.jonahseguin.payload.base.type.*;
 import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.DatabaseService;
+import com.jonahseguin.payload.server.ServerService;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -29,7 +30,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nonnull;
-import java.util.Collection;
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -40,82 +41,75 @@ import java.util.concurrent.*;
  * All Caching modes (profile, object, simple) extend this class.
  */
 @Getter
-public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadData> implements DatabaseDependent, Comparable<PayloadCache> {
+public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> implements DatabaseDependent, Comparable<PayloadCache>, PayloadCacheService<K, X, N, D> {
 
-    protected final Plugin plugin; // The Bukkit JavaPlugin that created this cache.  non-persistent
-    protected final PayloadPlugin payloadPlugin;
-    protected final PayloadAPI api;
-
-    protected final String name; // The name for this payload cache
+    protected final String name;
     protected final Class<K> keyType;
     protected final Class<X> payloadClass;
-
-    protected final DatabaseService database;
-    protected final PayloadLangController langController;
+    protected final Injector injector;
     protected final ExecutorService pool = Executors.newCachedThreadPool();
-    protected final LayerController<K, X, D> layerController = new LayerController<>();
-    protected final FailureManager<K, X, D> failureManager;
-    protected final PayloadAutoSaveTask<K, X, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
-    protected final PayloadCleanupTask<K, X, D> cleanupTask = new PayloadCleanupTask<>(this);
-    protected final SyncManager<K, X, D> syncManager = new SyncManager<>(this);
-    protected boolean debug = false; // Debug for this cache
-    protected Set<String> dependingCaches = new HashSet<>();
-    protected PayloadErrorHandler errorHandler = new DefaultErrorHandler();
-    protected PayloadMode mode = PayloadMode.STANDALONE; // Payload Mode for this cache
-    protected SyncMode syncMode = SyncMode.UPDATE;
-    protected PayloadInstantiator<X, D> instantiator = new NullPayloadInstantiator<>();
+    protected final FailureManager<K, X, N, D> failureManager;
+    protected final PayloadAutoSaveTask<K, X, N, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
+    protected final Set<String> dependingCaches = new HashSet<>();
+    @Inject
+    protected Plugin plugin;
+    @Inject
+    protected PayloadPlugin payloadPlugin;
+    @Inject
+    protected PayloadAPI api;
+    @Inject
+    protected DatabaseService database;
+    @Inject
+    protected LangService lang;
+    @Inject
+    protected ErrorService errorService;
+    @Inject
+    protected PayloadInstantiator<K, X, D> instantiator;
+    @Inject
+    protected SyncService<K, X, N, D> sync;
+    @Inject
+    protected HandshakeService handshakeService;
+    @Inject
+    protected NetworkService<K, X, N, D> networkService;
+    @Inject
+    protected ServerService serverService;
+    protected boolean debug = false;
+    protected PayloadMode mode = PayloadMode.STANDALONE;
     protected boolean running = false;
 
     /**
      * Creates an instance of a PayloadCache
      * This constructor should ONLY be used internally by Payload
      */
-    public PayloadCache(@Nonnull Plugin plugin, @Nonnull PayloadPlugin payloadPlugin, @Nonnull PayloadAPI api, @Nonnull DatabaseService database, @Nonnull String name, @Nonnull Class<K> keyType, @Nonnull Class<X> payloadClass) {
+    public PayloadCache(@Nonnull Injector injector, @Nonnull String name, @Nonnull Class<K> keyType, @Nonnull Class<X> payloadClass) {
         Preconditions.checkNotNull(plugin);
         Preconditions.checkNotNull(payloadPlugin);
         Preconditions.checkNotNull(api);
+        Preconditions.checkNotNull(injector);
         Preconditions.checkNotNull(database);
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(keyType);
         Preconditions.checkNotNull(payloadClass);
-        this.plugin = plugin;
-        this.payloadPlugin = payloadPlugin;
-        this.api = api;
-        this.database = database;
+        this.injector = injector.createChildInjector(module());
+        this.injector.injectMembers(this);
         this.name = name;
         this.keyType = keyType;
         this.payloadClass = payloadClass;
-        this.langController = new PayloadLangController(payloadPlugin);
         this.failureManager = new FailureManager<>(this, payloadPlugin);
-
-        this.langController.loadFromFile(name.toLowerCase().replaceAll(" ", "_") + ".yml");
     }
 
-    /**
-     * Internal method to convert a String to the key type (i.e UUID or String)
-     * @param key String key
-     * @return K key type object
-     */
-    public abstract K keyFromString(String key);
+    @Nonnull
+    protected abstract CacheModule<K, X, N, D> module();
 
     /**
      * Provide the instantiator for the creation of NEW (never joined before) profiles/objects
-     * This is required to be set before calling {@link #start()}
+     * The default value is {@link GuicePayloadInstantiator}.  You can use your own if you deem necessary.
      * @param instantiator {@link PayloadInstantiator}
      */
-    public void withInstantiator(PayloadInstantiator<X, D> instantiator) {
+    @Override
+    public final void setInstantiator(@Nonnull PayloadInstantiator<K, X, D> instantiator) {
+        Preconditions.checkNotNull(instantiator);
         this.instantiator = instantiator;
-    }
-
-    /**
-     * Provide a custom error handler implementation for the handling of error/debug/exception messages within
-     * Payload.  The default error handler should be sufficient for most use-cases,
-     * in the event you want to use a library like Sentry.io, I recommend simply extending the {@link DefaultErrorHandler} class
-     * and keeping the super() calls in each method, and simply adding sentry calls.
-     * @param errorHandler {@link PayloadErrorHandler}
-     */
-    public void setErrorHandler(PayloadErrorHandler errorHandler) {
-        this.errorHandler = errorHandler;
     }
 
     /**
@@ -123,20 +117,35 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * Should be called by the external plugin during startup after the cache has been created
      * @return Boolean successful
      */
+    @Override
     public final boolean start() {
-        if (this.isRunning()) return true;
-        if (this.instantiator instanceof NullPayloadInstantiator) {
-            throw new PayloadRuntimeException("Instantiator for cache " + this.getName() + " cannot be Null!  Call withInstantiator() before starting!");
+        if (running) return true;
+        Preconditions.checkNotNull(instantiator, "Instantiator must be set before calling start()");
+        Preconditions.checkState(database.isRunning(), "Database must be started before starting cache");
+        boolean success = true;
+        if (!initialize()) {
+            success = false;
         }
-        this.init();
-        this.running = true;
-        this.failureManager.start();
-        this.autoSaveTask.start();
-        this.cleanupTask.start();
-        if (this.getSettings().isEnableSync()) {
-            this.syncManager.startup();
+        if (!handshakeService.start()) {
+            success = false;
         }
-        return true;
+        if (getMode().equals(PayloadMode.NETWORK_NODE)) {
+            if (!networkService.start()) {
+                success = false;
+            }
+        }
+        if (!serverService.start()) {
+            success = false;
+        }
+        failureManager.start();
+        autoSaveTask.start();
+        if (getSettings().isEnableSync()) {
+            if (!sync.start()) {
+                success = false;
+            }
+        }
+        running = true;
+        return success;
     }
 
     /**
@@ -144,26 +153,40 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * Should be called by the external plugin during shutdown
      * @return Boolean successful
      */
-    public final boolean stop() {
-        if (!this.isRunning()) return true;
+    public final boolean shutdown() {
+        if (!running) return true;
 
-        int failedSaves = this.saveAll(); // First, save everything.
+        int failedSaves = saveAll(); // First, save everything.
 
-        this.shutdown(); // Allow the implementing cache to do it's shutdown first
+        boolean success = true;
 
-        this.autoSaveTask.stop();
-        this.cleanupTask.stop();
-        this.failureManager.stop();
-        if (this.getSettings().isEnableSync()) {
-            this.syncManager.shutdown();
+        if (!shutdown()) {
+            success = false;
         }
-        this.shutdownPool();
-        this.running = false;
+
+        autoSaveTask.stop();
+        failureManager.stop();
+        if (!handshakeService.shutdown()) {
+            success = false;
+        }
+        if (getMode().equals(PayloadMode.NETWORK_NODE)) {
+            if (!networkService.shutdown()) {
+                success = false;
+            }
+        }
+        if (!serverService.shutdown()) {
+            success = false;
+        }
+        if (getSettings().isEnableSync()) {
+            this.sync.shutdown();
+        }
+        shutdownPool();
+        running = false;
         if (failedSaves > 0) {
-            this.getErrorHandler().error(this, failedSaves + " Payload objects failed to save during shutdown");
-            return false;
+            errorService.capture(failedSaves + " Payload objects failed to save during shutdown");
+            success = false;
         }
-        return true;
+        return success;
     }
 
     /**
@@ -172,12 +195,12 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      */
     private void shutdownPool() {
         try {
-            this.pool.shutdown();
-            this.pool.awaitTermination(5, TimeUnit.SECONDS);
+            pool.shutdown();
+            pool.awaitTermination(5, TimeUnit.SECONDS);
         } catch (InterruptedException ex) {
-            this.errorHandler.exception(this, ex, "Interrupted during shutdown of cache's thread pool");
+            errorService.capture(ex, "Interrupted during shutdown of cache's thread pool");
         } finally {
-            this.pool.shutdownNow();
+            pool.shutdownNow();
         }
     }
 
@@ -187,117 +210,21 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param data {@link PayloadData}
      * @return {@link PayloadController}
      */
-    public abstract PayloadController<X> controller(D data);
+    public abstract PayloadController<X> controller(@Nonnull D data);
 
-    /**
-     * Get the Cache Settings for this Cache
-     *
-     * @return Cache Settings
-     */
-    public abstract CacheSettings getSettings();
+    public abstract PayloadController<X> controller(@Nonnull K key);
 
     /**
      * Starts up & initializes the cache.
      * Prepares everything for a fresh startup, ensures database connections, etc.
      */
-    protected abstract void init();
+    protected abstract boolean initialize();
 
     /**
      * Shut down the cache.
      * Saves everything first, and safely shuts down
      */
-    protected abstract void shutdown();
-
-
-    /**
-     * Get an object stored in this cache, using the best method provided by the cache
-     *
-     * @param key The key to use to get the object (i.e a string, number, etc.)
-     * @return The object if available (else null)
-     */
-    public abstract Optional<X> get(K key);
-
-    /**
-     * Get an object stored in this cache locally
-     *
-     * @param key The key to use to get the object
-     * @return The object if available (else null)
-     */
-    public abstract Optional<X> getFromCache(K key);
-
-    /**
-     * Get an object stored in the first available database layer
-     * @param key The key to use to get the object
-     * @return The object if available (else null)
-     */
-    public abstract Optional<X> getFromDatabase(K key);
-
-    /**
-     * Check if an object is locally-cached
-     * @param key Key
-     * @return True if cached
-     */
-    public abstract boolean isCached(K key);
-
-    /**
-     * Remove an object from the local cache
-     * If sync is enabled, this will also publish an UNCACHE event for other instances on this database.
-     * @param key The key for the object to remove (identifier)
-     * @return True if removed, otherwise false
-     */
-    public abstract boolean uncache(K key);
-
-    /**
-     * Remove an object from the local cache
-     * Contrary to {@link #uncache(Object)}
-     * @param key The key for the object to remove (identifier)
-     * @return True if removed, otherwise false
-     */
-    public abstract boolean uncacheLocal(K key);
-
-    /**
-     * Remove an object from the local cache on ALL SERVERS with this cache in the network/on this database
-     *
-     * @param key Key for the object to remove (identifier)
-     */
-    public void uncacheEverywhere(K key) {
-        if (this.getSettings().isEnableSync()) {
-            this.uncacheLocal(key);
-            this.syncManager.publishUncache(key);
-        } else {
-            this.getErrorHandler().exception(this, new UnsupportedOperationException("Cannot uncacheEverywhere unless Sync is enabled in cache settings!"));
-        }
-    }
-
-    /**
-     * Prepare an update for a payload
-     * You can use this functionality to prevent data loss when objects are loaded across multiple instances
-     * You should use this method to acquire the latest version of a payload from the server that is most relevant
-     * ** This is only supported if sync is enabled {@link CacheSettings#isEnableSync()}
-     * THIS IS A SYNC OPERATION.  FOR ASYNC, USE
-     * @param payload The payload to get an updated version of
-     * @param callback A callback with the updated Payload, you should use the callback's provided Payload parameter
-     *                 to make your changes to, rather than the {@param payload} Payload you provided.
-     */
-    public void prepareUpdate(X payload, PayloadCallback<X> callback) {
-        if (this.getSettings().isEnableSync()) {
-            this.syncManager.prepareUpdate(payload, callback);
-        } else {
-            this.getErrorHandler().exception(this, new UnsupportedOperationException("Cannot prepareUpdate unless Sync is enabled in cache settings!"));
-        }
-    }
-
-    /**
-     * Async version of {@link #prepareUpdate(Payload, PayloadCallback)}
-     * Simply uses the cache's thread executor service to complete this operation.
-     * @see #prepareUpdate(Payload, PayloadCallback)
-     * @param payload The payload to get an updated version of
-     * @param callback A callback with the updated Payload, you should use the callback's provided Payload parameter
-     *                 to make your changes to, rather than the {@param payload} Payload you provided.
-     */
-    public void prepareUpdateAsync(X payload, PayloadCallback<X> callback) {
-        this.runAsync(() -> this.prepareUpdate(payload, callback));
-    }
+    protected abstract boolean terminate();
 
     /**
      * Get a number of objects currently stored locally in this cache
@@ -306,90 +233,16 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
     public abstract long cachedObjectCount();
 
     /**
-     * Save a Payload to all layers / in this cache
-     * If sync is enabled, this save will also propagate to other caches on the database
-     * Your {@link SyncMode} setting for this cache {@link #syncMode} will determine the policy
-     * for when an object is cached locally from an update/save operation.
-     * {@link SyncMode#UPDATE}: Only cache if already previously cached
-     * {@link SyncMode#CACHE_ALL}: Always cache
-     * @param payload Payload to save
-     * @return Boolean successful
-     */
-    public abstract boolean save(X payload);
-
-    /**
-     * Same as {@link #save(Payload)}, without the sync operations.  This is primarily used internally.
-     * @param payload Payload to save
-     * @return Boolean successful
-     */
-    public abstract boolean saveNoSync(X payload);
-
-    /**
-     * Same as {@link #save(Payload)}, but called asynchronously using the local cache thread executor pool.
-     * For safety, we save the Payload to the local cache synchronously.
-     * @param payload Payload to save
-     * @return A {@link Future<X>} with the saved {@param payload} after the save operation is completed, successfully or not
-     */
-    public abstract Future<X> saveAsync(X payload);
-
-    /**
-     * Save a Payload to the local cache, without any kind of sync operation checking/etc.
-     * This is used primarily internally by Payload and is NOT recommended for outside use.
-     * The other {@link #cache(Payload)} is better fit for your use, as it will automatically
-     * replace existing payload object instances without messing up your existing references
-     * in the case that it is already cached.
-     * @param payload the Payload to save
-     */
-    public abstract void saveToLocal(X payload);
-
-    /**
-     * Save all locally-cached objects (or for profiles, only players who are online) to the database
-     * @return int : the number of failures
-     */
-    public abstract int saveAll();
-
-    /**
-     * Delete a Payload from all layers (including local + database)
-     * If sync is enabled, the Payload will also be uncached from all other caches on this database.
-     * @param key Key of payload to delete
-     */
-    public abstract void delete(K key);
-
-    /**
-     * Cache a Payload locally ONLY
-     * I.e save to local layer
-     *
-     * @param payload Payload to cache (save locally)
-     */
-    public abstract void cache(X payload);
-
-
-    /**
-     * Load all database-stored objects into the local cache
-     */
-    public abstract void cacheAll();
-
-    /**
-     * Get all objects across all layers
-     * @return A HashSet containing all the objects
-     */
-    public abstract Set<X> getAll();
-
-    /**
-     * Get all currently locally-cached objects
-     * @return Locally-cached objects
-     */
-    public abstract Collection<X> getCachedObjects();
-
-    /**
      * Get the name of this cache (set by the end user, should be unique)
      * A {@link com.jonahseguin.payload.base.exception.DuplicateCacheException} error will be thrown if another cache
      * exists with the same name or ID during creation.
      *
      * @return String: Cache Name
      */
+    @Nonnull
+    @Override
     public final String getName() {
-        return this.name;
+        return name;
     }
 
     /**
@@ -397,11 +250,13 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * This is primarily used by Redis layers for naming the redis key.
      * @return String: The server specific name for this cache
      */
+    @Nonnull
+    @Override
     public final String getServerSpecificName() {
-        if (this.getSettings().isServerSpecific()) {
-            return api.getPayloadID() + "-" + this.getName();
+        if (getSettings().isServerSpecific()) {
+            return api.getPayloadID() + "-" + name;
         } else {
-            return this.getName();
+            return name;
         }
     }
 
@@ -411,8 +266,9 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      *
      * @return Plugin
      */
+    @Nonnull
     public final Plugin getPlugin() {
-        return this.plugin;
+        return plugin;
     }
 
     /**
@@ -425,7 +281,8 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      *
      * @return {@link PayloadMode} the current mode
      */
-    public PayloadMode getMode() {
+    @Nonnull
+    public final PayloadMode getMode() {
         return mode;
     }
 
@@ -436,25 +293,11 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param mode {@link PayloadMode} mode
      * @see #getMode()
      */
-    public void setMode(PayloadMode mode) {
+    @Override
+    public void setMode(@Nonnull PayloadMode mode) {
+        Preconditions.checkNotNull(mode);
         this.mode = mode;
     }
-
-    /**
-     * Set the SyncMode for this cache
-     * The sync mode determines the policy for when to cache objects that are saved in other servers
-     *
-     * Your {@link SyncMode} setting for this cache {@link #syncMode} will determine the policy
-     * for when an object is cached locally from an update/save operation.
-     * {@link SyncMode#UPDATE}: Only cache if already previously cached
-     * {@link SyncMode#CACHE_ALL}: Always cache
-     *
-     * @param mode {@link SyncMode}
-     */
-    public void setSyncMode(SyncMode mode) {
-        this.syncMode = mode;
-    }
-
     /**
      * Internal method used by Payload to forcefully update a local instance of a Payload object with a newer one,
      * allowing your references to the existing Payload to remain intact and up-to-date.
@@ -462,71 +305,153 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param payload The Payload to update
      * @param update The newer version of said payload to replace the values of {@param payload} with.
      */
-    public void updatePayloadFromNewer(X payload, X update) {
-        this.database.getDatastore().getMapper().getMappedClass(this.payloadClass).getPersistenceFields().forEach(mf -> {
+    protected final void updatePayloadFromNewer(@Nonnull X payload, @Nonnull X update) {
+        Preconditions.checkNotNull(payload);
+        Preconditions.checkNotNull(update);
+        database.getDatastore().getMapper().getMappedClass(payloadClass).getPersistenceFields().forEach(mf -> {
             mf.setFieldValue(payload, mf.getFieldValue(update));
         });
     }
 
-    /**
-     * Internal method that handles when MongoDB disconnects
-     */
     @Override
-    public void onMongoDbDisconnect() {
-
+    public Optional<N> getNetworked(@Nonnull K key) {
+        Preconditions.checkNotNull(key);
+        return networkService.get(key);
     }
 
-    /**
-     * Internal method that handles when Redis disconnects
-     */
     @Override
-    public void onRedisDisconnect() {
-
+    public Optional<N> getNetworked(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        return networkService.get(payload);
     }
 
-    /**
-     * Internal method that handles when a MongoDB connection is established after a previous disconnect
-     */
     @Override
-    public void onMongoDbReconnect() {
-
+    public Optional<X> get(@Nonnull K key) {
+        Preconditions.checkNotNull(key);
+        return controller(key).cache();
     }
 
-    /**
-     * Internal method that handles when a Redis connection is established after a previous disconnect
-     */
     @Override
-    public void onRedisReconnect() {
-
+    public Future<Optional<X>> getAsync(@Nonnull K key) {
+        Preconditions.checkNotNull(key);
+        return runAsync(() -> get(key));
     }
 
-    /**
-     * Internal method that handles when MongoDB connects for the first time
-     */
     @Override
-    public void onMongoDbInitConnect() {
-
+    public Optional<X> getFromCache(@Nonnull K key) {
+        Preconditions.checkNotNull(key);
+        return getLocalStore().get(key);
     }
 
-    /**
-     * Internal method that handles when Redis connects for the first time
-     */
     @Override
-    public void onRedisInitConnect() {
+    public Optional<X> getFromDatabase(@Nonnull K key) {
+        Preconditions.checkNotNull(key);
+        return getDatabaseStore().get(key);
+    }
 
+    @Override
+    public boolean save(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        if (saveNoSync(payload)) {
+            if (getSettings().isEnableSync()) {
+                sync.update(payload.getIdentifier());
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public Future<Boolean> saveAsync(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        return runAsync(() -> save(payload));
+    }
+
+    @Override
+    public void cache(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        Optional<X> o = getLocalStore().get(payload.getIdentifier());
+        if (o.isPresent()) {
+            updatePayloadFromNewer(o.get(), payload);
+        } else {
+            getLocalStore().save(payload);
+        }
+    }
+
+    @Override
+    public void uncache(@Nonnull K key) {
+        Preconditions.checkNotNull(key);
+        getLocalStore().remove(key);
+    }
+
+    @Override
+    public void uncache(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        getLocalStore().remove(payload);
+    }
+
+    @Override
+    public void delete(@Nonnull K key) {
+        Preconditions.checkNotNull(key);
+        getLocalStore().remove(key);
+        getDatabaseStore().remove(key);
+    }
+
+    @Override
+    public void delete(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload);
+        getLocalStore().remove(payload);
+        getDatabaseStore().remove(payload);
+    }
+
+    @Override
+    public boolean isCached(@Nonnull K key) {
+        Preconditions.checkNotNull(key);
+        return getLocalStore().has(key);
+    }
+
+    @Override
+    public void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<X> callback) {
+        Preconditions.checkState(getSettings().isEnableSync(), "Cannot prepare update when sync is disabled!");
+        Preconditions.checkNotNull(payload);
+        Preconditions.checkNotNull(callback);
+        sync.prepareUpdate(payload, callback);
+    }
+
+    @Override
+    public void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<X> callback) {
+        Preconditions.checkState(getSettings().isEnableSync(), "Cannot prepare update when sync is disabled!");
+        Preconditions.checkNotNull(payload);
+        Preconditions.checkNotNull(callback);
+        runAsync(() -> sync.prepareUpdate(payload, callback));
+    }
+
+    @Override
+    public void cacheAll() {
+        getDatabaseStore().getAll().forEach(this::cache);
+    }
+
+    @Nonnull
+    @Override
+    public SyncService<K, X, N, D> getSyncService() {
+        return sync;
     }
 
     /**
      * Utility method to send a message to online players with a certain permission
      * @param required The required permission
-     * @param lang The language definition
+     * @param module The language module
+     * @param key The language definition
      * @param args The arguments for the language definition
      */
-    public void alert(PayloadPermission required, PLang lang, String... args) {
-        Bukkit.getLogger().info(this.langController.get(lang, args));
-        for (Player pl : this.plugin.getServer().getOnlinePlayers()) {
+    public void alert(@Nonnull PayloadPermission required, @Nonnull String module, @Nonnull String key, @Nullable Object... args) {
+        Preconditions.checkNotNull(required);
+        Preconditions.checkNotNull(module);
+        Preconditions.checkNotNull(key);
+        plugin.getLogger().info(lang.module(module).format(key, args));
+        for (Player pl : plugin.getServer().getOnlinePlayers()) {
             if (required.has(pl)) {
-                pl.sendMessage(this.langController.get(lang, args));
+                pl.sendMessage(lang.module(module).format(key, args));
             }
         }
     }
@@ -536,10 +461,12 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param required The required permission
      * @param msg The message to send
      */
-    public void alert(PayloadPermission required, String msg) {
+    public void alert(@Nonnull PayloadPermission required, @Nonnull String msg) {
+        Preconditions.checkNotNull(required);
+        Preconditions.checkNotNull(msg);
         msg = ChatColor.translateAlternateColorCodes('&', msg);
         Bukkit.getLogger().info(msg);
-        for (Player pl : this.plugin.getServer().getOnlinePlayers()) {
+        for (Player pl : plugin.getServer().getOnlinePlayers()) {
             if (required.has(pl)) {
                 pl.sendMessage(msg);
             }
@@ -553,8 +480,9 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @see Executors#newCachedThreadPool()
      * @param runnable The task to run
      */
-    public void runAsync(Runnable runnable) {
-        this.pool.submit(runnable);
+    public void runAsync(@Nonnull Runnable runnable) {
+        Preconditions.checkNotNull(runnable);
+        pool.submit(runnable);
     }
 
     /**
@@ -565,8 +493,10 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param callable The task to run
      * @return {@link Future<T>} a future with the callable's parameter after execution has completed.
      */
-    public <T> Future<T> runAsync(Callable<T> callable) {
-        return this.pool.submit(callable);
+    @Nonnull
+    public <T> Future<T> runAsync(@Nonnull Callable<T> callable) {
+        Preconditions.checkNotNull(callable);
+        return pool.submit(callable);
     }
 
     /**
@@ -582,7 +512,9 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * - Initialize objects before this cache
      * @param cache The {@link PayloadCache} implementation for this cache to depend on.
      */
-    public void addDepend(PayloadCache cache) {
+    @Override
+    public void addDepend(@Nonnull PayloadCache cache) {
+        Preconditions.checkNotNull(cache);
         this.dependingCaches.add(cache.getName());
     }
 
@@ -593,8 +525,10 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @param cache {@link PayloadCache}
      * @return True if this cache is dependent, false if it's not
      */
-    public boolean isDependentOn(PayloadCache cache) {
-        return this.dependingCaches.contains(cache.getName());
+    @Override
+    public boolean isDependentOn(@Nonnull PayloadCache cache) {
+        Preconditions.checkNotNull(cache);
+        return dependingCaches.contains(cache.getName());
     }
 
     /**
@@ -603,7 +537,8 @@ public abstract class PayloadCache<K, X extends Payload<K>, D extends PayloadDat
      * @return Comparator sorting integer
      */
     @Override
-    public int compareTo(PayloadCache o) {
+    public int compareTo(@Nonnull PayloadCache o) {
+        Preconditions.checkNotNull(o);
         if (this.isDependentOn(o)) {
             return -1;
         } else if (o.isDependentOn(this)) {

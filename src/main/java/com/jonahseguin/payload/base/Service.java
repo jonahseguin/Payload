@@ -11,4 +11,6 @@ public interface Service {
 
     boolean shutdown();
 
+    boolean isRunning();
+
 }
