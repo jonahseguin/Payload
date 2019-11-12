@@ -6,17 +6,25 @@
 package com.jonahseguin.payload.mode.object;
 
 import com.google.common.base.Preconditions;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.TypeLiteral;
+import com.google.inject.*;
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
-import com.jonahseguin.payload.base.CacheModule;
+import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.annotation.Cache;
 import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.error.ErrorService;
+import com.jonahseguin.payload.base.handshake.HandshakeService;
+import com.jonahseguin.payload.base.lang.LangService;
+import com.jonahseguin.payload.base.network.NetworkService;
 import com.jonahseguin.payload.base.store.PayloadStore;
+import com.jonahseguin.payload.base.sync.SyncService;
+import com.jonahseguin.payload.database.DatabaseService;
 import com.jonahseguin.payload.mode.object.settings.ObjectCacheSettings;
 import com.jonahseguin.payload.mode.object.store.ObjectStoreLocal;
 import com.jonahseguin.payload.mode.object.store.ObjectStoreMongo;
+import com.jonahseguin.payload.server.ServerService;
 import lombok.Getter;
+import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -28,6 +36,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 @Getter
+@Singleton
 public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X, NetworkObject, ObjectData> implements ObjectService<X> {
 
     private final ObjectCacheSettings settings = new ObjectCacheSettings();
@@ -35,17 +44,10 @@ public class ObjectCache<X extends PayloadObject> extends PayloadCache<String, X
     private final ConcurrentMap<String, ObjectData> data = new ConcurrentHashMap<>();
     private final ObjectStoreLocal<X> localStore = new ObjectStoreLocal<>(this);
     private final ObjectStoreMongo<X> mongoStore = new ObjectStoreMongo<>(this);
-    private final CacheModule<String, X, NetworkObject, ObjectData> module = new ObjectCacheModule<>(this);
 
-    public ObjectCache(@Nonnull Injector injector, @Nonnull String name, @Nonnull Class<X> payloadClass) {
-        super(injector, name, String.class, payloadClass);
-        this.injector.injectMembers(this);
-    }
-
-    @Nonnull
-    @Override
-    protected CacheModule<String, X, NetworkObject, ObjectData> module() {
-        return module;
+    @Inject
+    public ObjectCache(Injector injector, @Cache Class<X> payloadClass, @Cache String name, Plugin plugin, PayloadPlugin payloadPlugin, PayloadAPI api, DatabaseService database, LangService lang, ErrorService errorService, SyncService<String, X, NetworkObject, ObjectData> sync, HandshakeService handshakeService, NetworkService<String, X, NetworkObject, ObjectData> networkService, ServerService serverService) {
+        super(injector, payloadClass, name, plugin, payloadPlugin, api, database, lang, errorService, sync, handshakeService, networkService, serverService);
     }
 
     @Override

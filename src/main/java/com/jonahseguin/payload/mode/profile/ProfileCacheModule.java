@@ -1,39 +1,28 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.profile;
 
-import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import com.jonahseguin.payload.base.CacheModule;
-import com.jonahseguin.payload.base.network.NetworkModule;
 
-import javax.annotation.Nonnull;
 import java.util.UUID;
 
 public class ProfileCacheModule<X extends PayloadProfile> extends CacheModule<UUID, X, NetworkProfile, ProfileData> {
 
-    private final ProfileCache<X> cache;
-
-    ProfileCacheModule(@Nonnull ProfileCache<X> cache) {
-        super(cache);
-        this.cache = cache;
+    public ProfileCacheModule(Class<X> payloadType, String name) {
+        super(UUID.class, payloadType, NetworkProfile.class, ProfileData.class, name);
     }
 
     @Override
     protected void configure() {
+        bind(payloadType).to(payloadType);
+        bind(networkType).to(NetworkProfile.class);
+        bind(dataType).to(ProfileData.class);
         super.configure();
-        bind(new TypeLiteral<Class<NetworkProfile>>() {
-        }).toInstance(NetworkProfile.class);
-        install(new NetworkModule<UUID, X, NetworkProfile, ProfileData>());
     }
 
-    @Provides
-    ProfileCache<X> provideProfileCache() {
-        return this.cache;
-    }
-
-    @Provides
-    ProfileService<X> provideProfileService() {
-        return this.cache;
-    }
 
 
 }

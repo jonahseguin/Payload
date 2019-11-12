@@ -8,15 +8,19 @@ package com.jonahseguin.payload.base;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.annotation.Cache;
 import com.jonahseguin.payload.base.error.ErrorService;
 import com.jonahseguin.payload.base.failsafe.FailureManager;
 import com.jonahseguin.payload.base.handshake.HandshakeService;
 import com.jonahseguin.payload.base.lang.LangService;
 import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.network.NetworkService;
+import com.jonahseguin.payload.base.network.RedisNetworkService;
+import com.jonahseguin.payload.base.sync.CacheSyncService;
 import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.sync.SyncService;
 import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
@@ -42,55 +46,50 @@ import java.util.concurrent.*;
  * All Caching modes (profile, object, simple) extend this class.
  */
 @Getter
+@Singleton
 public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> implements DatabaseDependent, Comparable<PayloadCache>, PayloadCacheService<K, X, N, D> {
 
-    protected final String name;
-    protected final Class<K> keyType;
-    protected final Class<X> payloadClass;
     protected final Injector injector;
+    protected final Class<X> payloadClass;
+    protected final String name;
     protected final ExecutorService pool = Executors.newCachedThreadPool();
     protected final FailureManager<K, X, N, D> failureManager;
     protected final PayloadAutoSaveTask<K, X, N, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
     protected final Set<String> dependingCaches = new HashSet<>();
-    @Inject protected Plugin plugin;
-    @Inject protected PayloadPlugin payloadPlugin;
-    @Inject protected PayloadAPI api;
-    @Inject protected DatabaseService database;
-    @Inject protected LangService lang;
-    @Inject protected ErrorService errorService;
-    @Inject protected PayloadInstantiator<K, X, D> instantiator;
-    @Inject protected SyncService<K, X, N, D> sync;
-    @Inject protected HandshakeService handshakeService;
-    @Inject protected NetworkService<K, X, N, D> networkService;
-    @Inject protected ServerService serverService;
+    protected final Plugin plugin;
+    protected final PayloadPlugin payloadPlugin;
+    protected final PayloadAPI api;
+    protected final DatabaseService database;
+    protected final LangService lang;
+    protected final SyncService<K, X, N, D> sync;
+    protected final HandshakeService handshakeService;
+    protected final NetworkService<K, X, N, D> networkService;
+    protected final ServerService serverService;
+    protected ErrorService errorService;
+    protected PayloadInstantiator<K, X> instantiator;
     protected SyncMode syncMode = SyncMode.IF_CACHED;
     protected boolean debug = false;
     protected PayloadMode mode = PayloadMode.STANDALONE;
     protected boolean running = false;
 
-    /**
-     * Creates an instance of a PayloadCache
-     * This constructor should ONLY be used internally by Payload
-     */
-    public PayloadCache(@Nonnull Injector injector, @Nonnull String name, @Nonnull Class<K> keyType, @Nonnull Class<X> payloadClass) {
-        Preconditions.checkNotNull(plugin);
-        Preconditions.checkNotNull(payloadPlugin);
-        Preconditions.checkNotNull(api);
-        Preconditions.checkNotNull(injector);
-        Preconditions.checkNotNull(database);
-        Preconditions.checkNotNull(name);
-        Preconditions.checkNotNull(keyType);
-        Preconditions.checkNotNull(payloadClass);
-        this.injector = injector.createChildInjector(module());
-        this.injector.injectMembers(this);
-        this.name = name;
-        this.keyType = keyType;
+    @Inject
+    public PayloadCache(Injector injector, @Cache Class<X> payloadClass, Class<N> networkClass, @Cache String name, Plugin plugin, PayloadPlugin payloadPlugin, PayloadAPI api, DatabaseService database, LangService lang, ErrorService errorService, HandshakeService handshakeService, ServerService serverService) {
+        this.injector = injector;
         this.payloadClass = payloadClass;
+        this.name = name;
+        this.plugin = plugin;
+        this.payloadPlugin = payloadPlugin;
+        this.api = api;
+        this.database = database;
+        this.lang = lang;
+        this.errorService = errorService;
+        this.handshakeService = handshakeService;
+        this.serverService = serverService;
+        this.instantiator = new GuicePayloadInstantiator<>(payloadClass, injector);
         this.failureManager = new FailureManager<>(this, payloadPlugin);
+        this.sync = new CacheSyncService<>(this, handshakeService);
+        this.networkService = new RedisNetworkService<>(this, networkClass, database, injector);
     }
-
-    @Nonnull
-    protected abstract CacheModule<K, X, N, D> module();
 
     /**
      * Provide the instantiator for the creation of NEW (never joined before) profiles/objects
@@ -98,7 +97,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
      * @param instantiator {@link PayloadInstantiator}
      */
     @Override
-    public final void setInstantiator(@Nonnull PayloadInstantiator<K, X, D> instantiator) {
+    public final void setInstantiator(@Nonnull PayloadInstantiator<K, X> instantiator) {
         Preconditions.checkNotNull(instantiator);
         this.instantiator = instantiator;
     }
@@ -310,7 +309,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     protected final void updatePayloadFromNewer(@Nonnull X payload, @Nonnull X update) {
         Preconditions.checkNotNull(payload);
         Preconditions.checkNotNull(update);
-        database.getDatastore().getMapper().getMappedClass(payloadClass).getPersistenceFields().forEach(mf -> {
+        database.getDatastore().getMapper().getMappedClass(payload.getClass()).getPersistenceFields().forEach(mf -> {
             mf.setFieldValue(payload, mf.getFieldValue(update));
         });
     }

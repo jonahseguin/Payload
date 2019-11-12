@@ -5,17 +5,30 @@
 
 package com.jonahseguin.payload.mode.profile;
 
+import com.google.inject.Inject;
 import com.jonahseguin.payload.base.type.PayloadData;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.UUID;
 
-@Data
-public class ProfileData implements PayloadData {
+@Getter
+@Setter
+public class ProfileData extends PayloadData {
 
-    private final String username;
-    private final UUID uniqueId;
-    private final String ip;
+    private String username;
+    private UUID uniqueId;
+    private String ip;
+
+    @Inject
+    public ProfileData() {
+    }
+
+    public ProfileData(String username, UUID uniqueId, String ip) {
+        this.username = username;
+        this.uniqueId = uniqueId;
+        this.ip = ip;
+    }
 
     public String getIdentifier() {
         if (this.username != null) {

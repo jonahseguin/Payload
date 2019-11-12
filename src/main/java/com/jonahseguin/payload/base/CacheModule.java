@@ -5,49 +5,38 @@
 
 package com.jonahseguin.payload.base;
 
-import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
-import com.google.inject.TypeLiteral;
+import com.jonahseguin.payload.annotation.Cache;
 import com.jonahseguin.payload.base.error.CacheErrorService;
 import com.jonahseguin.payload.base.error.ErrorService;
 import com.jonahseguin.payload.base.handshake.HandshakeModule;
 import com.jonahseguin.payload.base.network.NetworkPayload;
-import com.jonahseguin.payload.base.sync.CacheSyncService;
-import com.jonahseguin.payload.base.sync.SyncService;
-import com.jonahseguin.payload.base.type.GuicePayloadInstantiator;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadData;
-import com.jonahseguin.payload.base.type.PayloadInstantiator;
+import lombok.Getter;
 
-import javax.annotation.Nonnull;
-
+@Getter
 public class CacheModule<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> extends AbstractModule {
 
-    protected final PayloadCache<K, X, N, D> cache;
+    protected final Class<K> keyType;
+    protected final Class<X> payloadType;
+    protected final Class<N> networkType;
+    protected final Class<D> dataType;
+    protected final String name;
 
-    public CacheModule(@Nonnull PayloadCache<K, X, N, D> cache) {
-        Preconditions.checkNotNull(cache);
-        this.cache = cache;
+    public CacheModule(Class<K> keyType, Class<X> payloadType, Class<N> networkType, Class<D> dataType, String name) {
+        this.keyType = keyType;
+        this.payloadType = payloadType;
+        this.networkType = networkType;
+        this.dataType = dataType;
+        this.name = name;
     }
 
     @Override
     protected void configure() {
-        bind(new TypeLiteral<PayloadInstantiator<K, X, D>>() {
-        }).to(new TypeLiteral<GuicePayloadInstantiator<K, X, N, D>>() {
-        });
+        bind(String.class).annotatedWith(Cache.class).toInstance(name);
+
+        bind(ErrorService.class).to(CacheErrorService.class);
         install(new HandshakeModule());
-        bind(ErrorService.class).to(new TypeLiteral<CacheErrorService<K, X, N, D>>() {
-        }).in(Singleton.class);
-        bind(new TypeLiteral<SyncService<K, X, N, D>>() {
-        }).to(new TypeLiteral<CacheSyncService<K, X, N, D>>() {
-        });
     }
-
-    @Provides
-    PayloadCache<K, X, N, D> provideCache() {
-        return this.cache;
-    }
-
 }

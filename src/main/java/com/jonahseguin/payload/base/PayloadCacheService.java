@@ -110,7 +110,7 @@ public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkP
 
     void setMode(@Nonnull PayloadMode mode);
 
-    void setInstantiator(@Nonnull PayloadInstantiator<K, X, D> instantiator);
+    void setInstantiator(@Nonnull PayloadInstantiator<K, X> instantiator);
 
     String keyToString(@Nonnull K key);
 

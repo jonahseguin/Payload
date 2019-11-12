@@ -1,27 +1,25 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.mode.object;
 
-import com.google.inject.Provides;
 import com.jonahseguin.payload.base.CacheModule;
-
-import javax.annotation.Nonnull;
 
 public class ObjectCacheModule<X extends PayloadObject> extends CacheModule<String, X, NetworkObject, ObjectData> {
 
-    private final ObjectCache<X> cache;
-
-    ObjectCacheModule(@Nonnull ObjectCache<X> cache) {
-        super(cache);
-        this.cache = cache;
+    public ObjectCacheModule(Class<X> payloadType, String name) {
+        super(String.class, payloadType, NetworkObject.class, ObjectData.class, name);
     }
 
-    @Provides
-    ObjectCache<X> provideObjectCache() {
-        return this.cache;
-    }
-
-    @Provides
-    ObjectService<X> provideObjectService() {
-        return this.cache;
+    @Override
+    protected void configure() {
+        bind(keyType).to(String.class);
+        bind(payloadType).to(payloadType);
+        bind(networkType).to(NetworkObject.class);
+        bind(dataType).to(ObjectData.class);
+        super.configure();
     }
 
 }

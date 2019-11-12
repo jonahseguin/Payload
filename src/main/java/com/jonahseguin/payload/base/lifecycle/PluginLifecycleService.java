@@ -6,6 +6,7 @@
 package com.jonahseguin.payload.base.lifecycle;
 
 import com.google.inject.Inject;
+import com.jonahseguin.payload.annotation.Database;
 import com.jonahseguin.payload.base.Service;
 import com.jonahseguin.payload.base.error.ErrorService;
 import org.bukkit.plugin.Plugin;
@@ -16,7 +17,7 @@ public class PluginLifecycleService implements LifecycleService {
     private final ErrorService errorService;
 
     @Inject
-    public PluginLifecycleService(Plugin plugin, ErrorService errorService) {
+    public PluginLifecycleService(Plugin plugin, @Database ErrorService errorService) {
         this.plugin = plugin;
         this.errorService = errorService;
     }

@@ -170,7 +170,7 @@ public class ObjectStoreMongo<X extends PayloadObject> extends ObjectCacheStore<
         if (!this.cache.getDatabase().isRunning()) {
             this.cache.getErrorService().capture("Error initializing MongoDB Object Layer: Payload Database is not started");
         }
-        this.nullPayload = this.cache.getInjector().getInstance(cache.getPayloadClass());
+        this.nullPayload = this.cache.getInstantiator().instantiate();
         Preconditions.checkNotNull(nullPayload, "Null payload failed to instantiate");
         if (this.cache.getSettings().isServerSpecific()) {
             this.addCriteriaModifier(query -> query.field("payloadId").equalIgnoreCase(cache.getApi().getPayloadID()));

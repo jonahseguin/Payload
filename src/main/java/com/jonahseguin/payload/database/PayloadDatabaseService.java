@@ -135,7 +135,7 @@ public class PayloadDatabaseService implements DatabaseService {
 
     @Override
     public String getName() {
-        return database.getName();
+        return name;
     }
 
     @Override
@@ -266,6 +266,7 @@ public class PayloadDatabaseService implements DatabaseService {
             }
             this.mongoClient = mongoClient;
             this.datastore = this.morphia.createDatastore(mongoClient, payloadMongo.getDatabase());
+            this.database = datastore.getDatabase();
             this.datastore.ensureIndexes();
             // If MongoDB fails it will automatically attempt to reconnect until it connects
             return true;

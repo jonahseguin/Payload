@@ -11,20 +11,17 @@ import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.base.PayloadCacheService;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.LangService;
-import com.jonahseguin.payload.base.network.NetworkPayload;
-import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class CacheErrorService<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> implements ErrorService, LangModule {
+public class CacheErrorService implements ErrorService, LangModule {
 
-    protected final PayloadCacheService<K, X, N, D> cache;
+    protected final PayloadCacheService cache;
     protected final LangService lang;
 
     @Inject
-    public CacheErrorService(PayloadCacheService<K, X, N, D> cache, LangService lang) {
+    public CacheErrorService(PayloadCacheService cache, LangService lang) {
         this.cache = cache;
         this.lang = lang;
         cache.getLang().register(this);

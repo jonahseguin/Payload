@@ -6,24 +6,30 @@
 package com.jonahseguin.payload.mode.profile;
 
 import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.TypeLiteral;
+import com.google.inject.*;
 import com.jonahseguin.lang.LangDefinitions;
 import com.jonahseguin.lang.LangModule;
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
-import com.jonahseguin.payload.base.CacheModule;
+import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.annotation.Cache;
 import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.error.ErrorService;
 import com.jonahseguin.payload.base.failsafe.FailedPayload;
+import com.jonahseguin.payload.base.handshake.HandshakeService;
+import com.jonahseguin.payload.base.lang.LangService;
+import com.jonahseguin.payload.base.network.NetworkService;
 import com.jonahseguin.payload.base.store.PayloadStore;
 import com.jonahseguin.payload.base.sync.SyncService;
 import com.jonahseguin.payload.base.uuid.UUIDService;
+import com.jonahseguin.payload.database.DatabaseService;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import com.jonahseguin.payload.mode.profile.store.ProfileStoreLocal;
 import com.jonahseguin.payload.mode.profile.store.ProfileStoreMongo;
+import com.jonahseguin.payload.server.ServerService;
 import lombok.Getter;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -37,6 +43,7 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 @Getter
+@Singleton
 public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X, NetworkProfile, ProfileData> implements LangModule, ProfileService<X> {
 
     private final ProfileCacheSettings settings = new ProfileCacheSettings();
@@ -44,15 +51,15 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     private final ProfileStoreLocal<X> localStore = new ProfileStoreLocal<>(this);
     private final ProfileStoreMongo<X> mongoStore = new ProfileStoreMongo<>(this);
     private final ConcurrentMap<UUID, ProfileData> data = new ConcurrentHashMap<>();
-    private final CacheModule<UUID, X, NetworkProfile, ProfileData> module = new ProfileCacheModule<>(this);
-    @Inject
-    private UUIDService uuidService;
+    private final UUIDService uuidService;
 
-    public ProfileCache(@Nonnull Injector injector, @Nonnull String name, @Nonnull Class<X> payloadClass) {
-        super(injector, name, UUID.class, payloadClass);
-        this.injector.injectMembers(this);
+    @Inject
+    public ProfileCache(Injector injector, @Cache Class<X> payloadClass, @Cache String name, Plugin plugin, PayloadPlugin payloadPlugin, PayloadAPI api, DatabaseService database, LangService lang, ErrorService errorService, SyncService<UUID, X, NetworkProfile, ProfileData> sync, HandshakeService handshakeService, NetworkService<UUID, X, NetworkProfile, ProfileData> networkService, ServerService serverService, UUIDService uuidService) {
+        super(injector, payloadClass, name, plugin, payloadPlugin, api, database, lang, errorService, sync, handshakeService, networkService, serverService);
+        this.uuidService = uuidService;
         lang.register(this);
     }
+
 
     @Override
     public void define(LangDefinitions l) {
@@ -64,12 +71,6 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
     @Override
     public String langModule() {
         return "profile-cache";
-    }
-
-    @Nonnull
-    @Override
-    protected CacheModule<UUID, X, NetworkProfile, ProfileData> module() {
-        return module;
     }
 
     @Override
@@ -220,10 +221,14 @@ public class ProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X
             FailedPayload<X, ProfileData> failedPayload = this.getFailureManager().getFailedPayload(uniqueId);
             if (failedPayload.getTemporaryPayload() == null) {
                 if (failedPayload.getPlayer() != null) {
-                    failedPayload.setTemporaryPayload(this.instantiator.instantiate(this.createData(failedPayload.getPlayer().getName(), uniqueId, failedPayload.getPlayer().getAddress().getAddress().getHostAddress())));
+                    failedPayload.setTemporaryPayload(this.instantiator.instantiate());
+                    ProfileData data = this.createData(failedPayload.getPlayer().getName(), uniqueId, failedPayload.getPlayer().getAddress().getAddress().getHostAddress());
+                    failedPayload.getTemporaryPayload().setUsername(data.getUsername());
+                    failedPayload.getTemporaryPayload().setUUID(data.getUniqueId());
+                    failedPayload.getTemporaryPayload().setLoginIp(data.getIp());
                 }
             }
-            return Optional.of(failedPayload.getTemporaryPayload());
+            return Optional.ofNullable(failedPayload.getTemporaryPayload());
         }
         ProfileData data = this.createData(null, uniqueId, null);
         PayloadProfileController<X> controller = this.controller(data);

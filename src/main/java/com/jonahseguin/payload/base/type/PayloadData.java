@@ -1,18 +1,18 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base.type;
 
-public interface PayloadData {
+import com.google.inject.Inject;
 
-    // Any extra data to be passed during caching (ex. username, IP address, etc.)
+public abstract class PayloadData {
 
-    // ex for Profile
-    /*
-    getName()
+    @Inject
+    public PayloadData() {
 
-    getUniqueId()
-
-    getLoginIpAddress()
-
-     */
+    }
 
 
 }

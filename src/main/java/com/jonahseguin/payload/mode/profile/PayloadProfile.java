@@ -103,6 +103,15 @@ public abstract class PayloadProfile implements Payload<UUID> {
         return this.getUUID();
     }
 
+    public void setUUID(UUID uuid) {
+        this.uuid = uuid;
+        this.uniqueId = uuid.toString();
+    }
+
+    public void setUniqueId(UUID uuid) {
+        this.setUUID(uuid);
+    }
+
     public void initializePlayer(Player player) {
         Validate.notNull(player, "Player cannot be null for initializePlayer");
         this.player = player;
