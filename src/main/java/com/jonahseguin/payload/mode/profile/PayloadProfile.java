@@ -32,7 +32,7 @@ import java.util.UUID;
 })
 public abstract class PayloadProfile implements Payload<UUID> {
 
-    protected transient final ProfileService cache;
+    protected transient final ProfileCache cache;
 
     @Id
     protected ObjectId objectId = new ObjectId();
@@ -54,21 +54,17 @@ public abstract class PayloadProfile implements Payload<UUID> {
     protected transient long handshakeStartTimestamp = 0;
 
     @Inject
-    public PayloadProfile(ProfileService cache) {
+    public PayloadProfile(ProfileCache cache) {
         this.cache = cache;
         this.payloadId = cache.getApi().getPayloadID();
     }
 
-    public PayloadProfile(ProfileService cache, String username, UUID uniqueId, String loginIp) {
+    public PayloadProfile(ProfileCache cache, String username, UUID uniqueId, String loginIp) {
         this(cache);
         this.username = username;
         this.uuid = uniqueId;
         this.uniqueId = uniqueId.toString();
         this.loginIp = loginIp;
-    }
-
-    public PayloadProfile(ProfileService cache, ProfileData data) {
-        this(cache, data.getUsername(), data.getUniqueId(), data.getIp());
     }
 
     @PostLoad
@@ -88,7 +84,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
 
     @Nonnull
     @Override
-    public ProfileService getCache() {
+    public ProfileCache getCache() {
         return cache;
     }
 
@@ -165,6 +161,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
         return this.player != null;
     }
 
+    @Nonnull
     @Override
     public String identifierFieldName() {
         return "uniqueId";

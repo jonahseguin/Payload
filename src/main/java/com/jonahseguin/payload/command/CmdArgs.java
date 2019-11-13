@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.command;
 
 import com.jonahseguin.payload.PayloadPlugin;
@@ -60,7 +65,7 @@ public class CmdArgs {
         this.sender.sendMessage(ChatColor.translateAlternateColorCodes('&', msg));
     }
 
-    public void msg(String msg, String... args) {
+    public void msg(String msg, Object... args) {
         this.sender.sendMessage(PayloadPlugin.format(msg, args));
     }
 

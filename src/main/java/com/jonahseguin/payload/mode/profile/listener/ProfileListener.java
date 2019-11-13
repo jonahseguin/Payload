@@ -8,7 +8,7 @@ package com.jonahseguin.payload.mode.profile.listener;
 import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
-import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.mode.profile.*;
 import com.jonahseguin.payload.mode.profile.event.PayloadProfileLogoutEvent;
 import com.jonahseguin.payload.mode.profile.event.PayloadProfileSwitchServersEvent;
@@ -35,58 +35,47 @@ public class ProfileListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOW)
-    public void onCachingStart(AsyncPlayerPreLoginEvent event) {
+    public void onProfileCachingStart(AsyncPlayerPreLoginEvent event) {
         final String username = event.getName();
         final UUID uniqueId = event.getUniqueId();
         final String ip = event.getAddress().getHostAddress();
 
-        List<PayloadCache> sortedCaches = api.getSortedCachesByDepends();
+        List<Cache> sortedCaches = api.getSortedCachesByDepends();
 
         sortedCaches.forEach(c -> {
             if (c instanceof ProfileCache) {
                 ProfileCache cache = (ProfileCache) c;
-                ProfileData data = cache.createData(username, uniqueId, ip);
-                PayloadProfileController controller = cache.controller(data);
-                controller.setLogin(true); // Caching in login-mode
+                PayloadProfileController controller = cache.controller(uniqueId);
+                controller.login(username, ip);
                 controller.cache();
 
                 if (controller.isDenyJoin()) {
                     event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, controller.getJoinDenyReason());
-                    cache.removeData(uniqueId);
-                } else {
-                    cache.removeData(uniqueId);
                 }
             }
         });
     }
 
     @EventHandler(priority = EventPriority.LOW)
-    public void onCachingInit(PlayerJoinEvent event) {
+    public void onProfileCachingInit(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         api.getSortedCachesByDepends().forEach(c -> {
-            if (c instanceof ProfileCache) {
-                ProfileCache cache = (ProfileCache) c;
+            if (c instanceof PayloadProfileCache) {
+                PayloadProfileCache cache = (PayloadProfileCache) c;
                 PayloadProfileController controller = cache.getController(player.getUniqueId());
                 if (controller != null) {
                     controller.initializeOnJoin(player);
-                    if (!cache.getFailureManager().hasFailure(player.getUniqueId())) {
-                        cache.removeController(player.getUniqueId());
-                        cache.removeData(player.getUniqueId());
-                    }
-                }
-                if (cache.getFailureManager().hasFailure(player.getUniqueId())) {
-                    cache.getFailureManager().getFailedPayload(player.getUniqueId()).setPlayer(player);
                 }
             }
         });
     }
 
     @EventHandler(priority = EventPriority.HIGH)
-    public void onQuit(final PlayerQuitEvent event) {
+    public void onProfileQuit(final PlayerQuitEvent event) {
         final Player player = event.getPlayer();
         api.getSortedCachesByDependsReversed().forEach(c -> {
-            if (c instanceof ProfileCache) {
-                ProfileCache cache = (ProfileCache) c;
+            if (c instanceof PayloadProfileCache) {
+                PayloadProfileCache cache = (PayloadProfileCache) c;
                 cache.runAsync(() -> {
                     if (cache.getMode().equals(PayloadMode.STANDALONE)) {
                         // save on quit in standalone mode
@@ -102,7 +91,6 @@ public class ProfileListener implements Listener {
                                 if (!cache.save(profile)) {
                                     cache.getErrorService().capture("Error saving profile on quit: " + player.getName());
                                 }
-                                cache.removeData(profile.getUniqueId());
                                 cache.removeController(profile.getUniqueId());
                             }
                         });
@@ -130,7 +118,6 @@ public class ProfileListener implements Listener {
                                     // but we do want to remove their locally cached profile because the data will be outdated
                                     // and we want to prevent accidental data rollbacks
                                     cache.getLocalStore().remove(player.getUniqueId());
-                                    cache.removeData(player.getUniqueId());
                                     cache.removeController(player.getUniqueId());
                                     cache.getErrorService().debug("Saving player " + player.getName() + " on logout (not switching servers)");
                                 } else {

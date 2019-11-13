@@ -12,7 +12,7 @@ import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
 import com.jonahseguin.payload.command.PayloadCommand;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
-import com.jonahseguin.payload.mode.profile.ProfileCache;
+import com.jonahseguin.payload.mode.profile.PayloadProfileCache;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -37,8 +37,8 @@ public class CmdProfile implements PayloadCommand {
             args.msg("&cA cache with the name '{0}' does not exist.  Type /payload caches for a list of caches.", cacheName);
             return;
         }
-        if (cache instanceof ProfileCache) {
-            ProfileCache pc = (ProfileCache) cache;
+        if (cache instanceof PayloadProfileCache) {
+            PayloadProfileCache pc = (PayloadProfileCache) cache;
 
             String playerName = args.arg(args.length() - 1);
             Player player = Bukkit.getPlayer(playerName);

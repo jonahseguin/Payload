@@ -6,27 +6,22 @@
 package com.jonahseguin.payload.base.sync;
 
 import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
-import com.google.inject.Key;
-import com.google.inject.TypeLiteral;
-import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.PayloadCallback;
 import com.jonahseguin.payload.base.handshake.HandshakeService;
 import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
 
 import javax.annotation.Nonnull;
 import java.util.Optional;
 
-public class CacheSyncService<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> implements SyncService<K, X, N, D> {
+public class CacheSyncService<K, X extends Payload<K>, N extends NetworkPayload<K>, D> implements SyncService<K, X, N> {
 
-    private final PayloadCache<K, X, N, D> cache;
+    private final Cache<K, X, N> cache;
     private final HandshakeService handshakeService;
     private boolean running = false;
 
-    @Inject
-    public CacheSyncService(PayloadCache<K, X, N, D> cache, HandshakeService handshakeService) {
+    public CacheSyncService(Cache<K, X, N> cache, HandshakeService handshakeService) {
         this.cache = cache;
         this.handshakeService = handshakeService;
     }
@@ -66,8 +61,7 @@ public class CacheSyncService<K, X extends Payload<K>, N extends NetworkPayload<
     @Override
     public boolean start() {
         running = true;
-        handshakeService.subscribe(Key.get(new TypeLiteral<SyncHandshake<K, X, N, D>>() {
-        }));
+        handshakeService.subscribe(new SyncHandshake<>(cache));
         return true;
     }
 

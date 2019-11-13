@@ -9,8 +9,8 @@ import com.jonahseguin.payload.base.Service;
 
 public interface LifecycleService {
 
-    void start(Service service);
+    boolean start(Service service);
 
-    void shutdown(Service service);
+    boolean shutdown(Service service);
 
 }

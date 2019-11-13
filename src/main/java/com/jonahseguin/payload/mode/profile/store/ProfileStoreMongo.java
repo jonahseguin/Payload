@@ -8,11 +8,9 @@ package com.jonahseguin.payload.mode.profile.store;
 import com.google.common.base.Preconditions;
 import com.jonahseguin.payload.base.type.PayloadQueryModifier;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
-import com.jonahseguin.payload.mode.profile.ProfileCache;
-import com.jonahseguin.payload.mode.profile.ProfileData;
+import com.jonahseguin.payload.mode.profile.PayloadProfileCache;
 import com.mongodb.MongoException;
 import dev.morphia.query.Query;
-import org.bukkit.entity.Player;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -23,7 +21,7 @@ public class ProfileStoreMongo<X extends PayloadProfile> extends ProfileCacheSto
     private final Set<PayloadQueryModifier<X>> queryModifiers = new HashSet<>();
     private boolean running = false;
 
-    public ProfileStoreMongo(ProfileCache<X> cache) {
+    public ProfileStoreMongo(PayloadProfileCache<X> cache) {
         super(cache);
     }
 
@@ -70,12 +68,6 @@ public class ProfileStoreMongo<X extends PayloadProfile> extends ProfileCacheSto
         }
     }
 
-    @Override
-    public Optional<X> get(@Nonnull ProfileData data) {
-        Preconditions.checkNotNull(data);
-        return get(data.getUniqueId());
-    }
-
     public Optional<X> getByUsername(@Nonnull String username) {
         Preconditions.checkNotNull(username);
         try {
@@ -114,21 +106,9 @@ public class ProfileStoreMongo<X extends PayloadProfile> extends ProfileCacheSto
     }
 
     @Override
-    public boolean has(@Nonnull ProfileData data) {
-        Preconditions.checkNotNull(data);
-        return has(data.getUniqueId());
-    }
-
-    @Override
     public boolean has(@Nonnull X payload) {
         Preconditions.checkNotNull(payload);
         return has(payload.getUniqueId());
-    }
-
-    @Override
-    public void remove(@Nonnull ProfileData data) {
-        Preconditions.checkNotNull(data);
-        remove(data.getUniqueId());
     }
 
     @Override
@@ -140,33 +120,7 @@ public class ProfileStoreMongo<X extends PayloadProfile> extends ProfileCacheSto
 
     @Override
     public int cleanup() {
-        int cleaned = 0;
-
-        // Check for online players that don't have profiles
-        for (Player player : cache.getPlugin().getServer().getOnlinePlayers()) {
-            Optional<X> o = cache.getFromCache(player);
-            if (o.isPresent()) {
-                X payload = o.get();
-                // They don't have a profile but are online
-                // Check if they are already failure handling
-                ProfileData data = cache.getData(player.getUniqueId());
-                if (data != null) {
-                    if (cache.getFailureManager().hasFailure(data)) {
-                        continue; // They are already being handled
-                    }
-                }
-
-                if (data == null) {
-                    data = cache.createData(player.getName(), player.getUniqueId(), player.getAddress().getAddress().getHostAddress());
-                }
-
-                // They aren't failure handling if we got here, let them know of the issue and start failure handling
-                player.sendMessage(cache.getLang().module(cache).format("no-profile"));
-                cache.getFailureManager().fail(data);
-            }
-        }
-
-        return cleaned;
+        return 0;
     }
 
     @Override

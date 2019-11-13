@@ -5,10 +5,9 @@
 
 package com.jonahseguin.payload.base.error;
 
-import com.google.inject.Inject;
 import com.jonahseguin.lang.LangDefinitions;
 import com.jonahseguin.lang.LangModule;
-import com.jonahseguin.payload.base.PayloadCacheService;
+import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.LangService;
 
@@ -17,14 +16,13 @@ import javax.annotation.Nullable;
 
 public class CacheErrorService implements ErrorService, LangModule {
 
-    protected final PayloadCacheService cache;
+    protected final Cache cache;
     protected final LangService lang;
 
-    @Inject
-    public CacheErrorService(PayloadCacheService cache, LangService lang) {
+    public CacheErrorService(Cache cache, LangService lang) {
         this.cache = cache;
         this.lang = lang;
-        cache.getLang().register(this);
+        lang.register(this);
     }
 
     @Override

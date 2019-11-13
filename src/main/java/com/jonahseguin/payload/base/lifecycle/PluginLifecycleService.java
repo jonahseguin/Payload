@@ -23,7 +23,7 @@ public class PluginLifecycleService implements LifecycleService {
     }
 
     @Override
-    public void start(Service service) {
+    public boolean start(Service service) {
         boolean success = true;
         try {
             if (!service.start()) {
@@ -37,16 +37,21 @@ public class PluginLifecycleService implements LifecycleService {
                 plugin.getServer().getPluginManager().disablePlugin(plugin);
             }
         }
+        return success;
     }
 
     @Override
-    public void shutdown(Service service) {
+    public boolean shutdown(Service service) {
         try {
             if (!service.shutdown()) {
                 errorService.capture("Error shutting down service: " + service.getClass().getSimpleName());
+                return false;
+            } else {
+                return true;
             }
         } catch (Exception ex) {
             errorService.capture(ex, "Error shutting down service: " + service.getClass().getSimpleName() + ": " + ex.getMessage());
+            return false;
         }
     }
 }

@@ -7,9 +7,8 @@ package com.jonahseguin.payload.mode.object.store;
 
 import com.google.common.base.Preconditions;
 import com.jonahseguin.payload.base.type.PayloadQueryModifier;
-import com.jonahseguin.payload.mode.object.ObjectCache;
-import com.jonahseguin.payload.mode.object.ObjectData;
 import com.jonahseguin.payload.mode.object.PayloadObject;
+import com.jonahseguin.payload.mode.object.PayloadObjectCache;
 import com.mongodb.MongoException;
 import dev.morphia.query.Query;
 
@@ -28,7 +27,7 @@ public class ObjectStoreMongo<X extends PayloadObject> extends ObjectCacheStore<
     private boolean running = false;
     private X nullPayload = null; // for identifierFieldName
 
-    public ObjectStoreMongo(ObjectCache<X> cache) {
+    public ObjectStoreMongo(PayloadObjectCache<X> cache) {
         super(cache);
     }
 
@@ -81,12 +80,6 @@ public class ObjectStoreMongo<X extends PayloadObject> extends ObjectCacheStore<
     }
 
     @Override
-    public Optional<X> get(@Nonnull ObjectData data) {
-        Preconditions.checkNotNull(data);
-        return this.get(data.getIdentifier());
-    }
-
-    @Override
     public boolean save(@Nonnull X payload) {
         Preconditions.checkNotNull(payload);
         payload.interact();
@@ -97,23 +90,6 @@ public class ObjectStoreMongo<X extends PayloadObject> extends ObjectCacheStore<
             return false;
         } catch (Exception expected) {
             this.getCache().getErrorService().capture(expected, "Error saving Object to MongoDB Layer: " + payload.getIdentifier());
-            return false;
-        }
-    }
-
-    @Override
-    public boolean has(@Nonnull ObjectData data) {
-        Preconditions.checkNotNull(data);
-        try {
-            Query<X> q = getQuery(data.getIdentifier());
-            Stream<X> stream = q.find().toList().stream();
-            Optional<X> xp = stream.findFirst();
-            return xp.isPresent();
-        } catch (MongoException ex) {
-            this.getCache().getErrorService().capture(ex, "MongoDB error check if Object exists in MongoDB Layer: " + data.getIdentifier());
-            return false;
-        } catch (Exception expected) {
-            this.getCache().getErrorService().capture(expected, "Error checking if Object exists in MongoDB Layer: " + data.getIdentifier());
             return false;
         }
     }
@@ -134,12 +110,6 @@ public class ObjectStoreMongo<X extends PayloadObject> extends ObjectCacheStore<
             this.getCache().getErrorService().capture(expected, "Error checking if Object exists in MongoDB Layer: " + payload.getIdentifier());
             return false;
         }
-    }
-
-    @Override
-    public void remove(@Nonnull ObjectData data) {
-        Preconditions.checkNotNull(data);
-        remove(data.getIdentifier());
     }
 
     @Override

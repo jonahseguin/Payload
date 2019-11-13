@@ -19,41 +19,41 @@ import java.util.Optional;
 @Setter
 public class PayloadObjectController<X extends PayloadObject> implements PayloadController<X> {
 
-    private final ObjectCache<X> cache;
-    private final ObjectData data;
+    private final PayloadObjectCache<X> cache;
+    private final String identifier;
 
     private X payload = null;
 
-    PayloadObjectController(@Nonnull ObjectCache<X> cache, @Nonnull ObjectData data) {
+    PayloadObjectController(@Nonnull PayloadObjectCache<X> cache, String identifier) {
         Preconditions.checkNotNull(cache);
-        Preconditions.checkNotNull(data);
+        Preconditions.checkNotNull(identifier);
         this.cache = cache;
-        this.data = data;
+        this.identifier = identifier;
     }
 
     private void load(boolean fromLocal) {
         if (fromLocal) {
-            Optional<X> local = cache.getFromCache(data.getIdentifier());
+            Optional<X> local = cache.getFromCache(identifier);
             if (local.isPresent()) {
                 payload = local.get();
                 return;
             }
         }
-        Optional<X> db = cache.getFromDatabase(data.getIdentifier());
+        Optional<X> db = cache.getFromDatabase(identifier);
         db.ifPresent(x -> payload = x);
     }
 
     @Override
     public Optional<X> cache() {
         if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
-            Optional<NetworkObject> network = cache.getNetworked(data.getIdentifier());
+            Optional<NetworkObject> network = cache.getNetworked(identifier);
             if (network.isPresent()) {
                 NetworkObject no = network.get();
                 if (no.isThisMostRelevantServer()) {
                     load(true);
                 } else {
                     // Handshake
-                    HandshakeHandler<ObjectHandshake<X>> h = cache.getHandshakeService().publish(new ObjectHandshake<>(cache, data.getIdentifier()));
+                    HandshakeHandler<ObjectHandshake> h = cache.getHandshakeService().publish(new ObjectHandshake(cache, identifier));
                     h.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
                     load(false);
                 }

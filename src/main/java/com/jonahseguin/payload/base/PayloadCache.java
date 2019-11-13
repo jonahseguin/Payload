@@ -12,9 +12,8 @@ import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
-import com.jonahseguin.payload.annotation.Cache;
+import com.jonahseguin.payload.base.error.CacheErrorService;
 import com.jonahseguin.payload.base.error.ErrorService;
-import com.jonahseguin.payload.base.failsafe.FailureManager;
 import com.jonahseguin.payload.base.handshake.HandshakeService;
 import com.jonahseguin.payload.base.lang.LangService;
 import com.jonahseguin.payload.base.network.NetworkPayload;
@@ -24,8 +23,9 @@ import com.jonahseguin.payload.base.sync.CacheSyncService;
 import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.sync.SyncService;
 import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
-import com.jonahseguin.payload.base.type.*;
-import com.jonahseguin.payload.database.DatabaseDependent;
+import com.jonahseguin.payload.base.type.GuicePayloadInstantiator;
+import com.jonahseguin.payload.base.type.Payload;
+import com.jonahseguin.payload.base.type.PayloadInstantiator;
 import com.jonahseguin.payload.database.DatabaseService;
 import com.jonahseguin.payload.server.ServerService;
 import lombok.Getter;
@@ -47,48 +47,49 @@ import java.util.concurrent.*;
  */
 @Getter
 @Singleton
-public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> implements DatabaseDependent, Comparable<PayloadCache>, PayloadCacheService<K, X, N, D> {
+public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPayload<K>> implements Comparable<PayloadCache>, Cache<K, X, N> {
 
-    protected final Injector injector;
-    protected final Class<X> payloadClass;
-    protected final String name;
     protected final ExecutorService pool = Executors.newCachedThreadPool();
-    protected final FailureManager<K, X, N, D> failureManager;
-    protected final PayloadAutoSaveTask<K, X, N, D> autoSaveTask = new PayloadAutoSaveTask<>(this);
+    protected final PayloadAutoSaveTask<K, X, N> autoSaveTask = new PayloadAutoSaveTask<>(this);
     protected final Set<String> dependingCaches = new HashSet<>();
-    protected final Plugin plugin;
-    protected final PayloadPlugin payloadPlugin;
-    protected final PayloadAPI api;
-    protected final DatabaseService database;
-    protected final LangService lang;
-    protected final SyncService<K, X, N, D> sync;
-    protected final HandshakeService handshakeService;
-    protected final NetworkService<K, X, N, D> networkService;
-    protected final ServerService serverService;
+    protected final Class<K> keyClass;
+    protected final Class<X> payloadClass;
+    protected final Class<N> networkClass;
+    protected final String name;
+    protected final Injector injector;
+    @Inject protected Plugin plugin;
+    @Inject protected PayloadPlugin payloadPlugin;
+    @Inject protected PayloadAPI api;
+    @Inject protected DatabaseService database;
+    @Inject protected LangService lang;
+    @Inject protected HandshakeService handshakeService;
+    @Inject protected ServerService serverService;
     protected ErrorService errorService;
+    protected SyncService<K, X, N> sync;
+    protected NetworkService<K, X, N> networkService;
     protected PayloadInstantiator<K, X> instantiator;
     protected SyncMode syncMode = SyncMode.IF_CACHED;
     protected boolean debug = false;
     protected PayloadMode mode = PayloadMode.STANDALONE;
     protected boolean running = false;
 
-    @Inject
-    public PayloadCache(Injector injector, @Cache Class<X> payloadClass, Class<N> networkClass, @Cache String name, Plugin plugin, PayloadPlugin payloadPlugin, PayloadAPI api, DatabaseService database, LangService lang, ErrorService errorService, HandshakeService handshakeService, ServerService serverService) {
+    public PayloadCache(Injector injector, String name, Class<K> key, Class<X> payload, Class<N> network) {
         this.injector = injector;
-        this.payloadClass = payloadClass;
         this.name = name;
-        this.plugin = plugin;
-        this.payloadPlugin = payloadPlugin;
-        this.api = api;
-        this.database = database;
-        this.lang = lang;
-        this.errorService = errorService;
-        this.handshakeService = handshakeService;
-        this.serverService = serverService;
+        this.keyClass = key;
+        this.payloadClass = payload;
+        this.networkClass = network;
+    }
+
+    protected void setupModule() {
         this.instantiator = new GuicePayloadInstantiator<>(payloadClass, injector);
-        this.failureManager = new FailureManager<>(this, payloadPlugin);
         this.sync = new CacheSyncService<>(this, handshakeService);
         this.networkService = new RedisNetworkService<>(this, networkClass, database, injector);
+        this.errorService = new CacheErrorService(this, lang);
+    }
+
+    protected void injectMe() {
+        injector.injectMembers(this);
     }
 
     /**
@@ -110,28 +111,29 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     @Override
     public final boolean start() {
         Preconditions.checkState(!running, "Cache " + name + " is already started!");
-        Preconditions.checkNotNull(instantiator, "Instantiator must be set before calling start()");
-        Preconditions.checkState(database.isRunning(), "Database must be started before starting cache");
+        Preconditions.checkNotNull(instantiator, "Instantiator must be set before calling start() for cache " + name);
+        Preconditions.checkNotNull(database, "Database has not been defined for cache " + name);
+        Preconditions.checkState(database.isRunning(), "Database must be started before starting cache " + name);
         boolean success = true;
         if (!initialize()) {
             success = false;
+            errorService.capture("Failed to initialize internally for cache " + name);
         }
         if (!handshakeService.start()) {
             success = false;
+            errorService.capture("Failed to start Handshake Service for cache " + name);
         }
         if (getMode().equals(PayloadMode.NETWORK_NODE)) {
             if (!networkService.start()) {
                 success = false;
+                errorService.capture("Failed to start Network Service for cache " + name);
             }
         }
-        if (!serverService.start()) {
-            success = false;
-        }
-        failureManager.start();
         autoSaveTask.start();
         if (getSettings().isEnableSync()) {
             if (!sync.start()) {
                 success = false;
+                errorService.capture("Failed to start Sync Service for cache " + name);
             }
         }
         running = true;
@@ -150,12 +152,11 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
 
         boolean success = true;
 
-        if (!shutdown()) {
+        if (!terminate()) {
             success = false;
         }
 
         autoSaveTask.stop();
-        failureManager.stop();
         if (!handshakeService.shutdown()) {
             success = false;
         }
@@ -163,9 +164,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
             if (!networkService.shutdown()) {
                 success = false;
             }
-        }
-        if (!serverService.shutdown()) {
-            success = false;
         }
         if (getSettings().isEnableSync()) {
             this.sync.shutdown();
@@ -195,16 +193,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     }
 
     /**
-     * Get/create a controller for specific data
-     *
-     * @param data {@link PayloadData}
-     * @return {@link PayloadController}
-     */
-    public abstract PayloadController<X> controller(@Nonnull D data);
-
-    public abstract PayloadController<X> controller(@Nonnull K key);
-
-    /**
      * Starts up & initializes the cache.
      * Prepares everything for a fresh startup, ensures database connections, etc.
      */
@@ -218,9 +206,12 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
 
     /**
      * Get a number of objects currently stored locally in this cache
-     * @return long number of objects cached
+     * @return int number of objects cached
      */
-    public abstract long cachedObjectCount();
+    @Override
+    public int cachedObjectCount() {
+        return getLocalStore().getAll().size();
+    }
 
     /**
      * Get the name of this cache (set by the end user, should be unique)
@@ -299,6 +290,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
         Preconditions.checkNotNull(mode);
         this.mode = mode;
     }
+
     /**
      * Internal method used by Payload to forcefully update a local instance of a Payload object with a newer one,
      * allowing your references to the existing Payload to remain intact and up-to-date.
@@ -440,9 +432,10 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
 
     @Nonnull
     @Override
-    public SyncService<K, X, N, D> getSyncService() {
+    public SyncService<K, X, N> getSyncService() {
         return sync;
     }
+
 
     /**
      * Utility method to send a message to online players with a certain permission
@@ -507,12 +500,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
         Preconditions.checkNotNull(callable);
         return pool.submit(callable);
     }
-
-    /**
-     * Internal method to update the Payload ID for objects stored in this cache after the Payload ID has been changed
-     * (via command)
-     */
-    public abstract void updatePayloadID();
 
     /**
      * Add a dependency to this cache

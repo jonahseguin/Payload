@@ -8,9 +8,11 @@ package com.jonahseguin.payload.mode.object;
 import com.google.inject.Inject;
 import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.server.ServerService;
+import dev.morphia.annotations.Entity;
 
 import java.util.Date;
 
+@Entity
 public class NetworkObject extends NetworkPayload<String> {
 
     @Inject

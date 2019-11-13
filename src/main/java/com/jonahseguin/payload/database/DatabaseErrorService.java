@@ -31,6 +31,7 @@ public class DatabaseErrorService implements ErrorService, LangModule {
         this.lang = lang;
         this.plugin = plugin;
         this.payloadPlugin = payloadPlugin;
+        lang.register(this);
     }
 
     @Override

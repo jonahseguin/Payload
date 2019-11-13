@@ -1,21 +1,25 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base.task;
 
 import com.google.common.base.Preconditions;
-import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
 import org.bukkit.scheduler.BukkitTask;
 
 import javax.annotation.Nonnull;
 
-public class PayloadAutoSaveTask<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> implements Runnable {
+public class PayloadAutoSaveTask<K, X extends Payload<K>, N extends NetworkPayload<K>> implements Runnable {
 
-    private final PayloadCache<K, X, N, D> cache;
+    private final Cache<K, X, N> cache;
 
     private BukkitTask task = null;
 
-    public PayloadAutoSaveTask(@Nonnull PayloadCache<K, X, N, D> cache) {
+    public PayloadAutoSaveTask(@Nonnull Cache<K, X, N> cache) {
         Preconditions.checkNotNull(cache);
         this.cache = cache;
     }

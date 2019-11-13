@@ -9,6 +9,7 @@ import com.google.inject.Inject;
 import com.jonahseguin.payload.server.ServerService;
 import dev.morphia.annotations.Embedded;
 import dev.morphia.annotations.Entity;
+import dev.morphia.annotations.Id;
 import lombok.Getter;
 import lombok.Setter;
 import org.bson.types.ObjectId;
@@ -21,6 +22,9 @@ import java.util.Set;
 @Setter
 @Entity
 public abstract class NetworkPayload<K> {
+
+    @Id
+    private ObjectId id = new ObjectId(); // required for morphia mapping
 
     protected transient final ServerService serverService;
     protected K identifier;

@@ -9,6 +9,7 @@ import com.jonahseguin.payload.base.Service;
 import com.jonahseguin.payload.base.error.ErrorService;
 import com.jonahseguin.payload.server.ServerService;
 import com.mongodb.MongoClient;
+import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
 import dev.morphia.Morphia;
 import redis.clients.jedis.Jedis;
@@ -24,6 +25,8 @@ public interface DatabaseService extends Service {
     Morphia getMorphia();
 
     Datastore getDatastore();
+
+    MongoDatabase getDatabase();
 
     Jedis getJedisResource();
 
@@ -48,7 +51,6 @@ public interface DatabaseService extends Service {
     DatabaseState getState();
 
     boolean connectRedis();
-
 
 
 }

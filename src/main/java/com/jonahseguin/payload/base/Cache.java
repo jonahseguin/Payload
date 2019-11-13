@@ -16,18 +16,18 @@ import com.jonahseguin.payload.base.store.PayloadStore;
 import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.sync.SyncService;
 import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
+import com.jonahseguin.payload.base.type.PayloadController;
 import com.jonahseguin.payload.base.type.PayloadInstantiator;
+import com.jonahseguin.payload.database.DatabaseDependent;
 import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
-public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> extends Service {
+public interface Cache<K, X extends Payload<K>, N extends NetworkPayload<K>> extends Service, DatabaseDependent {
 
     Optional<N> getNetworked(@Nonnull K key);
 
@@ -65,9 +65,6 @@ public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkP
 
     void cacheAll();
 
-    @Nullable
-    D getData(K key);
-
     @Nonnull
     Collection<X> getAll();
 
@@ -75,10 +72,10 @@ public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkP
     Collection<X> getCached();
 
     @Nonnull
-    NetworkService<K, X, N, D> getNetworkService();
+    NetworkService<K, X, N> getNetworkService();
 
     @Nonnull
-    SyncService<K, X, N, D> getSyncService();
+    SyncService<K, X, N> getSyncService();
 
     @Nonnull
     ErrorService getErrorService();
@@ -91,10 +88,10 @@ public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkP
     int saveAll();
 
     @Nonnull
-    PayloadStore<K, X, D> getLocalStore();
+    PayloadStore<K, X> getLocalStore();
 
     @Nonnull
-    PayloadStore<K, X, D> getDatabaseStore();
+    PayloadStore<K, X> getDatabaseStore();
 
     @Nonnull
     String getName();
@@ -142,5 +139,11 @@ public interface PayloadCacheService<K, X extends Payload<K>, N extends NetworkP
 
     void setSyncMode(@Nonnull SyncMode mode);
 
+    void updatePayloadID();
+
+    int cachedObjectCount();
+
+    @Nonnull
+    PayloadController<X> controller(@Nonnull K key);
 }
 

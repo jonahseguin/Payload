@@ -17,13 +17,16 @@ import org.bukkit.entity.Player;
 
 import javax.annotation.Nonnull;
 import java.util.Optional;
+import java.util.UUID;
 
 @Getter
 @Setter
 public class PayloadProfileController<X extends PayloadProfile> implements PayloadController<X> {
 
-    private final ProfileCache<X> cache;
-    private final ProfileData data;
+    private final PayloadProfileCache<X> cache;
+    private final UUID uuid;
+    private String username = null;
+    private String loginIp = null;
     private boolean login = true; // whether this controller is being used during a login operation
     private boolean denyJoin = false;
     private String joinDenyReason = ChatColor.RED + "A caching error occurred.  Please try again.";
@@ -31,11 +34,11 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     private Player player = null;
     private boolean failure = false;
 
-    PayloadProfileController(@Nonnull ProfileCache<X> cache, @Nonnull ProfileData data) {
+    PayloadProfileController(@Nonnull PayloadProfileCache<X> cache, @Nonnull UUID uuid) {
         Preconditions.checkNotNull(cache);
-        Preconditions.checkNotNull(data);
+        Preconditions.checkNotNull(uuid);
         this.cache = cache;
-        this.data = data;
+        this.uuid = uuid;
     }
 
     public void reset() {
@@ -44,22 +47,26 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         failure = false;
     }
 
+    public void login(@Nonnull String username, @Nonnull String loginIp) {
+        this.login = true;
+        this.username = username;
+        this.loginIp = loginIp;
+    }
+    
     @Override
     public Optional<X> cache() {
         reset();
 
-        if (data.getUniqueId() != null && data.getUsername() != null) {
+        if (uuid != null && username != null) {
             // Map their UUID to Username
-            cache.getUuidService().save(data.getUniqueId(), data.getUsername());
+            cache.getUuidService().save(uuid, username);
         }
 
         if (login) {
-            if (cache.getSettings().isDenyJoinDatabaseDown()) {
-                if (!cache.getDatabase().getState().canCacheFunction(cache)) {
-                    denyJoin = true;
-                    joinDenyReason = cache.getLang().module(cache).format("deny-join-database", cache.getName());
-                    return Optional.empty();
-                }
+            if (!cache.getDatabase().getState().canCacheFunction(cache)) {
+                denyJoin = true;
+                joinDenyReason = cache.getLang().module(cache).format("deny-join-database", cache.getName());
+                return Optional.empty();
             }
         }
 
@@ -88,33 +95,29 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
 
     private Optional<X> cacheStandalone() {
         // Iterate each layer in order
-        if (cache.getLocalStore().has(data.getUniqueId())) {
-            return cache.getLocalStore().get(data.getUniqueId());
+        if (cache.getLocalStore().has(uuid)) {
+            return cache.getLocalStore().get(uuid);
         }
-        Optional<X> o = cache.getMongoStore().get(data.getUniqueId());
+        Optional<X> o = cache.getMongoStore().get(uuid);
 
         if (!o.isPresent()) {
             // Failed to load from all layers
 
             // If there was a failure/error, start failure handling instead of making a new profile
             if (failure || !cache.getDatabase().getState().canCacheFunction(cache)) {
-                // start failure handling
-                if (cache.getSettings().isDenyJoinDatabaseDown()) {
-                    denyJoin = true;
-                    joinDenyReason = "&cThe database is currently offline.  Please try again soon.";
-                } else {
-                    if (!cache.getFailureManager().hasFailure(data)) {
-                        cache.getFailureManager().fail(data);
-                    }
-                }
+                denyJoin = true;
+                joinDenyReason = "&cThe database is currently offline.  Please try again soon.";
+                payload = null;
             } else if (login) {
                 // Only make a new profile if they are logging in
-                getCache().getErrorService().debug("Creating a new profile for Payload " + data.getUsername());
+                getCache().getErrorService().debug("Creating a new profile for Payload " + username);
                 // Otherwise make a new profile
                 payload = cache.getInstantiator().instantiate();
-                payload.setUsername(data.getUsername());
-                payload.setUUID(data.getUniqueId());
-                payload.setLoginIp(data.getIp());
+                if (username != null) {
+                    payload.setUsername(username);
+                }
+                payload.setUUID(uuid);
+                payload.setLoginIp(loginIp);
                 payload.setLoadingSource("New Profile");
                 cache.getPool().submit(() -> cache.save(payload));
             }
@@ -123,11 +126,11 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             payload = o.get();
             if (login) {
                 // Update their login ip
-                if (data.getIp() != null) {
-                    payload.setLoginIp(data.getIp());
+                if (loginIp != null) {
+                    payload.setLoginIp(loginIp);
                 }
-                if (data.getUsername() != null) {
-                    payload.setUsername(data.getUsername()); // Update their username
+                if (username != null) {
+                    payload.setUsername(username); // Update their username
                 }
             }
 
@@ -140,22 +143,26 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
 
     private void load(boolean local) {
         if (local) {
-            Optional<X> o = cache.getLocalStore().get(data.getUniqueId());
+            Optional<X> o = cache.getLocalStore().get(uuid);
             if (o.isPresent()) {
                 payload = o.get();
                 return;
             }
         }
-        Optional<X> o = cache.getMongoStore().get(data.getUniqueId());
+        Optional<X> o = cache.getMongoStore().get(uuid);
         if (o.isPresent()) {
             payload = o.get();
         } else {
             if (login) {
                 // Create
                 payload = cache.getInstantiator().instantiate();
-                payload.setUsername(data.getUsername());
-                payload.setUUID(data.getUniqueId());
-                payload.setLoginIp(data.getIp());
+                if (username != null) {
+                    payload.setUsername(username);
+                }
+                payload.setUUID(uuid);
+                if (loginIp != null) {
+                    payload.setLoginIp(loginIp);
+                }
                 payload.setLoadingSource("New Profile");
             } else {
                 // Doesn't exist
@@ -166,8 +173,8 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     }
 
     private Optional<X> cacheNetworkNode() {
-        cache.getErrorService().debug("Starting caching Payload [network-node] " + getData().getIdentifier() + "(login: " + login + ")");
-        Optional<NetworkProfile> oNP = cache.getNetworkService().get(data.getUniqueId());
+        cache.getErrorService().debug("Starting caching Payload [network-node] " + uuid.toString() + "(login: " + login + ")");
+        Optional<NetworkProfile> oNP = cache.getNetworkService().get(uuid);
         NetworkProfile networkProfile = null;
         if (oNP.isPresent()) {
             networkProfile = oNP.get();
@@ -175,8 +182,8 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 PayloadServer server = cache.getServerService().get(networkProfile.getLastSeenServer()).orElse(null);
                 if (server != null && server.isOnline()) {
                     // Handshake
-                    HandshakeHandler<ProfileHandshake<X>> handshake = cache.getHandshakeService().publish(new ProfileHandshake<>(cache, data.getUniqueId()));
-                    Optional<ProfileHandshake<X>> o = handshake.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
+                    HandshakeHandler<ProfileHandshake> handshake = cache.getHandshakeService().publish(new ProfileHandshake(cache, uuid));
+                    Optional<ProfileHandshake> o = handshake.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
                     if (o.isPresent()) {
                         load(false);
                     } else {
@@ -208,9 +215,9 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         }
 
         if (payload != null) {
-            if (!payload.getUsername().equalsIgnoreCase(data.getUsername())) {
-                cache.getErrorService().debug("Updated username: " + payload.getUsername() + " to " + data.getUsername());
-                payload.setUsername(data.getUsername());
+            if (username != null && !payload.getUsername().equalsIgnoreCase(username)) {
+                cache.getErrorService().debug("Updated username: " + payload.getUsername() + " to " + username);
+                payload.setUsername(username);
                 if (!cache.save(payload)) {
                     cache.getErrorService().capture("Error saving Payload during caching after username update: " + payload.getUsername());
                 }

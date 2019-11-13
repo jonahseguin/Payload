@@ -6,13 +6,11 @@
 package com.jonahseguin.payload.base.sync;
 
 import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
-import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.handshake.Handshake;
 import com.jonahseguin.payload.base.handshake.HandshakeData;
 import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,24 +18,28 @@ import javax.annotation.Nonnull;
 
 @Getter
 @Setter
-public class SyncHandshake<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> extends Handshake {
+public class SyncHandshake<K, X extends Payload<K>, N extends NetworkPayload<K>> extends Handshake {
 
     public static final String KEY_IDENTIFIER = "sync-identifier";
     public static final String KEY_MODE = "sync-mode";
-    private final PayloadCache<K, X, N, D> cache;
+    private final Cache<K, X, N> cache;
     private K identifier;
     private SyncHandshakeMode mode;
 
-    @Inject
-    public SyncHandshake(PayloadCache<K, X, N, D> cache) {
+    public SyncHandshake(Cache<K, X, N> cache) {
         this.cache = cache;
     }
 
-    public SyncHandshake(PayloadCache<K, X, N, D> cache, @Nonnull K identifier, @Nonnull SyncHandshakeMode mode) {
+    public SyncHandshake(Cache<K, X, N> cache, @Nonnull K identifier, @Nonnull SyncHandshakeMode mode) {
         Preconditions.checkNotNull(identifier);
         this.cache = cache;
         this.identifier = identifier;
         this.mode = mode;
+    }
+
+    @Override
+    public SyncHandshake<K, X, N> create() {
+        return new SyncHandshake<>(cache);
     }
 
     @Override

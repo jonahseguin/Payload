@@ -5,17 +5,17 @@
 
 package com.jonahseguin.payload.base;
 
-import com.jonahseguin.payload.mode.object.ObjectService;
+import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.PayloadObject;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
-import com.jonahseguin.payload.mode.profile.ProfileService;
+import com.jonahseguin.payload.mode.profile.ProfileCache;
 
 import javax.annotation.Nonnull;
 
 public interface CacheService extends Service {
 
-    <X extends PayloadProfile> ProfileService<X> createProfileCache(@Nonnull String name, @Nonnull Class<X> type);
+    <X extends PayloadProfile> ProfileCache<X> createProfileCache(@Nonnull String name, @Nonnull Class<X> type);
 
-    <X extends PayloadObject> ObjectService<X> createObjectCache(@Nonnull String name, @Nonnull Class<X> type);
+    <X extends PayloadObject> ObjectCache<X> createObjectCache(@Nonnull String name, @Nonnull Class<X> type);
 
 }

@@ -7,12 +7,11 @@ package com.jonahseguin.payload.base.network;
 
 import com.jonahseguin.payload.base.Service;
 import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
 
 import javax.annotation.Nonnull;
 import java.util.Optional;
 
-public interface NetworkService<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> extends Service {
+public interface NetworkService<K, X extends Payload<K>, N extends NetworkPayload<K>> extends Service {
 
     Optional<N> get(@Nonnull K key);
 

@@ -7,35 +7,30 @@ package com.jonahseguin.payload.base.handshake;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.jonahseguin.payload.database.DatabaseService;
 import org.bson.Document;
 import redis.clients.jedis.Jedis;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.*;
-import java.util.function.Function;
 
 public class PayloadHandshakeService implements HandshakeService {
 
     private final ConcurrentMap<String, Handshake> replyControllers = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, HandshakeContainer> containers = new ConcurrentHashMap<>();
     private boolean running = false;
-    private final Injector injector;
     private final DatabaseService database;
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     @Inject
-    public PayloadHandshakeService(Injector injector, DatabaseService database) {
-        this.injector = injector;
+    public PayloadHandshakeService(DatabaseService database) {
         this.database = database;
     }
 
     @Override
     public boolean start() {
         running = true;
-        return database.isConnected();
+        return true;
     }
 
     @Override
@@ -46,7 +41,7 @@ public class PayloadHandshakeService implements HandshakeService {
     @Override
     public boolean shutdown() {
         this.containers.values().stream()
-                .map((Function<HandshakeContainer, Handshake>) HandshakeContainer::getSubscriberController)
+                .map(HandshakeContainer::getSubscriberController)
                 .forEach(Handshake::stopListening);
         shutdownExecutor();
         this.containers.clear();
@@ -107,10 +102,10 @@ public class PayloadHandshakeService implements HandshakeService {
     }
 
     @Override
-    public <H extends Handshake> void subscribe(@Nonnull Key<H> key) {
-        Preconditions.checkNotNull(key);
-        HandshakeContainer<H> container = new HandshakeContainer<>(key, injector);
-        H controller = container.getSubscriberController();
+    public <H extends Handshake> void subscribe(@Nonnull H subscriber) {
+        Preconditions.checkNotNull(subscriber);
+        HandshakeContainer container = new HandshakeContainer(subscriber);
+        Handshake controller = container.getSubscriberController();
         containers.put(controller.channelPublish(), container);
         containers.put(controller.channelReply(), container);
         executor.submit(controller::listen);

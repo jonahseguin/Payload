@@ -74,4 +74,6 @@ public abstract class Handshake {
         }
     }
 
+    public abstract Handshake create();
+
 }

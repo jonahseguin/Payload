@@ -6,9 +6,8 @@
 package com.jonahseguin.payload.mode.object.store;
 
 import com.google.common.base.Preconditions;
-import com.jonahseguin.payload.mode.object.ObjectCache;
-import com.jonahseguin.payload.mode.object.ObjectData;
 import com.jonahseguin.payload.mode.object.PayloadObject;
+import com.jonahseguin.payload.mode.object.PayloadObjectCache;
 import lombok.Getter;
 import org.bson.types.ObjectId;
 
@@ -24,7 +23,7 @@ public class ObjectStoreLocal<X extends PayloadObject> extends ObjectCacheStore<
     private final ConcurrentMap<String, X> localCache = new ConcurrentHashMap<>();
     private boolean running = false;
 
-    public ObjectStoreLocal(ObjectCache<X> cache) {
+    public ObjectStoreLocal(PayloadObjectCache<X> cache) {
         super(cache);
     }
 
@@ -32,11 +31,6 @@ public class ObjectStoreLocal<X extends PayloadObject> extends ObjectCacheStore<
     public Optional<X> get(@Nonnull String key) {
         Preconditions.checkNotNull(key);
         return Optional.ofNullable(this.localCache.get(key.toLowerCase()));
-    }
-
-    @Override
-    public Optional<X> get(@Nonnull ObjectData data) {
-        return this.get(data.getIdentifier().toLowerCase());
     }
 
     public Optional<X> getByObjectID(ObjectId id) {
@@ -55,11 +49,6 @@ public class ObjectStoreLocal<X extends PayloadObject> extends ObjectCacheStore<
     }
 
     @Override
-    public boolean has(@Nonnull ObjectData data) {
-        return this.has(data.getIdentifier().toLowerCase());
-    }
-
-    @Override
     public boolean has(@Nonnull X payload) {
         return this.has(payload.getIdentifier().toLowerCase());
     }
@@ -67,11 +56,6 @@ public class ObjectStoreLocal<X extends PayloadObject> extends ObjectCacheStore<
     @Override
     public void remove(@Nonnull String key) {
         this.localCache.remove(key.toLowerCase());
-    }
-
-    @Override
-    public void remove(@Nonnull ObjectData data) {
-        this.remove(data.getIdentifier().toLowerCase());
     }
 
     @Override

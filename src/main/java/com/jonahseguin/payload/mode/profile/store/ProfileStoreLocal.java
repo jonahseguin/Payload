@@ -7,8 +7,7 @@ package com.jonahseguin.payload.mode.profile.store;
 
 import com.google.common.base.Preconditions;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
-import com.jonahseguin.payload.mode.profile.ProfileCache;
-import com.jonahseguin.payload.mode.profile.ProfileData;
+import com.jonahseguin.payload.mode.profile.PayloadProfileCache;
 import lombok.Getter;
 import org.bson.types.ObjectId;
 
@@ -23,14 +22,8 @@ public class ProfileStoreLocal<X extends PayloadProfile> extends ProfileCacheSto
     private final ConcurrentMap<UUID, X> localCache = new ConcurrentHashMap<>();
     private boolean running = false;
 
-    public ProfileStoreLocal(ProfileCache<X> cache) {
+    public ProfileStoreLocal(PayloadProfileCache<X> cache) {
         super(cache);
-    }
-
-    @Override
-    public Optional<X> get(@Nonnull ProfileData data) {
-        Preconditions.checkNotNull(data);
-        return get(data.getUniqueId());
     }
 
     @Override
@@ -69,23 +62,12 @@ public class ProfileStoreLocal<X extends PayloadProfile> extends ProfileCacheSto
     }
 
     @Override
-    public boolean has(@Nonnull ProfileData data) {
-        Preconditions.checkNotNull(data);
-        return localCache.containsKey(data.getUniqueId());
-    }
-
-    @Override
     public boolean has(@Nonnull X payload) {
         Preconditions.checkNotNull(payload);
         payload.interact();
         return localCache.containsKey(payload.getUniqueId());
     }
 
-    @Override
-    public void remove(@Nonnull ProfileData data) {
-        Preconditions.checkNotNull(data);
-        localCache.remove(data.getUniqueId());
-    }
 
     @Override
     public void remove(@Nonnull X payload) {

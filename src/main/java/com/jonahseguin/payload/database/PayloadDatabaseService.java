@@ -69,9 +69,9 @@ public class PayloadDatabaseService implements DatabaseService {
         this.payloadPlugin = payloadPlugin;
         this.plugin = plugin;
         this.serverService = serverService;
-        this.morphia = new Morphia();
         this.name = name;
         this.error = error;
+        this.morphia = new Morphia();
         api.registerDatabase(this);
 
         MapperOptions options = morphia.getMapper().getOptions();
@@ -100,6 +100,11 @@ public class PayloadDatabaseService implements DatabaseService {
     @Override
     public Morphia getMorphia() {
         return morphia;
+    }
+
+    @Override
+    public MongoDatabase getDatabase() {
+        return database;
     }
 
     @Override
@@ -230,10 +235,15 @@ public class PayloadDatabaseService implements DatabaseService {
     @Override
     public boolean start() {
         Preconditions.checkState(!running, "Database " + name + " is already running");
+        fromConfigFile("database.yml");
         boolean mongo = this.connectMongo();
         boolean redis = this.connectRedis();
+        boolean server = true;
+        if (!serverService.isRunning()) {
+            server = serverService.start();
+        }
         this.running = true;
-        return mongo && redis;
+        return mongo && redis && server;
     }
 
     public boolean connectMongo() {
@@ -264,6 +274,7 @@ public class PayloadDatabaseService implements DatabaseService {
                     mongoClient = new MongoClient(address, optionsBuilder.build());
                 }
             }
+
             this.mongoClient = mongoClient;
             this.datastore = this.morphia.createDatastore(mongoClient, payloadMongo.getDatabase());
             this.database = datastore.getDatabase();

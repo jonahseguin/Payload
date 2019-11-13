@@ -5,14 +5,13 @@
 
 package com.jonahseguin.payload.base.handshake;
 
-import com.google.inject.Key;
 import com.jonahseguin.payload.base.Service;
 
 import javax.annotation.Nonnull;
 
 public interface HandshakeService extends Service {
 
-    <H extends Handshake> void subscribe(@Nonnull Key<H> key);
+    <H extends Handshake> void subscribe(@Nonnull H subscriber);
 
     <H extends Handshake> HandshakeHandler<H> publish(@Nonnull H packet);
 

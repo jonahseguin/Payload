@@ -5,7 +5,7 @@
 
 package com.jonahseguin.payload.base.type;
 
-import com.jonahseguin.payload.base.PayloadCacheService;
+import com.jonahseguin.payload.base.Cache;
 import org.bson.types.ObjectId;
 
 import javax.annotation.Nonnull;
@@ -38,7 +38,7 @@ public interface Payload<K> {
      * @return PayloadCache
      */
     @Nonnull
-    PayloadCacheService getCache();
+    Cache getCache();
 
     /**
      * Get a timestamp of when this object was cached

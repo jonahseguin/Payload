@@ -10,7 +10,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
 import com.jonahseguin.payload.database.DatabaseService;
 import com.mongodb.BasicDBObject;
 import redis.clients.jedis.Jedis;
@@ -18,16 +17,16 @@ import redis.clients.jedis.Jedis;
 import javax.annotation.Nonnull;
 import java.util.Optional;
 
-public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPayload<K>, D extends PayloadData> implements NetworkService<K, X, N, D> {
+public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPayload<K>, D> implements NetworkService<K, X, N> {
 
-    private final PayloadCache<K, X, N, D> cache;
+    private final PayloadCache<K, X, N> cache;
     private final DatabaseService database;
     private final Injector injector;
     private final Class<N> type;
     private boolean running = false;
 
     @Inject
-    public RedisNetworkService(PayloadCache<K, X, N, D> cache, Class<N> type, DatabaseService database, Injector injector) {
+    public RedisNetworkService(PayloadCache<K, X, N> cache, Class<N> type, DatabaseService database, Injector injector) {
         this.cache = cache;
         this.database = database;
         this.injector = injector;

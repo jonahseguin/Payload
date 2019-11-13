@@ -6,29 +6,32 @@
 package com.jonahseguin.payload.mode.object;
 
 import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
 import com.jonahseguin.payload.base.handshake.Handshake;
 import com.jonahseguin.payload.base.handshake.HandshakeData;
 
 import javax.annotation.Nonnull;
 import java.util.Optional;
 
-public class ObjectHandshake<X extends PayloadObject> extends Handshake {
+public class ObjectHandshake extends Handshake {
 
     public static final String KEY_IDENTIFIER = "identifier";
-    private final ObjectCache<X> cache;
+    private final ObjectCache cache;
     private String identifier = null;
 
-    @Inject
-    public ObjectHandshake(@Nonnull ObjectCache<X> cache) {
+    public ObjectHandshake(@Nonnull ObjectCache cache) {
         Preconditions.checkNotNull(cache);
         this.cache = cache;
     }
 
-    public ObjectHandshake(@Nonnull ObjectCache<X> cache, @Nonnull String identifier) {
+    public ObjectHandshake(@Nonnull ObjectCache cache, @Nonnull String identifier) {
         this(cache);
         Preconditions.checkNotNull(identifier);
         this.identifier = identifier;
+    }
+
+    @Override
+    public ObjectHandshake create() {
+        return new ObjectHandshake(cache);
     }
 
     @Override
@@ -53,9 +56,9 @@ public class ObjectHandshake<X extends PayloadObject> extends Handshake {
 
     @Override
     public void receive() {
-        Optional<X> o = cache.getFromCache(identifier);
+        Optional<PayloadObject> o = cache.getFromCache(identifier);
         if (o.isPresent()) {
-            X object = o.get();
+            PayloadObject object = o.get();
             object.setHandshakeStartTimestamp(System.currentTimeMillis());
             if (!cache.save(object)) {
                 cache.getErrorService().capture("Failed to save during handshake for object " + object.getIdentifier());
@@ -65,9 +68,9 @@ public class ObjectHandshake<X extends PayloadObject> extends Handshake {
 
     @Override
     public boolean shouldAccept() {
-        Optional<X> o = cache.getLocalStore().get(identifier);
+        Optional<PayloadObject> o = cache.getLocalStore().get(identifier);
         if (o.isPresent()) {
-            X object = o.get();
+            PayloadObject object = o.get();
             Optional<NetworkObject> ono = cache.getNetworked(object);
             if (ono.isPresent()) {
                 NetworkObject no = ono.get();

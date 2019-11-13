@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.command.commands;
 
 import com.google.inject.Inject;
@@ -27,7 +32,6 @@ public class CmdCache implements PayloadCommand {
 
         args.msg("&7***** &6Payload Cache: {0} &7*****", cacheName);
         args.msg("&7{0} objects currently cached", cache.cachedObjectCount() + "");
-        args.msg("&c{0} objects failed to cache", cache.getFailureManager().getFailures().size() + "");
         args.msg("&7Current State: {0}", cache.isRunning() ? "&aRunning" : "&cNot running");
         if (cache.getDatabase() != null) {
             if (cache.requireMongoDb()) {

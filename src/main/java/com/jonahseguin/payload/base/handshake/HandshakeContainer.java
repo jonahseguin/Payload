@@ -5,25 +5,23 @@
 
 package com.jonahseguin.payload.base.handshake;
 
-import com.google.inject.Injector;
-import com.google.inject.Key;
+import com.google.common.base.Preconditions;
 import lombok.Getter;
 
+import javax.annotation.Nonnull;
+
 @Getter
-public class HandshakeContainer<H extends Handshake> {
+public class HandshakeContainer {
 
-    private final Key<H> type;
-    private final Injector injector;
-    private final H subscriberController;
+    private final Handshake subscriberController;
 
-    public HandshakeContainer(Key<H> type, Injector injector) {
-        this.type = type;
-        this.injector = injector;
-        this.subscriberController = createInstance();
+    public HandshakeContainer(@Nonnull Handshake subscriber) {
+        Preconditions.checkNotNull(subscriber);
+        this.subscriberController = subscriber;
     }
 
-    public H createInstance() {
-        return injector.getInstance(this.type);
+    public Handshake createInstance() {
+        return subscriberController.create();
     }
 
 }
