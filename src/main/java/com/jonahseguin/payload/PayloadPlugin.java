@@ -5,10 +5,7 @@
 
 package com.jonahseguin.payload;
 
-import com.google.inject.Guice;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.google.inject.Singleton;
+import com.google.inject.*;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.LangService;
 import com.jonahseguin.payload.base.listener.LockListener;
@@ -85,7 +82,7 @@ public class PayloadPlugin extends JavaPlugin {
     public void onEnable() {
         plugin = this;
 
-        injector = Guice.createInjector(PayloadAPI.install(this, "PayloadDatabase"));
+        injector = Guice.createInjector(Stage.PRODUCTION, PayloadAPI.install(this, "PayloadDatabase"));
         injector.injectMembers(this);
 
         this.copyResources();
