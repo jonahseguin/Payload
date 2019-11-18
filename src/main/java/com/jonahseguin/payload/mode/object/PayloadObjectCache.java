@@ -11,6 +11,7 @@ import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.store.PayloadStore;
+import com.jonahseguin.payload.base.type.PayloadInstantiator;
 import com.jonahseguin.payload.mode.object.settings.ObjectCacheSettings;
 import com.jonahseguin.payload.mode.object.store.ObjectStoreLocal;
 import com.jonahseguin.payload.mode.object.store.ObjectStoreMongo;
@@ -34,8 +35,8 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
     private final ObjectStoreLocal<X> localStore = new ObjectStoreLocal<>(this);
     private final ObjectStoreMongo<X> mongoStore = new ObjectStoreMongo<>(this);
 
-    public PayloadObjectCache(Injector injector, String name, Class<X> payload) {
-        super(injector, name, String.class, payload, NetworkObject.class);
+    public PayloadObjectCache(Injector injector, PayloadInstantiator<String, X> instantiator, String name, Class<X> payload) {
+        super(injector, instantiator, name, String.class, payload, NetworkObject.class);
         setupModule();
     }
 

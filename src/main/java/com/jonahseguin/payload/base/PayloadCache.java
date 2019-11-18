@@ -23,7 +23,6 @@ import com.jonahseguin.payload.base.sync.CacheSyncService;
 import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.sync.SyncService;
 import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
-import com.jonahseguin.payload.base.type.GuicePayloadInstantiator;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadInstantiator;
 import com.jonahseguin.payload.database.DatabaseService;
@@ -73,8 +72,9 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     protected PayloadMode mode = PayloadMode.STANDALONE;
     protected boolean running = false;
 
-    public PayloadCache(Injector injector, String name, Class<K> key, Class<X> payload, Class<N> network) {
+    public PayloadCache(Injector injector, PayloadInstantiator<K, X> instantiator, String name, Class<K> key, Class<X> payload, Class<N> network) {
         this.injector = injector;
+        this.instantiator = instantiator;
         this.name = name;
         this.keyClass = key;
         this.payloadClass = payload;
@@ -82,7 +82,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     }
 
     protected void setupModule() {
-        this.instantiator = new GuicePayloadInstantiator<>(payloadClass, injector);
         this.sync = new CacheSyncService<>(this, handshakeService);
         this.networkService = new RedisNetworkService<>(this, networkClass, database, injector);
         this.errorService = new CacheErrorService(this, lang);
@@ -94,7 +93,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
 
     /**
      * Provide the instantiator for the creation of NEW (never joined before) profiles/objects
-     * The default value is {@link GuicePayloadInstantiator}.  You can use your own if you deem necessary.
      * @param instantiator {@link PayloadInstantiator}
      */
     @Override
@@ -471,6 +469,11 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
                 pl.sendMessage(msg);
             }
         }
+    }
+
+    @Override
+    public X create() {
+        return instantiator.instantiate(injector);
     }
 
     /**

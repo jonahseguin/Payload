@@ -19,6 +19,7 @@ import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadController;
 import com.jonahseguin.payload.base.type.PayloadInstantiator;
 import com.jonahseguin.payload.database.DatabaseDependent;
+import com.jonahseguin.payload.database.DatabaseService;
 import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nonnull;
@@ -145,5 +146,10 @@ public interface Cache<K, X extends Payload<K>, N extends NetworkPayload<K>> ext
 
     @Nonnull
     PayloadController<X> controller(@Nonnull K key);
+
+    DatabaseService getDatabase();
+
+    X create();
+
 }
 

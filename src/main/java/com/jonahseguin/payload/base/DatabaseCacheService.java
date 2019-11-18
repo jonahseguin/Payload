@@ -9,6 +9,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.jonahseguin.payload.PayloadAPI;
+import com.jonahseguin.payload.base.type.PayloadInstantiator;
 import com.jonahseguin.payload.database.DatabaseService;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.PayloadObject;
@@ -18,6 +19,7 @@ import com.jonahseguin.payload.mode.profile.PayloadProfileCache;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 
 import javax.annotation.Nonnull;
+import java.util.UUID;
 
 public class DatabaseCacheService implements CacheService {
 
@@ -34,19 +36,21 @@ public class DatabaseCacheService implements CacheService {
     }
 
     @Override
-    public <X extends PayloadProfile> ProfileCache<X> createProfileCache(@Nonnull String name, @Nonnull Class<X> type) {
+    public <X extends PayloadProfile> ProfileCache<X> createProfileCache(@Nonnull String name, @Nonnull Class<X> type, @Nonnull PayloadInstantiator<UUID, X> instantiator) {
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(type);
-        ProfileCache<X> cache = new PayloadProfileCache<>(injector, name, type);
+        Preconditions.checkNotNull(instantiator);
+        ProfileCache<X> cache = new PayloadProfileCache<>(injector, instantiator, name, type);
         setup(cache, type);
         return cache;
     }
 
     @Override
-    public <X extends PayloadObject> ObjectCache<X> createObjectCache(@Nonnull String name, @Nonnull Class<X> type) {
+    public <X extends PayloadObject> ObjectCache<X> createObjectCache(@Nonnull String name, @Nonnull Class<X> type, @Nonnull PayloadInstantiator<String, X> instantiator) {
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(type);
-        ObjectCache<X> cache = new PayloadObjectCache<>(injector, name, type);
+        Preconditions.checkNotNull(instantiator);
+        ObjectCache<X> cache = new PayloadObjectCache<>(injector, instantiator, name, type);
         setup(cache, type);
         return cache;
     }

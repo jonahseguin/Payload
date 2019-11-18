@@ -15,6 +15,7 @@ import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.store.PayloadStore;
 import com.jonahseguin.payload.base.sync.SyncService;
+import com.jonahseguin.payload.base.type.PayloadInstantiator;
 import com.jonahseguin.payload.base.uuid.UUIDService;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import com.jonahseguin.payload.mode.profile.store.ProfileStoreLocal;
@@ -42,8 +43,8 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
     private final ProfileStoreMongo<X> mongoStore = new ProfileStoreMongo<>(this);
     @Inject private UUIDService uuidService;
 
-    public PayloadProfileCache(Injector injector, String name, Class<X> payload) {
-        super(injector, name, UUID.class, payload, NetworkProfile.class);
+    public PayloadProfileCache(Injector injector, PayloadInstantiator<UUID, X> instantiator, String name, Class<X> payload) {
+        super(injector, instantiator, name, UUID.class, payload, NetworkProfile.class);
         this.setupModule();
     }
 

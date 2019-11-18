@@ -6,8 +6,13 @@
 package com.jonahseguin.payload.base.type;
 
 
+import com.google.inject.Injector;
+
+import javax.annotation.Nonnull;
+
 public interface PayloadInstantiator<K, X extends Payload<K>> {
 
-    X instantiate();
+    @Nonnull
+    X instantiate(@Nonnull Injector injector);
 
 }

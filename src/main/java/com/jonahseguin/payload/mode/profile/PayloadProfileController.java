@@ -112,7 +112,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 // Only make a new profile if they are logging in
                 getCache().getErrorService().debug("Creating a new profile for Payload " + username);
                 // Otherwise make a new profile
-                payload = cache.getInstantiator().instantiate();
+                payload = cache.getInstantiator().instantiate(cache.getInjector());
                 if (username != null) {
                     payload.setUsername(username);
                 }
@@ -155,7 +155,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         } else {
             if (login) {
                 // Create
-                payload = cache.getInstantiator().instantiate();
+                payload = cache.getInstantiator().instantiate(cache.getInjector());
                 if (username != null) {
                     payload.setUsername(username);
                 }
