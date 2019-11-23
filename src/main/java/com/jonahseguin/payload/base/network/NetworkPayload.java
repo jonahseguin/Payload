@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.bson.types.ObjectId;
 
+import javax.annotation.Nonnull;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -27,7 +28,6 @@ public abstract class NetworkPayload<K> {
     private ObjectId id = new ObjectId(); // required for morphia mapping
 
     protected transient final ServerService serverService;
-    protected K identifier;
     protected ObjectId objectId;
     protected Date lastCached = new Date();
     protected Date lastSaved = new Date();
@@ -39,14 +39,6 @@ public abstract class NetworkPayload<K> {
     @Inject
     public NetworkPayload(ServerService serverService) {
         this.serverService = serverService;
-        this.mostRecentServer = serverService.getThisServer().getName();
-    }
-
-    public NetworkPayload(ServerService serverService, K identifier, ObjectId objectId) {
-        this.serverService = serverService;
-        this.identifier = identifier;
-        this.objectId = objectId;
-        this.mostRecentServer = serverService.getThisServer().getName();
     }
 
     public boolean isThisMostRelevantServer() {
@@ -55,5 +47,9 @@ public abstract class NetworkPayload<K> {
         }
         return false;
     }
+
+    public abstract K getIdentifier();
+
+    public abstract void setIdentifier(@Nonnull K identifier);
 
 }

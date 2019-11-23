@@ -7,17 +7,17 @@ package com.jonahseguin.payload.database.redis;
 
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.database.DatabaseDependent;
-import com.jonahseguin.payload.database.DatabaseService;
+import com.jonahseguin.payload.database.PayloadDatabase;
 import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.Jedis;
 
 public class PayloadRedisMonitor implements Runnable {
 
     private final PayloadPlugin payloadPlugin;
-    private final DatabaseService database;
+    private final PayloadDatabase database;
     private BukkitTask task = null;
 
-    public PayloadRedisMonitor(PayloadPlugin payloadPlugin, DatabaseService database) {
+    public PayloadRedisMonitor(PayloadPlugin payloadPlugin, PayloadDatabase database) {
         this.payloadPlugin = payloadPlugin;
         this.database = database;
     }

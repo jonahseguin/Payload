@@ -7,7 +7,6 @@ package com.jonahseguin.payload.base.network;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.database.DatabaseService;
@@ -21,15 +20,13 @@ public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPaylo
 
     private final PayloadCache<K, X, N> cache;
     private final DatabaseService database;
-    private final Injector injector;
     private final Class<N> type;
     private boolean running = false;
 
     @Inject
-    public RedisNetworkService(PayloadCache<K, X, N> cache, Class<N> type, DatabaseService database, Injector injector) {
+    public RedisNetworkService(PayloadCache<K, X, N> cache, Class<N> type, DatabaseService database) {
         this.cache = cache;
         this.database = database;
-        this.injector = injector;
         this.type = type;
     }
 
@@ -57,6 +54,9 @@ public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPaylo
             if (json != null && json.length() > 0) {
                 BasicDBObject dbObject = BasicDBObject.parse(json);
                 N np = database.getMorphia().fromDBObject(database.getDatastore(), type, dbObject);
+                if (np != null) {
+                    np.setIdentifier(payload.getIdentifier());
+                }
                 return Optional.ofNullable(np);
             } else {
                 N np = create(payload);
@@ -78,7 +78,7 @@ public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPaylo
         try (Jedis jedis = database.getJedisResource()) {
             return jedis.hexists(cache.getServerSpecificName(), cache.keyToString(key));
         } catch (Exception ex) {
-            cache.getErrorService().capture(ex, "Error checking if hexists() in Redis Network Service");
+            cache.getErrorService().capture(ex, "Error checking if hexists() in Redis Network Service: " + cache.keyToString(key));
         }
         return false;
     }
@@ -89,11 +89,15 @@ public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPaylo
         BasicDBObject object = (BasicDBObject) database.getMorphia().toDBObject(payload);
         if (object != null) {
             String json = object.toJson();
+            Preconditions.checkNotNull(json, "JSON is null");
+            Preconditions.checkNotNull(cache.getServerSpecificName(), "Server specific cache name is null");
+            Preconditions.checkNotNull(payload.getIdentifier());
+            Preconditions.checkNotNull(cache.keyToString(payload.getIdentifier()), "Payload identifier key is null");
             try (Jedis jedis = database.getJedisResource()) {
                 jedis.hset(cache.getServerSpecificName(), cache.keyToString(payload.getIdentifier()), json);
                 return true;
             } catch (Exception ex) {
-                cache.getErrorService().capture(ex, "Error checking if hexists() in Redis Network Service");
+                cache.getErrorService().capture(ex, "Error saving in Redis Network Service: " + cache.keyToString(payload.getIdentifier()));
             }
         }
         return false;
@@ -108,9 +112,8 @@ public class RedisNetworkService<K, X extends Payload<K>, N extends NetworkPaylo
     @Override
     public N create(@Nonnull X payload) {
         Preconditions.checkNotNull(payload);
-        N np = injector.getInstance(type);
+        N np = cache.createNetworked();
         np.setIdentifier(payload.getIdentifier());
-        np.setObjectId(payload.getObjectId());
         return np;
     }
 

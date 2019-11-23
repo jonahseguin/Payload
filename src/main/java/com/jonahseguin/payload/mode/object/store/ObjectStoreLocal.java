@@ -60,7 +60,7 @@ public class ObjectStoreLocal<X extends PayloadObject> extends ObjectCacheStore<
 
     @Override
     public void remove(@Nonnull X payload) {
-        this.remove(payload.getIdentifier().toLowerCase());
+        this.remove(payload.getIdentifier());
     }
 
     @Nonnull

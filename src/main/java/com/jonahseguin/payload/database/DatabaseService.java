@@ -50,7 +50,5 @@ public interface DatabaseService extends Service {
 
     DatabaseState getState();
 
-    boolean connectRedis();
-
 
 }

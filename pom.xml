@@ -92,13 +92,13 @@
         <dependency>
             <groupId>dev.morphia.morphia</groupId>
             <artifactId>core</artifactId>
-            <version>1.5.3</version>
+            <version>1.5.8</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>dev.morphia.morphia</groupId>
             <artifactId>guice-plug</artifactId>
-            <version>1.5.3</version>
+            <version>1.5.8</version>
             <scope>compile</scope>
         </dependency>
         <dependency>

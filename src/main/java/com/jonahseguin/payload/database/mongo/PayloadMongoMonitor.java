@@ -1,7 +1,12 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.database.mongo;
 
 import com.jonahseguin.payload.database.DatabaseDependent;
-import com.jonahseguin.payload.database.DatabaseService;
+import com.jonahseguin.payload.database.PayloadDatabase;
 import com.mongodb.event.ServerHeartbeatFailedEvent;
 import com.mongodb.event.ServerHeartbeatStartedEvent;
 import com.mongodb.event.ServerHeartbeatSucceededEvent;
@@ -9,10 +14,10 @@ import com.mongodb.event.ServerMonitorListener;
 
 public class PayloadMongoMonitor implements ServerMonitorListener {
 
-    private final DatabaseService database;
+    private final PayloadDatabase database;
     private boolean connected = false;
 
-    public PayloadMongoMonitor(DatabaseService database) {
+    public PayloadMongoMonitor(PayloadDatabase database) {
         this.database = database;
     }
 

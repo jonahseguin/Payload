@@ -33,6 +33,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     private X payload = null;
     private Player player = null;
     private boolean failure = false;
+    private boolean loadedFromLocal = false;
 
     PayloadProfileController(@Nonnull PayloadProfileCache<X> cache, @Nonnull UUID uuid) {
         Preconditions.checkNotNull(cache);
@@ -106,7 +107,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             // If there was a failure/error, start failure handling instead of making a new profile
             if (failure || !cache.getDatabase().getState().canCacheFunction(cache)) {
                 denyJoin = true;
-                joinDenyReason = "&cThe database is currently offline.  Please try again soon.";
+                joinDenyReason = ChatColor.RED + "The database is currently offline.  Please try again soon.";
                 payload = null;
             } else if (login) {
                 // Only make a new profile if they are logging in
@@ -146,6 +147,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             Optional<X> o = cache.getLocalStore().get(uuid);
             if (o.isPresent()) {
                 payload = o.get();
+                loadedFromLocal = true;
                 return;
             }
         }
@@ -173,48 +175,53 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     }
 
     private Optional<X> cacheNetworkNode() {
-        cache.getErrorService().debug("Starting caching Payload [network-node] " + uuid.toString() + "(login: " + login + ")");
-        Optional<NetworkProfile> oNP = cache.getNetworkService().get(uuid);
-        NetworkProfile networkProfile = null;
-        if (oNP.isPresent()) {
-            networkProfile = oNP.get();
-            if (networkProfile.isOnlineThisServer()) {
-                PayloadServer server = cache.getServerService().get(networkProfile.getLastSeenServer()).orElse(null);
-                if (server != null && server.isOnline()) {
-                    // Handshake
-                    HandshakeHandler<ProfileHandshake> handshake = cache.getHandshakeService().publish(new ProfileHandshake(cache, uuid));
-                    Optional<ProfileHandshake> o = handshake.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
-                    if (o.isPresent()) {
-                        load(false);
+        Player player = cache.getPlugin().getServer().getPlayer(uuid);
+        if (player != null && player.isOnline()) {
+            load(true);
+        } else {
+            cache.getErrorService().debug("Starting caching Payload [network-node] " + uuid.toString() + "(login: " + login + ")");
+            Optional<NetworkProfile> oNP = cache.getNetworkService().get(uuid);
+            NetworkProfile networkProfile = null;
+            if (oNP.isPresent()) {
+                networkProfile = oNP.get();
+                if (networkProfile.isOnlineOtherServer()) {
+                    PayloadServer server = cache.getServerService().get(networkProfile.getLastSeenServer()).orElse(null);
+                    if (server != null && server.isOnline()) {
+                        // Handshake
+                        HandshakeHandler<ProfileHandshake> handshake = cache.getHandshakeService().publish(new ProfileHandshake(cache, uuid));
+                        Optional<ProfileHandshake> o = handshake.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
+                        if (o.isPresent()) {
+                            load(false);
+                        } else {
+                            // Timed out
+                            denyJoin = true;
+                            joinDenyReason = ChatColor.RED + "Timed out while loading your profile.  Please try again.";
+                        }
                     } else {
-                        // Timed out
-                        denyJoin = true;
-                        joinDenyReason = "&cTimed out while loading your profile.  Please try again.";
+                        // Target server isn't online
+                        load(false);
                     }
                 } else {
-                    // Target server isn't online
-                    load(false);
+                    load(networkProfile.isOnlineThisServer()); // only load from local if they're online this server
                 }
             } else {
+                // Create the network profile
                 load(true);
-            }
-        } else {
-            // Create the network profile
-            load(true);
-            if (payload != null) {
-                if (login) {
-                    networkProfile = cache.getNetworkService().create(payload);
+                if (payload != null) {
+                    if (login) {
+                        networkProfile = cache.getNetworkService().create(payload);
+                    }
                 }
             }
+
+            if (networkProfile != null) {
+                networkProfile.markLoaded(login);
+                NetworkProfile finalNetworkProfile = networkProfile;
+                cache.runAsync(() -> cache.getNetworkService().save(finalNetworkProfile));
+            }
         }
 
-        if (networkProfile != null) {
-            networkProfile.markLoaded(login);
-            NetworkProfile finalNetworkProfile = networkProfile;
-            cache.runAsync(() -> cache.getNetworkService().save(finalNetworkProfile));
-        }
-
-        if (payload != null) {
+        if (payload != null && !loadedFromLocal) {
             if (username != null && !payload.getUsername().equalsIgnoreCase(username)) {
                 cache.getErrorService().debug("Updated username: " + payload.getUsername() + " to " + username);
                 payload.setUsername(username);

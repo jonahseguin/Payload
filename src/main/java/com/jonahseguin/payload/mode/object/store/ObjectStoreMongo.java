@@ -71,7 +71,7 @@ public class ObjectStoreMongo<X extends PayloadObject> extends ObjectCacheStore<
         Preconditions.checkNotNull(key);
         try {
             Query<X> q = getQuery(key);
-            this.cache.getDatabase().getDatastore().findAndDelete(q);
+            this.cache.getDatabase().getDatastore().delete(q);
         } catch (MongoException ex) {
             this.getCache().getErrorService().capture(ex, "MongoDB error removing Object from MongoDB Layer: " + key);
         } catch (Exception expected) {

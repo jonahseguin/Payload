@@ -68,7 +68,7 @@ public interface Payload<K> {
      */
     void setPayloadServer(String payloadID);
 
-    void save();
+    boolean save();
 
     int hashCode();
 

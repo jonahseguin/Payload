@@ -16,6 +16,7 @@ import java.util.concurrent.*;
 
 public class PayloadHandshakeService implements HandshakeService {
 
+    private final String name;
     private final ConcurrentMap<String, Handshake> replyControllers = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, HandshakeContainer> containers = new ConcurrentHashMap<>();
     private boolean running = false;
@@ -25,6 +26,7 @@ public class PayloadHandshakeService implements HandshakeService {
     @Inject
     public PayloadHandshakeService(DatabaseService database) {
         this.database = database;
+        this.name = database.getName();
     }
 
     @Override
@@ -126,5 +128,11 @@ public class PayloadHandshakeService implements HandshakeService {
             database.getErrorService().capture(ex, "Error with Jedis resource during handshake publish for " + controller.getClass().getSimpleName());
         }
         return handler;
+    }
+
+    @Nonnull
+    @Override
+    public String getName() {
+        return name;
     }
 }

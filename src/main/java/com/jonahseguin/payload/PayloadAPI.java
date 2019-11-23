@@ -6,13 +6,14 @@
 package com.jonahseguin.payload;
 
 import com.google.common.base.Preconditions;
-import com.google.inject.Singleton;
 import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.handshake.HandshakeService;
 import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.database.DatabaseModule;
-import com.jonahseguin.payload.database.DatabaseService;
+import com.jonahseguin.payload.database.PayloadDatabase;
+import com.jonahseguin.payload.server.ServerService;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -24,12 +25,13 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 @Getter
-@Singleton
 public class PayloadAPI {
 
     private final PayloadPlugin plugin;
     private final ConcurrentMap<String, Cache> caches = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, DatabaseService> databases = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, PayloadDatabase> databases = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, ServerService> serverServices = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, HandshakeService> handshakeServices = new ConcurrentHashMap<>();
     private final Set<String> requested = new HashSet<>();
 
     private List<Cache> _sortedCaches = null;
@@ -47,7 +49,7 @@ public class PayloadAPI {
 
     public static PayloadModule install(@Nonnull JavaPlugin plugin, @Nonnull String databaseName) {
         Preconditions.checkNotNull(databaseName);
-        return install(plugin, new DatabaseModule(plugin, databaseName));
+        return install(plugin, new DatabaseModule(databaseName));
     }
 
     /**
@@ -71,7 +73,7 @@ public class PayloadAPI {
         this.caches.putIfAbsent(convertCacheName(cache.getName()), cache);
     }
 
-    public void registerDatabase(DatabaseService database) {
+    public void registerDatabase(PayloadDatabase database) {
         if (!isDatabaseRegistered(database.getName())) {
             this.databases.putIfAbsent(database.getName().toLowerCase(), database);
         } else {
@@ -79,13 +81,46 @@ public class PayloadAPI {
         }
     }
 
-    public DatabaseService getDatabase(String name) {
+    public PayloadDatabase getDatabase(String name) {
         return this.databases.get(name.toLowerCase());
     }
 
     public boolean isDatabaseRegistered(String name) {
         return this.databases.containsKey(name.toLowerCase());
     }
+
+    public boolean isServerServiceRegistered(String name) {
+        return this.serverServices.containsKey(name.toLowerCase());
+    }
+
+    public ServerService getServerService(String name) {
+        return this.serverServices.get(name.toLowerCase());
+    }
+
+    public void registerServerService(ServerService serverService) {
+        if (!isServerServiceRegistered(serverService.getName())) {
+            this.serverServices.put(serverService.getName(), serverService);
+        } else {
+            throw new IllegalArgumentException("A Payload Server Service (database) with the name '" + serverService.getName() + "' has already been registered.  Choose a different name.");
+        }
+    }
+
+    public boolean isHandshakeServiceRegistered(String name) {
+        return this.handshakeServices.containsKey(name.toLowerCase());
+    }
+
+    public HandshakeService getHandshakeService(String name) {
+        return this.handshakeServices.get(name.toLowerCase());
+    }
+
+    public void registerHandshakeService(HandshakeService handshakeService) {
+        if (!isHandshakeServiceRegistered(handshakeService.getName())) {
+            this.handshakeServices.put(handshakeService.getName(), handshakeService);
+        } else {
+            throw new IllegalArgumentException("A Payload Server Service (database) with the name '" + handshakeService.getName() + "' has already been registered.  Choose a different name.");
+        }
+    }
+
 
     /**
      * Get a cache by name
@@ -135,7 +170,7 @@ public class PayloadAPI {
             for (Cache cache : getCaches().values()) {
                 cache.updatePayloadID();
             }
-            for (DatabaseService database : getDatabases().values()) {
+            for (PayloadDatabase database : getDatabases().values()) {
                 database.getServerService().getPublisher().publishUpdateName(oldName, name);
             }
         } else {

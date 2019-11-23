@@ -6,6 +6,7 @@
 package com.jonahseguin.payload.command.commands;
 
 import com.google.inject.Inject;
+import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
@@ -14,10 +15,12 @@ import com.jonahseguin.payload.command.PayloadCommand;
 public class CmdDebug implements PayloadCommand {
 
     private final PayloadPlugin payloadPlugin;
+    private final PayloadAPI api;
 
     @Inject
-    public CmdDebug(PayloadPlugin payloadPlugin) {
+    public CmdDebug(PayloadPlugin payloadPlugin, PayloadAPI api) {
         this.payloadPlugin = payloadPlugin;
+        this.api = api;
     }
 
     @Override
@@ -28,10 +31,12 @@ public class CmdDebug implements PayloadCommand {
             String toggle = args.arg(0).toLowerCase();
             if (toggle.startsWith("on")) {
                 payloadPlugin.setDebug(true);
+                api.getCaches().values().forEach(cache -> cache.setDebug(true));
                 args.msg("&7Payload: Debug &aon");
             } else if (toggle.startsWith("off")) {
                 payloadPlugin.setDebug(false);
                 args.msg("&7Payload: Debug &coff");
+                api.getCaches().values().forEach(cache -> cache.setDebug(false));
             }
         }
     }

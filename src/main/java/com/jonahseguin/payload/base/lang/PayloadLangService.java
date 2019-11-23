@@ -19,13 +19,11 @@ import javax.annotation.Nullable;
 @Singleton
 public class PayloadLangService implements LangService {
 
-    private final Plugin plugin;
     private final Lang lang;
 
     @Inject
     public PayloadLangService(@Nonnull Plugin plugin) {
         Preconditions.checkNotNull(plugin);
-        this.plugin = plugin;
         this.lang = new Lang(plugin);
     }
 

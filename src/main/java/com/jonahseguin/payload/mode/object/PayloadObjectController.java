@@ -8,6 +8,7 @@ package com.jonahseguin.payload.mode.object;
 import com.google.common.base.Preconditions;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.handshake.HandshakeHandler;
+import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.type.PayloadController;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,6 +24,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
     private final String identifier;
 
     private X payload = null;
+    private boolean loadedFromLocal = false;
 
     PayloadObjectController(@Nonnull PayloadObjectCache<X> cache, String identifier) {
         Preconditions.checkNotNull(cache);
@@ -36,6 +38,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
             Optional<X> local = cache.getFromCache(identifier);
             if (local.isPresent()) {
                 payload = local.get();
+                loadedFromLocal = true;
                 return;
             }
         }
@@ -45,42 +48,45 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
 
     @Override
     public Optional<X> cache() {
-        if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
-            Optional<NetworkObject> network = cache.getNetworked(identifier);
-            if (network.isPresent()) {
-                NetworkObject no = network.get();
-                if (no.isThisMostRelevantServer()) {
-                    load(true);
-                } else {
-                    // Handshake
-                    HandshakeHandler<ObjectHandshake> h = cache.getHandshakeService().publish(new ObjectHandshake(cache, identifier));
-                    h.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
-                    load(false);
-                }
+        if (cache.getSyncMode().equals(SyncMode.ALWAYS) && cache.getSettings().isEnableSync() && cache.isCached(identifier)) {
+            load(true);
+        } else {
+            if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
+                Optional<NetworkObject> network = cache.getNetworked(identifier);
+                if (network.isPresent()) {
+                    NetworkObject no = network.get();
+                    if (no.isThisMostRelevantServer()) {
+                        load(true);
+                    } else {
+                        // Handshake
+                        HandshakeHandler<ObjectHandshake> h = cache.getHandshakeService().publish(new ObjectHandshake(cache, identifier));
+                        h.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
+                        load(false);
+                    }
 
-                if (payload != null) {
-                    no.markLoaded();
-                    cache.getNetworkService().save(no);
-                }
-
-            } else {
-                // They have no network object, create it and load from the first available source
-                load(true);
-                if (payload != null) {
-                    network = cache.getNetworked(payload);
-                    if (network.isPresent()) {
-                        NetworkObject no = network.get();
+                    if (payload != null) {
                         no.markLoaded();
                         cache.getNetworkService().save(no);
                     }
+                } else {
+                    // They have no network object, create it and load from the first available source
+                    load(true);
+                    if (payload != null) {
+                        network = cache.getNetworked(payload);
+                        if (network.isPresent()) {
+                            NetworkObject no = network.get();
+                            no.markLoaded();
+                            cache.getNetworkService().save(no);
+                        }
+                    }
                 }
+            } else {
+                // Standalone mode
+                load(true);
             }
-        } else {
-            // Standalone mode
-            load(true);
         }
 
-        if (payload != null) {
+        if (payload != null && !loadedFromLocal) {
             this.cache.cache(payload);
             this.cache.getErrorService().debug("Cached payload " + payload.getIdentifier());
         }

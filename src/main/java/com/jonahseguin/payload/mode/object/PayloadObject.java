@@ -73,8 +73,8 @@ public abstract class PayloadObject implements Payload<String> {
     }
 
     @Override
-    public void save() {
-        this.getCache().save(this);
+    public boolean save() {
+        return this.getCache().save(this);
     }
 
     @Nonnull

@@ -98,6 +98,11 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
         return success;
     }
 
+    @Override
+    public NetworkObject createNetworked() {
+        return injector.getInstance(NetworkObject.class);
+    }
+
     @Nonnull
     @Override
     public PayloadStore<String, X> getDatabaseStore() {

@@ -5,9 +5,13 @@
 
 package com.jonahseguin.payload;
 
-import com.google.inject.*;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Singleton;
+import com.google.inject.Stage;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.base.lang.LangService;
+import com.jonahseguin.payload.base.lang.PayloadLangService;
 import com.jonahseguin.payload.base.listener.LockListener;
 import com.jonahseguin.payload.command.PCommandHandler;
 import com.jonahseguin.payload.mode.profile.listener.ProfileListener;
@@ -33,13 +37,11 @@ import java.net.InetAddress;
 public class PayloadPlugin extends JavaPlugin {
 
     private final PayloadAPI api = new PayloadAPI(this);
-    private static PayloadPlugin plugin;
+    private static PayloadPlugin plugin = null;
     private Injector injector = null;
     private boolean locked = false;
     private PayloadLocal local = new PayloadLocal(this);
-    @Inject
     private PCommandHandler commandHandler;
-    @Inject
     private LangService lang;
 
     /**
@@ -82,9 +84,6 @@ public class PayloadPlugin extends JavaPlugin {
     public void onEnable() {
         plugin = this;
 
-        injector = Guice.createInjector(Stage.PRODUCTION, PayloadAPI.install(this, "PayloadDatabase"));
-        injector.injectMembers(this);
-
         this.copyResources();
         if (!this.local.loadPayloadID()) {
             // Failed to load.  This will be handled by the method itself.
@@ -93,8 +92,14 @@ public class PayloadPlugin extends JavaPlugin {
         if (this.local.isFirstStartup()) {
             this.getLogger().info("This is the first startup for Payload on this server instance.  Files created.");
         }
-        this.getServer().getPluginManager().registerEvents(new LockListener(this), this);
-        this.getServer().getPluginManager().registerEvents(new ProfileListener(api), this);
+
+        injector = Guice.createInjector(Stage.PRODUCTION, PayloadAPI.install(this, "PayloadDatabase"));
+
+        lang = new PayloadLangService(this);
+        commandHandler = new PCommandHandler(this, lang, injector);
+
+        this.getServer().getPluginManager().registerEvents(injector.getInstance(LockListener.class), this);
+        this.getServer().getPluginManager().registerEvents(injector.getInstance(ProfileListener.class), this);
         this.getCommand("payload").setExecutor(this.commandHandler);
         this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", getDescription().getVersion()));
     }
@@ -171,8 +176,8 @@ public class PayloadPlugin extends JavaPlugin {
     }
 
     public void setDebug(boolean debug) {
-        this.local.setDebug(true);
-        this.local.getConfig().set("debug", true);
+        this.local.setDebug(debug);
+        this.local.getConfig().set("debug", debug);
         try {
             this.local.getConfig().save(this.local.getPayloadFile());
         } catch (IOException ex) {

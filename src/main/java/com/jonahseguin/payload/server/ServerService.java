@@ -28,4 +28,7 @@ public interface ServerService extends Service {
 
     Collection<PayloadServer> getServers();
 
+    @Nonnull
+    String getName();
+
 }

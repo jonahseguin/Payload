@@ -10,7 +10,7 @@ import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
 import com.jonahseguin.payload.command.PayloadCommand;
-import com.jonahseguin.payload.database.DatabaseService;
+import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.server.PayloadServer;
 
 public class CmdServers implements PayloadCommand {
@@ -25,9 +25,8 @@ public class CmdServers implements PayloadCommand {
     @Override
     public void execute(CmdArgs args) {
         String dbName = args.joinArgs();
-        DatabaseService database = api.getDatabase(dbName);
+        PayloadDatabase database = api.getDatabase(dbName);
         if (database == null) {
-            args.msg("4");
             args.msg("&cA database with the name '{0}' does not exist.  Type /payload databases for a list of databases.", dbName);
             return;
         }

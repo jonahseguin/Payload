@@ -19,4 +19,7 @@ public interface HandshakeService extends Service {
 
     void receive(@Nonnull String channel, @Nonnull HandshakeData data);
 
+    @Nonnull
+    String getName();
+
 }

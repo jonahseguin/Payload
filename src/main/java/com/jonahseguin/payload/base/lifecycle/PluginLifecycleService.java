@@ -24,6 +24,10 @@ public class PluginLifecycleService implements LifecycleService {
 
     @Override
     public boolean start(Service service) {
+        if (service == null) {
+            return false;
+        }
+        if (service.isRunning()) return true;
         boolean success = true;
         try {
             if (!service.start()) {
@@ -42,6 +46,10 @@ public class PluginLifecycleService implements LifecycleService {
 
     @Override
     public boolean shutdown(Service service) {
+        if (service == null) {
+            return false;
+        }
+        if (!service.isRunning()) return true;
         try {
             if (!service.shutdown()) {
                 errorService.capture("Error shutting down service: " + service.getClass().getSimpleName());

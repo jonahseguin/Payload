@@ -68,7 +68,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     protected NetworkService<K, X, N> networkService;
     protected PayloadInstantiator<K, X> instantiator;
     protected SyncMode syncMode = SyncMode.IF_CACHED;
-    protected boolean debug = false;
+    protected boolean debug = true;
     protected PayloadMode mode = PayloadMode.STANDALONE;
     protected boolean running = false;
 
@@ -83,7 +83,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
 
     protected void setupModule() {
         this.sync = new CacheSyncService<>(this, handshakeService);
-        this.networkService = new RedisNetworkService<>(this, networkClass, database, injector);
+        this.networkService = new RedisNetworkService<>(this, networkClass, database);
         this.errorService = new CacheErrorService(this, lang);
     }
 
@@ -134,6 +134,8 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
                 errorService.capture("Failed to start Sync Service for cache " + name);
             }
         }
+        lang.lang().load();
+        lang.lang().save();
         running = true;
         return success;
     }
@@ -172,6 +174,8 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
             errorService.capture(failedSaves + " Payload objects failed to save during shutdown");
             success = false;
         }
+        lang.lang().load();
+        lang.lang().save();
         return success;
     }
 

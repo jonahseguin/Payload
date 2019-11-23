@@ -217,8 +217,8 @@ public abstract class PayloadProfile implements Payload<UUID> {
     }
 
     @Override
-    public void save() {
-        this.cache.save(this);
+    public boolean save() {
+        return this.cache.save(this);
     }
 
     @Override

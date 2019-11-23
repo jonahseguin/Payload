@@ -5,6 +5,7 @@
 
 package com.jonahseguin.payload.base.listener;
 
+import com.google.inject.Inject;
 import com.jonahseguin.lang.LangDefinitions;
 import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.PayloadPlugin;
@@ -20,6 +21,7 @@ public class LockListener implements Listener, LangModule {
 
     private final PayloadPlugin payloadPlugin;
 
+    @Inject
     public LockListener(PayloadPlugin payloadPlugin) {
         this.payloadPlugin = payloadPlugin;
         payloadPlugin.getLang().register(this);

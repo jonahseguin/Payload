@@ -7,7 +7,7 @@ package com.jonahseguin.payload.server;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.jonahseguin.payload.PayloadAPI;
+import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.annotation.Database;
 import com.jonahseguin.payload.base.error.ErrorService;
@@ -22,11 +22,13 @@ import java.util.Optional;
 import java.util.concurrent.*;
 
 @Getter
+@Singleton
 public class PayloadServerService implements Runnable, ServerService {
 
     public static final long ASSUME_OFFLINE_SECONDS = 60;
     public static final long PING_FREQUENCY_SECONDS = 10;
 
+    private final String name;
     private final PayloadPlugin payloadPlugin;
     private final DatabaseService database;
     private final PayloadServer thisServer;
@@ -40,11 +42,12 @@ public class PayloadServerService implements Runnable, ServerService {
     private boolean running = false;
 
     @Inject
-    public PayloadServerService(DatabaseService database, PayloadAPI api, PayloadPlugin payloadPlugin, @Database ErrorService error) {
+    public PayloadServerService(DatabaseService database, PayloadPlugin payloadPlugin, @Database ErrorService error, @Database String name) {
+        this.name = name;
         this.database = database;
         this.payloadPlugin = payloadPlugin;
         this.error = error;
-        this.thisServer = new PayloadServer(api.getPayloadID(), System.currentTimeMillis(), true);
+        this.thisServer = new PayloadServer(payloadPlugin.getLocal().getPayloadID(), System.currentTimeMillis(), true);
         this.servers.put(this.thisServer.getName().toLowerCase(), this.thisServer);
     }
 

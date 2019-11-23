@@ -46,6 +46,7 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
     public PayloadProfileCache(Injector injector, PayloadInstantiator<UUID, X> instantiator, String name, Class<X> payload) {
         super(injector, instantiator, name, UUID.class, payload, NetworkProfile.class);
         this.setupModule();
+        lang.register(this);
     }
 
     @Override
@@ -427,5 +428,10 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
             });
         }
         this.pool.submit(this::saveAll);
+    }
+
+    @Override
+    public NetworkProfile createNetworked() {
+        return injector.getInstance(NetworkProfile.class);
     }
 }

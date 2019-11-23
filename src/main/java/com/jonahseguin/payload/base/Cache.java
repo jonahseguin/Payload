@@ -151,5 +151,7 @@ public interface Cache<K, X extends Payload<K>, N extends NetworkPayload<K>> ext
 
     X create();
 
+    N createNetworked();
+
 }
 

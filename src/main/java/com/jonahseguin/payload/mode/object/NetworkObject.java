@@ -5,15 +5,19 @@
 
 package com.jonahseguin.payload.mode.object;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.server.ServerService;
 import dev.morphia.annotations.Entity;
 
+import javax.annotation.Nonnull;
 import java.util.Date;
 
 @Entity
 public class NetworkObject extends NetworkPayload<String> {
+
+    private String identifier = null;
 
     @Inject
     public NetworkObject(ServerService serverService) {
@@ -37,4 +41,14 @@ public class NetworkObject extends NetworkPayload<String> {
         lastSaved = new Date();
     }
 
+    @Override
+    public String getIdentifier() {
+        return identifier;
+    }
+
+    @Override
+    public void setIdentifier(@Nonnull String identifier) {
+        Preconditions.checkNotNull(identifier);
+        this.identifier = identifier;
+    }
 }
