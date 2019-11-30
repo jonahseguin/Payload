@@ -130,8 +130,16 @@ public class PayloadAPI {
      * @return The Cache
      */
     @SuppressWarnings("unchecked") // bad, oops
-    public <K, X extends Payload<K>, N extends NetworkPayload<K>, D> PayloadCache<K, X, N> getCache(String name) {
-        return (PayloadCache<K, X, N>) this.caches.get(convertCacheName(name));
+    public <K, X extends Payload<K>, N extends NetworkPayload<K>> Cache<K, X, N> getCache(String name) {
+        return (Cache<K, X, N>) this.caches.get(convertCacheName(name));
+    }
+
+    public Cache getCacheRaw(String name) {
+        return this.caches.get(convertCacheName(name));
+    }
+
+    public boolean isCacheRegistered(String name) {
+        return this.caches.containsKey(convertCacheName(name));
     }
 
     public List<Cache> getSortedCachesByDepends() {
@@ -141,7 +149,6 @@ public class PayloadAPI {
             }
         }
         this._sortedCaches = new ArrayList<>(this.caches.values()).stream().sorted().collect(Collectors.toList());
-        Collections.reverse(this._sortedCaches);
         return this._sortedCaches;
     }
 
@@ -152,6 +159,7 @@ public class PayloadAPI {
             }
         }
         this._sortedCachesReversed = new ArrayList<>(this.caches.values()).stream().sorted().collect(Collectors.toList());
+        Collections.reverse(this._sortedCachesReversed);
         return this._sortedCachesReversed;
     }
 

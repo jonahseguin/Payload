@@ -64,7 +64,11 @@ public class ProfileListener implements Listener {
                 PayloadProfileCache cache = (PayloadProfileCache) c;
                 PayloadProfileController controller = cache.getController(player.getUniqueId());
                 if (controller != null) {
+                    cache.getErrorService().debug("Initializing player " + player.getName());
                     controller.initializeOnJoin(player);
+                }
+                else {
+                    cache.getErrorService().capture("Could not initialize player " + player.getName() + " for cache " + cache.getName() + " (controller is null)");
                 }
             }
         });

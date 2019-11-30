@@ -25,6 +25,8 @@ public class PayloadLangService implements LangService {
     public PayloadLangService(@Nonnull Plugin plugin) {
         Preconditions.checkNotNull(plugin);
         this.lang = new Lang(plugin);
+        lang.load();
+        lang.save();
     }
 
     @Override

@@ -140,7 +140,7 @@ public class ObjectStoreMongo<X extends PayloadObject> extends ObjectCacheStore<
         if (!this.cache.getDatabase().isRunning()) {
             this.cache.getErrorService().capture("Error initializing MongoDB Object Layer: Payload Database is not started");
         }
-        this.nullPayload = this.cache.getInstantiator().instantiate(cache.getInjector());
+        this.nullPayload = this.cache.create();
         Preconditions.checkNotNull(nullPayload, "Null payload failed to instantiate");
         if (this.cache.getSettings().isServerSpecific()) {
             this.addCriteriaModifier(query -> query.field("payloadId").equalIgnoreCase(cache.getApi().getPayloadID()));
@@ -196,6 +196,9 @@ public class ObjectStoreMongo<X extends PayloadObject> extends ObjectCacheStore<
 
     public Query<X> getQuery(String key) {
         Query<X> q = createQuery();
+        Preconditions.checkNotNull(q, "Query is null");
+        Preconditions.checkNotNull(nullPayload, "nullPayload is null");
+        Preconditions.checkNotNull(nullPayload.identifierFieldName(), "identifierFieldName() is null for Payload Object: " + this.nullPayload.getClass().getSimpleName());
         q.criteria(this.nullPayload.identifierFieldName()).equalIgnoreCase(key);
         return q;
     }

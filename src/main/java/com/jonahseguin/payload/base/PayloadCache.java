@@ -516,7 +516,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
      * @param cache The {@link PayloadCache} implementation for this cache to depend on.
      */
     @Override
-    public void addDepend(@Nonnull PayloadCache cache) {
+    public void addDepend(@Nonnull Cache cache) {
         Preconditions.checkNotNull(cache);
         this.dependingCaches.add(cache.getName());
     }
@@ -529,7 +529,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
      * @return True if this cache is dependent, false if it's not
      */
     @Override
-    public boolean isDependentOn(@Nonnull PayloadCache cache) {
+    public boolean isDependentOn(@Nonnull Cache cache) {
         Preconditions.checkNotNull(cache);
         return dependingCaches.contains(cache.getName());
     }

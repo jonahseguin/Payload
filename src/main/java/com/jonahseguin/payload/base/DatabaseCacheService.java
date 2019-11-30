@@ -36,20 +36,34 @@ public class DatabaseCacheService implements CacheService {
     }
 
     @Override
-    public <X extends PayloadProfile> ProfileCache<X> createProfileCache(@Nonnull String name, @Nonnull Class<X> type, @Nonnull PayloadInstantiator<UUID, X> instantiator) {
+    public <X extends PayloadProfile> ProfileCache<X> profileCache(@Nonnull String name, @Nonnull Class<X> type, @Nonnull PayloadInstantiator<UUID, X> instantiator) {
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(type);
         Preconditions.checkNotNull(instantiator);
+        if (api.isCacheRegistered(name)) {
+            Cache cache = api.getCacheRaw(name);
+            if (cache instanceof ProfileCache) {
+                return (ProfileCache<X>) cache;
+            }
+            throw new IllegalArgumentException("A cache with the name '" + name + "' already exists (while registering Profile Cache for " + type.getSimpleName() + ")");
+        }
         ProfileCache<X> cache = new PayloadProfileCache<>(injector, instantiator, name, type);
         setup(cache, type);
         return cache;
     }
 
     @Override
-    public <X extends PayloadObject> ObjectCache<X> createObjectCache(@Nonnull String name, @Nonnull Class<X> type, @Nonnull PayloadInstantiator<String, X> instantiator) {
+    public <X extends PayloadObject> ObjectCache<X> objectCache(@Nonnull String name, @Nonnull Class<X> type, @Nonnull PayloadInstantiator<String, X> instantiator) {
         Preconditions.checkNotNull(name);
         Preconditions.checkNotNull(type);
         Preconditions.checkNotNull(instantiator);
+        if (api.isCacheRegistered(name)) {
+            Cache cache = api.getCacheRaw(name);
+            if (cache instanceof ObjectCache) {
+                return (ObjectCache<X>) cache;
+            }
+            throw new IllegalArgumentException("A cache with the name '" + name + "' already exists (while registering Object Cache for " + type.getSimpleName() + ")");
+        }
         ObjectCache<X> cache = new PayloadObjectCache<>(injector, instantiator, name, type);
         setup(cache, type);
         return cache;

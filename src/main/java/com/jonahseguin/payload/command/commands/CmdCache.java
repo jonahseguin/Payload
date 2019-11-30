@@ -7,6 +7,7 @@ package com.jonahseguin.payload.command.commands;
 
 import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
+import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
@@ -24,7 +25,7 @@ public class CmdCache implements PayloadCommand {
     @Override
     public void execute(CmdArgs args) {
         String cacheName = args.joinArgs();
-        PayloadCache cache = api.getCache(cacheName);
+        Cache cache = api.getCache(cacheName);
         if (cache == null) {
             args.msg("&cA cache with the name '{0}' does not exist.  Type /payload caches for a list of caches.", cacheName);
             return;

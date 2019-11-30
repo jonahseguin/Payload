@@ -114,9 +114,9 @@ public interface Cache<K, X extends Payload<K>, N extends NetworkPayload<K>> ext
 
     K keyFromString(@Nonnull String key);
 
-    void addDepend(@Nonnull PayloadCache cache);
+    void addDepend(@Nonnull Cache cache);
 
-    boolean isDependentOn(@Nonnull PayloadCache cache);
+    boolean isDependentOn(@Nonnull Cache cache);
 
     @Nonnull
     PayloadAPI getApi();

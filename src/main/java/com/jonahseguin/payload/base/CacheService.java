@@ -16,8 +16,8 @@ import java.util.UUID;
 
 public interface CacheService extends Service {
 
-    <X extends PayloadProfile> ProfileCache<X> createProfileCache(@Nonnull String name, @Nonnull Class<X> type, @Nonnull PayloadInstantiator<UUID, X> instantiator);
+    <X extends PayloadProfile> ProfileCache<X> profileCache(@Nonnull String name, @Nonnull Class<X> type, @Nonnull PayloadInstantiator<UUID, X> instantiator);
 
-    <X extends PayloadObject> ObjectCache<X> createObjectCache(@Nonnull String name, @Nonnull Class<X> type, @Nonnull PayloadInstantiator<String, X> instantiator);
+    <X extends PayloadObject> ObjectCache<X> objectCache(@Nonnull String name, @Nonnull Class<X> type, @Nonnull PayloadInstantiator<String, X> instantiator);
 
 }
