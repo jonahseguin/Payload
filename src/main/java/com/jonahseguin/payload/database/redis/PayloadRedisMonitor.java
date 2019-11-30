@@ -6,27 +6,29 @@
 package com.jonahseguin.payload.database.redis;
 
 import com.jonahseguin.payload.PayloadPlugin;
-import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.PayloadDatabase;
 import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.Jedis;
 
 public class PayloadRedisMonitor implements Runnable {
 
+    private final PayloadPlugin payloadPlugin;
     private final PayloadDatabase database;
     private BukkitTask task = null;
 
-    public PayloadRedisMonitor(PayloadDatabase database) {
+    public PayloadRedisMonitor(PayloadPlugin payloadPlugin, PayloadDatabase database) {
+        this.payloadPlugin = payloadPlugin;
         this.database = database;
     }
 
     public void start() {
         if (this.task == null) {
-            this.task = PayloadPlugin.get().getServer().getScheduler()
-                    .runTaskTimerAsynchronously(PayloadPlugin.get(), this, 0L, 20L);
+            this.task = payloadPlugin.getServer().getScheduler()
+                    .runTaskTimerAsynchronously(payloadPlugin, this, 0L, 20L);
         }
         else {
-            throw new IllegalStateException("Redis Monitor is already running for database ID '" + database.getUuid() + "'; cannot start");
+            throw new IllegalStateException("Redis Monitor is already running for database ID '" + database.getName() + "'; cannot start");
         }
     }
 
@@ -35,7 +37,7 @@ public class PayloadRedisMonitor implements Runnable {
             task.cancel();
         }
         else {
-            throw new IllegalStateException("Redis Monitor is not running for database ID '" + database.getUuid() + "'; cannot stop");
+            throw new IllegalStateException("Redis Monitor is not running for database ID '" + database.getName() + "'; cannot stop");
         }
     }
 
@@ -63,7 +65,7 @@ public class PayloadRedisMonitor implements Runnable {
         catch (Exception ex) {
             // Failed, assume disconnected
             this.handleDisconnected();
-            this.database.databaseError(ex, "Error in Redis Monitor task: " + ex.getMessage());
+            this.database.getErrorService().capture(ex, "Error in Redis Monitor task: " + ex.getMessage());
         }
     }
 
@@ -71,20 +73,20 @@ public class PayloadRedisMonitor implements Runnable {
         if (!this.database.getState().isRedisConnected()) {
             this.database.getState().setRedisConnected(true);
             if (this.database.getState().isRedisInitConnect()) {
-                this.database.getHooks().forEach(PayloadCache::onRedisReconnect);
+                this.database.getHooks().forEach(DatabaseDependent::onRedisReconnect);
             } else {
                 this.database.getState().setRedisInitConnect(true);
-                this.database.getHooks().forEach(PayloadCache::onRedisInitConnect);
+                this.database.getHooks().forEach(DatabaseDependent::onRedisInitConnect);
             }
-            database.databaseDebug("Redis connected");
+            database.getErrorService().debug("Redis connected");
         }
     }
 
     private void handleDisconnected() {
         if (this.database.getState().isRedisConnected()) {
             this.database.getState().setRedisConnected(false);
-            this.database.getHooks().forEach(PayloadCache::onRedisDisconnect);
-            database.databaseDebug("Redis connection lost");
+            this.database.getHooks().forEach(DatabaseDependent::onRedisDisconnect);
+            database.getErrorService().debug("Redis connection lost");
         }
         this.database.connectRedis();
     }

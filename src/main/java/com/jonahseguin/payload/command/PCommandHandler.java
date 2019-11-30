@@ -5,9 +5,14 @@
 
 package com.jonahseguin.payload.command;
 
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.jonahseguin.lang.LangDefinitions;
+import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
-import com.jonahseguin.payload.base.lang.PLang;
+import com.jonahseguin.payload.base.lang.LangService;
 import com.jonahseguin.payload.command.commands.*;
 import lombok.Getter;
 import org.bukkit.command.Command;
@@ -15,29 +20,52 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 @Getter
-public class PCommandHandler implements CommandExecutor {
+public class PCommandHandler implements CommandExecutor, LangModule {
 
+    private final PayloadPlugin plugin;
+    private final LangService langService;
+    private final LangDefinitions lang;
     private final Map<String, PayloadCommand> commands = new HashMap<>();
 
-    public PCommandHandler() {
-        register(new CmdHelp());
-        register(new CmdCache());
-        register(new CmdCacheList());
-        register(new CmdCacheLayers());
-        register(new CmdDebug());
-        register(new CmdProfile());
-        register(new CmdSaveall());
-        register(new CmdServer());
-        register(new CmdSetID());
-        register(new CmdResetHandshake());
-        register(new CmdDatabaseList());
-        register(new CmdDatabase());
-        register(new CmdServers());
+    @Inject
+    public PCommandHandler(@Nonnull PayloadPlugin plugin, @Nonnull LangService langService, @Nonnull Injector injector) {
+        Preconditions.checkNotNull(plugin);
+        Preconditions.checkNotNull(langService);
+        Preconditions.checkNotNull(injector);
+        this.plugin = plugin;
+        this.langService = langService;
+        this.lang = langService.module(this);
+        register(injector.getInstance(CmdHelp.class));
+        register(injector.getInstance(CmdCache.class));
+        register(injector.getInstance(CmdCacheList.class));
+        register(injector.getInstance(CmdCacheStores.class));
+        register(injector.getInstance(CmdDebug.class));
+        register(injector.getInstance(CmdProfile.class));
+        register(injector.getInstance(CmdSaveall.class));
+        register(injector.getInstance(CmdServer.class));
+        register(injector.getInstance(CmdSetID.class));
+        register(injector.getInstance(CmdDatabaseList.class));
+        register(injector.getInstance(CmdDatabase.class));
+        register(injector.getInstance(CmdServers.class));
+    }
+
+    @Override
+    public void define(LangDefinitions l) {
+        l.define("no-permission", "&cNo permission.");
+        l.define("player-only", "&cThis command is player-only.");
+        l.define("incorrect-usage", "&cIncorrect usage. (needs {0} arguments)  Use: {1} {2}");
+        l.define("unknown", "&cUnknown command: '{0}'.  Use /payload for help.");
+    }
+
+    @Override
+    public String langModule() {
+        return "cmd";
     }
 
     private void register(PayloadCommand cmd) {
@@ -74,19 +102,19 @@ public class PCommandHandler implements CommandExecutor {
                         }
                     }
                 }
-            }
 
+            }
             if (command != null) {
                 if (command.playerOnly() && !(sender instanceof Player)) {
-                    sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_PLAYER_ONLY));
+                    sender.sendMessage(lang.format("player-only"));
                     return true;
                 }
                 if (!command.permission().has(sender)) {
-                    sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_NO_PERMISSION));
+                    sender.sendMessage(lang.format("no-permission"));
                     return true;
                 }
                 if (args.length < command.minArgs()) {
-                    sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.COMMAND_INCORRECT_USAGE, command.minArgs() + "", "/" + command.name() + " " + command.usage()));
+                    sender.sendMessage(lang.format("incorrect-usage", command.minArgs() + "", "/" + command.name() + " " + command.usage()));
                     return true;
                 }
                 CmdArgs cmdArgs = new CmdArgs(sender, pCmd, args);
@@ -101,7 +129,7 @@ public class PCommandHandler implements CommandExecutor {
                     }
                 }
             } else {
-                sender.sendMessage(PayloadPlugin.get().getGlobalLangController().get(PLang.UNKNOWN_COMMAND, pCmd));
+                sender.sendMessage(lang.format("unknown", pCmd));
             }
 
             return true;

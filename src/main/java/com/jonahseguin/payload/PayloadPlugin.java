@@ -5,26 +5,24 @@
 
 package com.jonahseguin.payload;
 
-import com.google.common.collect.HashBiMap;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Singleton;
+import com.google.inject.Stage;
 import com.jonahseguin.payload.base.PayloadPermission;
-import com.jonahseguin.payload.base.data.PayloadLocal;
-import com.jonahseguin.payload.base.lang.PLang;
-import com.jonahseguin.payload.base.lang.PayloadLangController;
+import com.jonahseguin.payload.base.lang.LangService;
+import com.jonahseguin.payload.base.lang.PayloadLangService;
 import com.jonahseguin.payload.base.listener.LockListener;
 import com.jonahseguin.payload.command.PCommandHandler;
 import com.jonahseguin.payload.mode.profile.listener.ProfileListener;
-import org.bukkit.Bukkit;
+import lombok.Getter;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.plugin.java.JavaPluginLoader;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.UUID;
 
 /**
  * Created by Jonah on 11/16/2017.
@@ -34,61 +32,41 @@ import java.util.UUID;
  *
  * Main Bukkit/Spigot JavaPlugin class, entrance point of this piece of software
  */
+@Singleton
+@Getter
 public class PayloadPlugin extends JavaPlugin {
 
-    public static final String PREFIX = "[Payload] ";
+    private final PayloadAPI api = new PayloadAPI(this);
+    private static PayloadPlugin plugin = null;
+    private Injector injector = null;
+    private boolean locked = false;
+    private PayloadLocal local = new PayloadLocal(this);
+    private PCommandHandler commandHandler;
+    private LangService lang;
 
-    private static PayloadPlugin instance = null;
-
-    private boolean locked = true;
-    private final PayloadLangController globalLangController = new PayloadLangController();
-    private final PayloadLocal local = new PayloadLocal();
-    private final PCommandHandler commandHandler = new PCommandHandler();
-    private final HashBiMap<String, UUID> uuids = HashBiMap.create(); // <Username, UUID>
-
-    public PayloadPlugin() {
-        if (PayloadPlugin.instance != null) {
-            throw new IllegalStateException("PayloadPlugin has already been created");
+    /**
+     * Format a string with arguments
+     *
+     * @param s    String
+     * @param args Arguments
+     * @return Formatted string, colorized
+     */
+    public static String format(String s, Object... args) {
+        if (args != null) {
+            if (args.length > 0) {
+                for (int i = 0; i < args.length; i++) {
+                    if (s.contains("{" + i + "}")) {
+                        s = s.replace("{" + i + "}", args[i].toString());
+                    }
+                }
+            }
         }
+
+        return ChatColor.translateAlternateColorCodes('&', s);
     }
 
-    public PayloadPlugin(JavaPluginLoader loader, PluginDescriptionFile description, File dataFolder, File file) {
-        super(loader, description, dataFolder, file);
-        if (PayloadPlugin.instance != null) {
-            throw new IllegalStateException("PayloadPlugin has already been created");
-        }
-    }
-
-    @Override
-    public void onEnable() {
-        PayloadPlugin.instance = this;
-        this.copyResources();
-        if (!this.local.loadPayloadID()) {
-            // Failed to load.  This will be handled by the method itself.
-            this.getLogger().warning("[FATAL] Payload failed to load it's local file (payload.yml)");
-        }
-        if (this.local.isFirstStartup()) {
-            this.getLogger().info("This is the first startup for Payload on this server instance.  Files created.");
-        }
-        this.getServer().getPluginManager().registerEvents(new LockListener(), this);
-        this.getServer().getPluginManager().registerEvents(new ProfileListener(), this);
-        this.getCommand("payload").setExecutor(this.commandHandler);
-        this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", PayloadPlugin.get().getDescription().getVersion()));
-        try {
-            new PayloadAPI(this);
-            this.locked = false;
-        }
-        catch (IllegalAccessException ex) {
-            this.getLogger().warning("Payload failed to initialize API; was already created... LOCKING");
-            this.locked = true;
-            this.getLogger().warning("To ensure no other plugins are creating a PayloadAPI instance, Payload has been locked.");
-        }
-    }
-
-    @Override
-    public void onDisable() {
-        this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin disabled.", PayloadPlugin.get().getDescription().getVersion()));
-        PayloadPlugin.instance = null;
+    static PayloadPlugin getPlugin() {
+        return plugin;
     }
 
     private void copyResources() {
@@ -102,40 +80,28 @@ public class PayloadPlugin extends JavaPlugin {
         }
     }
 
-    public HashBiMap<String, UUID> getUUIDs() {
-        return uuids;
-    }
+    @Override
+    public void onEnable() {
+        plugin = this;
 
-    public void saveUUID(String username, UUID uuid) {
-        this.uuids.put(username.toLowerCase(), uuid);
-    }
-
-    public UUID getUUID(String username) {
-        return this.uuids.get(username.toLowerCase());
-    }
-
-    public String getUsername(UUID uuid) {
-        return this.uuids.inverse().get(uuid);
-    }
-
-    /**
-     * Format a string with arguments
-     * @param s String
-     * @param args Arguments
-     * @return Formatted string, colorized
-     */
-    public static String format(String s, String... args) {
-        if (args != null) {
-            if (args.length > 0) {
-                for (int i = 0; i < args.length; i++) {
-                    if (s.contains("{" + i + "}")) {
-                        s = s.replace("{" + i + "}", args[i]);
-                    }
-                }
-            }
+        this.copyResources();
+        if (!this.local.loadPayloadID()) {
+            // Failed to load.  This will be handled by the method itself.
+            this.getLogger().warning("[FATAL] Payload failed to load it's local file (payload.yml)");
+        }
+        if (this.local.isFirstStartup()) {
+            this.getLogger().info("This is the first startup for Payload on this server instance.  Files created.");
         }
 
-        return ChatColor.translateAlternateColorCodes('&', s);
+        injector = Guice.createInjector(Stage.PRODUCTION, PayloadAPI.install(this, "PayloadDatabase"));
+
+        lang = new PayloadLangService(this);
+        commandHandler = new PCommandHandler(this, lang, injector);
+
+        this.getServer().getPluginManager().registerEvents(injector.getInstance(LockListener.class), this);
+        this.getServer().getPluginManager().registerEvents(injector.getInstance(ProfileListener.class), this);
+        this.getCommand("payload").setExecutor(this.commandHandler);
+        this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", getDescription().getVersion()));
     }
 
     /**
@@ -154,14 +120,6 @@ public class PayloadPlugin extends JavaPlugin {
      */
     public static void runASync(Plugin plugin, Runnable runnable) {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, runnable);
-    }
-
-    /**
-     * Get the Singleton instance of the {@link PayloadPlugin} class
-     * @return Instance
-     */
-    public static PayloadPlugin get() {
-        return instance;
     }
 
     /**
@@ -189,25 +147,6 @@ public class PayloadPlugin extends JavaPlugin {
         return this.local;
     }
 
-    public void alert(PayloadPermission required, PLang lang, String... args) {
-        Bukkit.getLogger().info(this.globalLangController.get(lang, args));
-        for (Player pl : getServer().getOnlinePlayers()) {
-            if (required.has(pl)) {
-                pl.sendMessage(this.globalLangController.get(lang, args));
-            }
-        }
-    }
-
-    public void alert(PayloadPermission required, String msg) {
-        msg = ChatColor.translateAlternateColorCodes('&', msg);
-        Bukkit.getLogger().info(msg);
-        for (Player pl : getServer().getOnlinePlayers()) {
-            if (required.has(pl)) {
-                pl.sendMessage(msg);
-            }
-        }
-    }
-
     /**
      * Is the Payload plugin globally in debug (used for default error handlers and similar)
      * @return True if debug is enabled
@@ -216,26 +155,10 @@ public class PayloadPlugin extends JavaPlugin {
         return this.local.isDebug();
     }
 
-    public void setDebug(boolean debug) {
-        this.local.setDebug(true);
-        this.local.getConfig().set("debug", true);
-        try {
-            this.local.getConfig().save(this.local.getPayloadFile());
-        } catch (IOException ex) {
-            alert(PayloadPermission.DEBUG, "&cError setting debug mode to " + debug + ": while saving to payload.yml: " + ex.getMessage());
-            if (this.isDebug()) {
-                ex.printStackTrace();
-            }
-        }
-    }
-
-
-    /**
-     * Get the Global plugin-wide default Language Controller
-     * @return {@link PayloadLangController} default
-     */
-    public PayloadLangController getGlobalLangController() {
-        return globalLangController;
+    @Override
+    public void onDisable() {
+        this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin disabled.", getDescription().getVersion()));
+        plugin = null;
     }
 
     /**
@@ -250,6 +173,30 @@ public class PayloadPlugin extends JavaPlugin {
 
     public ClassLoader getPayloadClassLoader() {
         return this.getClassLoader();
+    }
+
+    public void setDebug(boolean debug) {
+        this.local.setDebug(debug);
+        this.local.getConfig().set("debug", debug);
+        try {
+            this.local.getConfig().save(this.local.getPayloadFile());
+        } catch (IOException ex) {
+            getLogger().severe("Error saving config while setting debug status");
+            if (this.isDebug()) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    public void alert(PayloadPermission permission, String module, String key, Object... args) {
+        String l = lang.get(module, key, args);
+        getLogger().info(l);
+        getServer().getOnlinePlayers().stream().filter(p -> p.hasPermission(permission.getPermission())).forEach(p -> p.sendMessage(l));
+    }
+
+    public void alert(PayloadPermission permission, String msg) {
+        getLogger().info(msg);
+        getServer().getOnlinePlayers().stream().filter(p -> p.hasPermission(permission.getPermission())).forEach(p -> p.sendMessage(msg));
     }
 
 }

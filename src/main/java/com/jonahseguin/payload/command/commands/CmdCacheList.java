@@ -1,17 +1,30 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.command.commands;
 
+import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
-import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
 import com.jonahseguin.payload.command.PayloadCommand;
 
 public class CmdCacheList implements PayloadCommand {
 
+    private final PayloadAPI api;
+
+    @Inject
+    public CmdCacheList(PayloadAPI api) {
+        this.api = api;
+    }
+
     @Override
     public void execute(CmdArgs args) {
         args.msg("&7***** &6Payload Caches &7*****");
-        for (PayloadCache cache : PayloadAPI.get().getCaches().values()) {
+        for (Cache cache : api.getCaches().values()) {
             args.msg("&7" + cache.getName() + " - " + cache.getMode().toString().toLowerCase() + " - " + cache.cachedObjectCount() + " objects");
         }
     }

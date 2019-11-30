@@ -5,6 +5,7 @@
 
 package com.jonahseguin.payload.command.commands;
 
+import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
@@ -14,12 +15,19 @@ import org.bukkit.ChatColor;
 
 public class CmdSetID implements PayloadCommand {
 
+    private final PayloadAPI api;
+
+    @Inject
+    public CmdSetID(PayloadAPI api) {
+        this.api = api;
+    }
+
     @Override
     public void execute(CmdArgs args) {
         String name = args.arg(0);
         if (StringUtils.isAlphanumeric(name)) {
-            PayloadAPI.get().setPayloadID(name);
-            args.msg("&7[Payload] &aPayload-ID set to: " + PayloadAPI.get().getPayloadID() + ".  A restart may be required for changes to completely take effect.");
+            api.setPayloadID(name);
+            args.msg("&7[Payload] &aPayload-ID set to: " + api.getPayloadID() + ".  A restart may be required for changes to completely take effect.");
         } else {
             args.msg(ChatColor.RED + "Payload-ID must be alphanumeric");
         }

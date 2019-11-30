@@ -7,10 +7,12 @@ package com.jonahseguin.payload.mode.profile.settings;
 
 import com.jonahseguin.payload.base.settings.CacheSettings;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class ProfileCacheSettings extends CacheSettings {
 
     private int localExpiryTimeSeconds = 7200;
@@ -18,7 +20,6 @@ public class ProfileCacheSettings extends CacheSettings {
     private int handshakeTimeoutSeconds = 5;
     private boolean denyJoinOnHandshakeTimeout = false; // will allow for failure handling
     private boolean denyJoinOnHandshakeFailDatabase = false; // deny join if database is down during handshake?
-    private boolean denyJoinDatabaseDown = false;
     private int handshakeTimeOutAttemptsAllowJoin = 3;
     private boolean setOfflineOnShutdown = true; // update Profiles to offline=true on cache shutdown
     private boolean alwaysCacheOnLoadNetworkNode = false; // should we cache profiles that are fetched (not during login) in network_node mode (CAN CAUSE DATA LOSS)

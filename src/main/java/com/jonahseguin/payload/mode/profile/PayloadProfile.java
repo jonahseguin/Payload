@@ -5,12 +5,11 @@
 
 package com.jonahseguin.payload.mode.profile;
 
-import com.jonahseguin.payload.PayloadAPI;
+import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.type.Payload;
-import dev.morphia.annotations.Id;
-import dev.morphia.annotations.Indexed;
-import dev.morphia.annotations.PostLoad;
+import com.jonahseguin.payload.mode.profile.util.MsgBuilder;
+import dev.morphia.annotations.*;
 import lombok.Getter;
 import lombok.Setter;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -21,59 +20,72 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
+import javax.annotation.Nonnull;
 import java.util.UUID;
 
 // The implementing class of this abstract class must add an @Entity annotation (from MongoDB) with a collection name!
 @Getter
 @Setter
+@Indexes({
+        @Index(fields = @Field("username")),
+        @Index(fields = @Field("uniqueId"))
+})
 public abstract class PayloadProfile implements Payload<UUID> {
+
+    protected transient final ProfileCache cache;
 
     @Id
     protected ObjectId objectId = new ObjectId();
-
     @Indexed
     protected String username;
     @Indexed
     protected String uniqueId;
     protected String loginIp = null; // IP the profile logged in with
-
-    protected String lastSeenServer = null; // The Payload ID of the server they last joined
-    protected long lastSeenTimestamp = 0;
-    protected boolean online = false; // is the profile online anywhere in the network, can be true even if they aren't online on this server instance
     protected String payloadId; // The ID of the Payload instance that currently holds this profile
-
     protected transient UUID uuid = null;
     protected transient long cachedTimestamp = System.currentTimeMillis();
     protected transient long lastInteractionTimestamp = System.currentTimeMillis();
-    protected transient long redisCacheTimestamp = System.currentTimeMillis();
     protected transient long lastSaveTimestamp = 0;
-    protected transient boolean switchingServers = false; // set to true when an incoming handshake requests their profile be saved
     protected transient boolean saveFailed = false; // If the player's profile failed to auto-save/save on shutdown,
     // This will be set to true, and we will notify the player once their
     // Profile has been saved successfully
     protected transient String loadingSource = null;
     protected transient Player player = null;
+    protected transient long handshakeStartTimestamp = 0;
 
-    public PayloadProfile() {
-        this.payloadId = PayloadAPI.get().getPayloadID();
+    @Inject
+    public PayloadProfile(ProfileCache cache) {
+        this.cache = cache;
+        this.payloadId = cache.getApi().getPayloadID();
     }
 
-
-    public PayloadProfile(String username, UUID uniqueId, String loginIp) {
-        this();
+    public PayloadProfile(ProfileCache cache, String username, UUID uniqueId, String loginIp) {
+        this(cache);
         this.username = username;
         this.uuid = uniqueId;
         this.uniqueId = uniqueId.toString();
         this.loginIp = loginIp;
     }
 
-    public PayloadProfile(ProfileData data) {
-        this(data.getUsername(), data.getUniqueId(), data.getIp());
-    }
-
     @PostLoad
     private void onPostPayloadLoad() {
         this.uuid = UUID.fromString(this.uniqueId);
+    }
+
+    @Override
+    public boolean hasValidHandshake() {
+        if (handshakeStartTimestamp > 0) {
+            long ago = System.currentTimeMillis() - handshakeStartTimestamp;
+            long seconds = ago / 1000;
+            return seconds < 10;
+        }
+        return false;
+    }
+
+    @Nonnull
+    @Override
+    public ProfileCache getCache() {
+        return cache;
     }
 
     public UUID getUUID() {
@@ -87,31 +99,39 @@ public abstract class PayloadProfile implements Payload<UUID> {
         return this.getUUID();
     }
 
-    public void initializePlayer(Player player) {
+    public void setUUID(UUID uuid) {
+        this.uuid = uuid;
+        this.uniqueId = uuid.toString();
+    }
+
+    public void setUniqueId(UUID uuid) {
+        this.setUUID(uuid);
+    }
+
+    public final void initializePlayer(Player player) {
         Validate.notNull(player, "Player cannot be null for initializePlayer");
         this.player = player;
+        this.init();
     }
 
-    public void uninitializePlayer() {
-
+    public final void uninitializePlayer() {
+        this.uninit();
+        this.player = null;
     }
 
-    public boolean isPlayerOnline() {
+    protected abstract void init();
+
+    protected abstract void uninit();
+
+    public boolean isOnline() {
         if (this.player == null) {
             Player player = Bukkit.getPlayer(this.getUUID());
             if (player != null && player.isOnline()) {
                 this.player = player;
+                return true;
             }
         }
         return this.player != null && this.player.isOnline();
-    }
-
-    public boolean isOnlineThisServer() {
-        return this.isPlayerOnline();
-    }
-
-    public boolean isOnlineOtherServer() {
-        return !this.isPlayerOnline() && this.online;
     }
 
     public String getCurrentIP() {
@@ -124,10 +144,6 @@ public abstract class PayloadProfile implements Payload<UUID> {
     @Override
     public void interact() {
         this.lastInteractionTimestamp = System.currentTimeMillis();
-    }
-
-    public void interactRedis() {
-        this.redisCacheTimestamp = System.currentTimeMillis();
     }
 
     @Override
@@ -145,6 +161,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
         return this.player != null;
     }
 
+    @Nonnull
     @Override
     public String identifierFieldName() {
         return "uniqueId";
@@ -165,7 +182,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
         }
     }
 
-    public void msg(String msg, String... args) {
+    public void msg(String msg, Object... args) {
         this.msg(PayloadPlugin.format(msg, args));
     }
 
@@ -200,18 +217,8 @@ public abstract class PayloadProfile implements Payload<UUID> {
     }
 
     @Override
-    public boolean shouldSave() {
-        return this.isOnlineThisServer();
-    }
-
-    @Override
-    public boolean shouldPrepareUpdate() {
-        return this.isOnlineOtherServer();
-    }
-
-    @Override
-    public void save() {
-        this.getCache().save(this);
+    public boolean save() {
+        return this.cache.save(this);
     }
 
     @Override
@@ -224,7 +231,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
         return result;
     }
 
-    protected boolean canEqual(Object other) {
+    private boolean canEqual(Object other) {
         return other instanceof PayloadProfile;
     }
 
@@ -240,7 +247,12 @@ public abstract class PayloadProfile implements Payload<UUID> {
                 return false;
             } else {
                 if (this.objectId != null && other.objectId != null) {
-                    return this.objectId.equals(other.objectId);
+                    if (this.uniqueId != null && other.uniqueId != null) {
+                        return this.objectId.equals(other.objectId)
+                                && this.uniqueId.equalsIgnoreCase(other.uniqueId);
+                    } else {
+                        return false;
+                    }
                 } else {
                     return false;
                 }

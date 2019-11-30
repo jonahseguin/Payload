@@ -5,61 +5,105 @@
 
 package com.jonahseguin.payload.mode.object;
 
-import com.jonahseguin.payload.base.failsafe.FailedPayload;
-import com.jonahseguin.payload.base.layer.PayloadLayer;
+import com.google.common.base.Preconditions;
+import com.jonahseguin.payload.PayloadMode;
+import com.jonahseguin.payload.base.handshake.HandshakeHandler;
+import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.type.PayloadController;
 import lombok.Getter;
 import lombok.Setter;
+
+import javax.annotation.Nonnull;
+import java.util.Optional;
 
 @Getter
 @Setter
 public class PayloadObjectController<X extends PayloadObject> implements PayloadController<X> {
 
-    private final ObjectCache<X> cache;
-    private final ObjectData data;
+    private final PayloadObjectCache<X> cache;
+    private final String identifier;
 
-    private boolean failure = false;
     private X payload = null;
+    private boolean loadedFromLocal = false;
 
-    public PayloadObjectController(ObjectCache<X> cache, ObjectData data) {
+    PayloadObjectController(@Nonnull PayloadObjectCache<X> cache, String identifier) {
+        Preconditions.checkNotNull(cache);
+        Preconditions.checkNotNull(identifier);
         this.cache = cache;
-        this.data = data;
+        this.identifier = identifier;
+    }
+
+    private void load(boolean fromLocal) {
+        if (fromLocal) {
+            Optional<X> local = cache.getFromCache(identifier);
+            if (local.isPresent()) {
+                payload = local.get();
+                loadedFromLocal = true;
+                return;
+            }
+        }
+        Optional<X> db = cache.getFromDatabase(identifier);
+        db.ifPresent(x -> payload = x);
     }
 
     @Override
-    public X cache() {
-        for (PayloadLayer<String, X, ObjectData> layer : this.cache.getLayerController().getLayers()) {
-            try {
-                if (layer.has(this.data)) {
-                    this.cache.getErrorHandler().debug(this.cache, "Loading object " + this.data.getIdentifier() + " from layer " + layer.layerName());
-                    payload = layer.get(this.data);
+    public Optional<X> cache() {
+        if (cache.getSyncMode().equals(SyncMode.ALWAYS) && cache.getSettings().isEnableSync() && cache.isCached(identifier)) {
+            load(true);
+        } else {
+            if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
+                Optional<NetworkObject> network = cache.getNetworked(identifier);
+                if (network.isPresent()) {
+                    NetworkObject no = network.get();
+                    if (no.isThisMostRelevantServer()) {
+                        load(true);
+                    } else {
+                        // Handshake
+                        HandshakeHandler<ObjectHandshake> h = cache.getHandshakeService().publish(new ObjectHandshake(cache, identifier));
+                        h.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
+                        load(false);
+                    }
+
                     if (payload != null) {
-                        break;
+                        no.markLoaded();
+                        cache.getNetworkService().save(no);
+                    }
+                } else {
+                    // They have no network object, create it and load from the first available source
+                    load(true);
+                    if (payload != null) {
+                        network = cache.getNetworked(payload);
+                        if (network.isPresent()) {
+                            NetworkObject no = network.get();
+                            no.markLoaded();
+                            cache.getNetworkService().save(no);
+                        }
                     }
                 }
-            } catch (Exception ex) {
-                failure = true;
-                this.cache.getErrorHandler().exception(this.cache, ex, "Failed to load object " + this.data.getIdentifier() + " from layer " + layer.layerName());
+            } else {
+                // Standalone mode
+                load(true);
             }
         }
 
-        if (payload == null && this.failure) {
-            // A failure occurred.. start failure handling
-            if (!this.cache.getFailureManager().hasFailure(this.data)) {
-                this.cache.getFailureManager().fail(this.data);
-            }
-            FailedPayload<X, ObjectData> failedPayload = this.cache.getFailureManager().getFailedPayload(data);
-            if (failedPayload.getTemporaryPayload() == null) {
-                failedPayload.setTemporaryPayload(this.cache.getInstantiator().instantiate(data));
-            }
-            return failedPayload.getTemporaryPayload();
-        }
-
-        if (payload != null) {
+        if (payload != null && !loadedFromLocal) {
             this.cache.cache(payload);
-            this.cache.getErrorHandler().debug(this.cache, "Cached payload " + payload.getIdentifier());
+            this.cache.getErrorService().debug("Cached payload " + payload.getIdentifier());
         }
+        return Optional.ofNullable(payload);
+    }
 
-        return payload;
+    @Override
+    public void uncache(@Nonnull X payload, boolean switchingServers) {
+        if (cache.isCached(payload.getIdentifier())) {
+            cache.uncache(payload);
+        }
+        if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
+            Optional<NetworkObject> o = cache.getNetworkService().get(payload.getIdentifier());
+            if (o.isPresent()) {
+                NetworkObject networkObject = o.get();
+                networkObject.markUnloaded();
+            }
+        }
     }
 }

@@ -10,56 +10,56 @@ import redis.clients.jedis.Jedis;
 
 public class ServerPublisher {
 
-    private final ServerManager serverManager;
+    private final PayloadServerService payloadServerService;
 
-    public ServerPublisher(ServerManager serverManager) {
-        this.serverManager = serverManager;
+    public ServerPublisher(PayloadServerService serverService) {
+        this.payloadServerService = serverService;
     }
 
     public void publishPing() {
-        this.serverManager.getExecutorService().submit(() -> {
-            try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
-                jedis.publish(ServerEvent.PING.getEvent(), serverManager.getThisServer().getName());
+        this.payloadServerService.getExecutorService().submit(() -> {
+            try (Jedis jedis = this.payloadServerService.getDatabase().getJedisResource()) {
+                jedis.publish(ServerEvent.PING.getEvent(), payloadServerService.getThisServer().getName());
             }
             catch (Exception ex) {
-                serverManager.getDatabase().databaseError(ex, "Server Manager: Error publishing PING event");
+                payloadServerService.getDatabase().getErrorService().capture(ex, "Server Manager: Error publishing PING event");
             }
         });
     }
 
     public void publishJoin() {
-        this.serverManager.getExecutorService().submit(() -> {
-            try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
-                jedis.publish(ServerEvent.JOIN.getEvent(), serverManager.getThisServer().getName());
+        this.payloadServerService.getExecutorService().submit(() -> {
+            try (Jedis jedis = this.payloadServerService.getDatabase().getJedisResource()) {
+                jedis.publish(ServerEvent.JOIN.getEvent(), payloadServerService.getThisServer().getName());
             }
             catch (Exception ex) {
-                serverManager.getDatabase().databaseError(ex, "Server Manager: Error publishing JOIN event");
+                payloadServerService.getDatabase().getErrorService().capture(ex, "Server Manager: Error publishing JOIN event");
             }
         });
     }
 
     public void publishQuit() {
         // Sync -- we want this to complete first before shutdown
-        this.serverManager.getExecutorService().submit(() -> {
-            try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
-                jedis.publish(ServerEvent.QUIT.getEvent(), serverManager.getThisServer().getName());
+        this.payloadServerService.getExecutorService().submit(() -> {
+            try (Jedis jedis = this.payloadServerService.getDatabase().getJedisResource()) {
+                jedis.publish(ServerEvent.QUIT.getEvent(), payloadServerService.getThisServer().getName());
             }
             catch (Exception ex) {
-                serverManager.getDatabase().databaseError(ex, "Server Manager: Error publishing QUIT event");
+                payloadServerService.getDatabase().getErrorService().capture(ex, "Server Manager: Error publishing QUIT event");
             }
         });
     }
 
     public void publishUpdateName(String oldName, String newName) {
-        this.serverManager.getExecutorService().submit(() -> {
-            try (Jedis jedis = this.serverManager.getDatabase().getResource()) {
+        this.payloadServerService.getExecutorService().submit(() -> {
+            try (Jedis jedis = this.payloadServerService.getDatabase().getJedisResource()) {
                 Document data = new Document();
                 data.append("old", oldName);
                 data.append("new", newName);
                 jedis.publish(ServerEvent.UPDATE_NAME.getEvent(), data.toJson());
             }
             catch (Exception ex) {
-                serverManager.getDatabase().databaseError(ex, "Server Manager: Error publishing UPDATE_NAME event");
+                payloadServerService.getDatabase().getErrorService().capture(ex, "Server Manager: Error publishing UPDATE_NAME event");
             }
         });
     }

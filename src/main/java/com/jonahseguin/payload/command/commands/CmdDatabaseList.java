@@ -5,6 +5,7 @@
 
 package com.jonahseguin.payload.command.commands;
 
+import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
@@ -13,10 +14,17 @@ import com.jonahseguin.payload.database.PayloadDatabase;
 
 public class CmdDatabaseList implements PayloadCommand {
 
+    private final PayloadAPI api;
+
+    @Inject
+    public CmdDatabaseList(PayloadAPI api) {
+        this.api = api;
+    }
+
     @Override
     public void execute(CmdArgs args) {
         args.msg("&7***** &6Payload Databases &7*****");
-        for (PayloadDatabase database : PayloadAPI.get().getDatabases().values()) {
+        for (PayloadDatabase database : api.getDatabases().values()) {
             args.msg("&7" + database.getName() + " - " + (database.getState().isDatabaseConnected() ? "&aConnected" : "&cDisconnected"));
         }
     }

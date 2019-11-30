@@ -5,17 +5,21 @@
 
 package com.jonahseguin.payload;
 
+import com.google.common.base.Preconditions;
+import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.exception.runtime.PayloadProvisionException;
+import com.jonahseguin.payload.base.handshake.HandshakeService;
+import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.type.Payload;
-import com.jonahseguin.payload.base.type.PayloadData;
+import com.jonahseguin.payload.database.DatabaseModule;
 import com.jonahseguin.payload.database.PayloadDatabase;
+import com.jonahseguin.payload.server.ServerService;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
-import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
 
+import javax.annotation.Nonnull;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -23,22 +27,29 @@ import java.util.stream.Collectors;
 @Getter
 public class PayloadAPI {
 
-    private static PayloadAPI instance;
     private final PayloadPlugin plugin;
-    private final ConcurrentMap<String, PayloadHook> hooks = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, PayloadCache> caches = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Cache> caches = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, PayloadDatabase> databases = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, ServerService> serverServices = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, HandshakeService> handshakeServices = new ConcurrentHashMap<>();
     private final Set<String> requested = new HashSet<>();
 
-    private List<PayloadCache> _sortedCaches = null;
-    private List<PayloadCache> _sortedCachesReversed = null;
+    private List<Cache> _sortedCaches = null;
+    private List<Cache> _sortedCachesReversed = null;
 
-    protected PayloadAPI(PayloadPlugin plugin) throws IllegalAccessException {
+    PayloadAPI(PayloadPlugin plugin) {
         this.plugin = plugin;
-        if (PayloadAPI.instance != null) {
-            throw new IllegalAccessException("PayloadAPI can only be created by the internal Payload plugin.");
-        }
-        PayloadAPI.instance = this;
+    }
+
+    public static PayloadModule install(@Nonnull JavaPlugin plugin, @Nonnull DatabaseModule databaseModule) {
+        Preconditions.checkNotNull(plugin);
+        Preconditions.checkNotNull(databaseModule);
+        return new PayloadModule(plugin, databaseModule);
+    }
+
+    public static PayloadModule install(@Nonnull JavaPlugin plugin, @Nonnull String databaseName) {
+        Preconditions.checkNotNull(databaseName);
+        return install(plugin, new DatabaseModule(databaseName));
     }
 
     /**
@@ -49,77 +60,16 @@ public class PayloadAPI {
         return this.plugin.getLocal().getPayloadID();
     }
 
-    /**
-     * Check if a hook is valid for a plugin
-     * @param plugin Plugin
-     * @param hook PayloadHook
-     * @return True if valid, else false
-     */
-    public final boolean validateHook(Plugin plugin, PayloadHook hook) {
-        return this.isProvisioned(plugin) && getHook(plugin).equals(hook);
-    }
-
-    /**
-     * Get the singleton instance of the Payload API
-     * @return {@link PayloadAPI}
-     */
-    public static PayloadAPI get() {
-        return PayloadAPI.instance;
-    }
-
     public static String convertCacheName(String name) {
         return name.toLowerCase().replace(" ", "");
-    }
-
-    /**
-     * Check if a hook has been provisioned for a plugin
-     * @param plugin {@link Plugin}
-     * @return True if provisioned, else false
-     */
-    public boolean isProvisioned(Plugin plugin) {
-        return this.hooks.containsKey(plugin.getName());
-    }
-
-
-    /**
-     * Get the {@link PayloadHook} for a {@link Plugin}
-     * @param plugin {@link Plugin}
-     * @return {@link PayloadHook} if the plugin is provisioned ({@link #isProvisioned(Plugin)})
-     */
-    public PayloadHook getHook(Plugin plugin) {
-        if (!this.isProvisioned(plugin)) {
-            throw new PayloadProvisionException("Cannot get a hook that is not yet provisioned.  Use requestProvision() first.");
-        }
-        return this.hooks.get(plugin.getName());
-    }
-
-    /**
-     * Request a provision for a Plugin, async.
-     * This is the method for obtaining an {@link PayloadHook} for a {@link Plugin} / JavaPlugin instance,
-     * for an external hooking plugin.
-     * @param plugin {@link Plugin} the hooking plugin
-     * @return The {@link PayloadHook} for your plugin
-     * might also throw an exception if the hook is already registered
-     */
-    public PayloadHook requestProvision(final Plugin plugin) {
-        if (this.hooks.containsKey(plugin.getName())) {
-            throw new IllegalStateException("Hook has already been provisioned for plugin " + plugin.getName());
-        }
-        PayloadHook hook = new PayloadHook(plugin);
-        this.hooks.putIfAbsent(plugin.getName(), hook);
-        return hook;
     }
 
     /**
      * Register a cache w/ a hook
      *
      * @param cache {@link PayloadCache}
-     * @param hook  {@link PayloadHook}
      */
-    public final void saveCache(PayloadCache cache, PayloadHook hook) {
-        if (!this.validateHook(hook.getPlugin(), hook)) {
-            throw new IllegalStateException("Hook is not valid for cache to save in PayloadAPI");
-        }
+    public final void saveCache(Cache cache) {
         this.caches.putIfAbsent(convertCacheName(cache.getName()), cache);
     }
 
@@ -139,6 +89,39 @@ public class PayloadAPI {
         return this.databases.containsKey(name.toLowerCase());
     }
 
+    public boolean isServerServiceRegistered(String name) {
+        return this.serverServices.containsKey(name.toLowerCase());
+    }
+
+    public ServerService getServerService(String name) {
+        return this.serverServices.get(name.toLowerCase());
+    }
+
+    public void registerServerService(ServerService serverService) {
+        if (!isServerServiceRegistered(serverService.getName())) {
+            this.serverServices.put(serverService.getName(), serverService);
+        } else {
+            throw new IllegalArgumentException("A Payload Server Service (database) with the name '" + serverService.getName() + "' has already been registered.  Choose a different name.");
+        }
+    }
+
+    public boolean isHandshakeServiceRegistered(String name) {
+        return this.handshakeServices.containsKey(name.toLowerCase());
+    }
+
+    public HandshakeService getHandshakeService(String name) {
+        return this.handshakeServices.get(name.toLowerCase());
+    }
+
+    public void registerHandshakeService(HandshakeService handshakeService) {
+        if (!isHandshakeServiceRegistered(handshakeService.getName())) {
+            this.handshakeServices.put(handshakeService.getName(), handshakeService);
+        } else {
+            throw new IllegalArgumentException("A Payload Server Service (database) with the name '" + handshakeService.getName() + "' has already been registered.  Choose a different name.");
+        }
+    }
+
+
     /**
      * Get a cache by name
      * @param name Name of the cache
@@ -147,28 +130,36 @@ public class PayloadAPI {
      * @return The Cache
      */
     @SuppressWarnings("unchecked") // bad, oops
-    public <K, X extends Payload<K>, D extends PayloadData> PayloadCache<K, X, D> getCache(String name) {
-        return (PayloadCache<K, X, D>) this.caches.get(convertCacheName(name));
+    public <K, X extends Payload<K>, N extends NetworkPayload<K>> Cache<K, X, N> getCache(String name) {
+        return (Cache<K, X, N>) this.caches.get(convertCacheName(name));
     }
 
-    public List<PayloadCache> getSortedCachesByDepends() {
+    public Cache getCacheRaw(String name) {
+        return this.caches.get(convertCacheName(name));
+    }
+
+    public boolean isCacheRegistered(String name) {
+        return this.caches.containsKey(convertCacheName(name));
+    }
+
+    public List<Cache> getSortedCachesByDepends() {
         if (this._sortedCaches != null) {
             if (!this.hasBeenModified()) {
                 return this._sortedCaches;
             }
         }
         this._sortedCaches = new ArrayList<>(this.caches.values()).stream().sorted().collect(Collectors.toList());
-        Collections.reverse(this._sortedCaches);
         return this._sortedCaches;
     }
 
-    public List<PayloadCache> getSortedCachesByDependsReversed() {
+    public List<Cache> getSortedCachesByDependsReversed() {
         if (this._sortedCachesReversed != null) {
             if (!this.hasBeenModifiedReversed()) {
                 return this._sortedCachesReversed;
             }
         }
         this._sortedCachesReversed = new ArrayList<>(this.caches.values()).stream().sorted().collect(Collectors.toList());
+        Collections.reverse(this._sortedCachesReversed);
         return this._sortedCachesReversed;
     }
 
@@ -182,13 +173,13 @@ public class PayloadAPI {
 
     public void setPayloadID(String name) {
         if (StringUtils.isAlphanumeric(name)) {
-            final String oldName = PayloadPlugin.get().getLocal().getPayloadID();
-            PayloadPlugin.get().getLocal().savePayloadID(name);
-            for (PayloadCache cache : getCaches().values()) {
+            final String oldName = plugin.getLocal().getPayloadID();
+            plugin.getLocal().savePayloadID(name);
+            for (Cache cache : getCaches().values()) {
                 cache.updatePayloadID();
             }
             for (PayloadDatabase database : getDatabases().values()) {
-                database.getServerManager().getPublisher().publishUpdateName(oldName, name);
+                database.getServerService().getPublisher().publishUpdateName(oldName, name);
             }
         } else {
             throw new IllegalArgumentException("Payload ID must be alphanumeric, '" + name + "' is not valid.");

@@ -5,31 +5,51 @@
 
 package com.jonahseguin.payload.mode.object;
 
-import com.jonahseguin.payload.PayloadAPI;
+import com.google.inject.Inject;
 import com.jonahseguin.payload.base.type.Payload;
 import dev.morphia.annotations.Id;
 import lombok.Getter;
 import lombok.Setter;
 import org.bson.types.ObjectId;
 
+import javax.annotation.Nonnull;
+
 @Getter
 @Setter
 public abstract class PayloadObject implements Payload<String> {
 
-    private String payloadId;
+    protected transient final ObjectCache cache;
 
+    protected String payloadId;
     @Id
-    private ObjectId objectId = new ObjectId();
+    protected ObjectId objectId = new ObjectId();
+    protected transient long cachedTimestamp = System.currentTimeMillis();
+    protected transient long handshakeStartTimestamp = 0;
 
-    private long cachedTimestamp = System.currentTimeMillis();
-
-    public PayloadObject() {
-        this.payloadId = PayloadAPI.get().getPayloadID();
+    @Inject
+    public PayloadObject(ObjectCache cache) {
+        this.cache = cache;
+        if (cache != null && cache.getApi().getPayloadID() != null) {
+            this.payloadId = cache.getApi().getPayloadID();
+        }
+        if (cache == null) {
+            System.out.println("cache is null");
+        }
+        if (cache != null) {
+            if (cache.getApi().getPayloadID() == null) {
+                System.out.println("payload id is null");
+            }
+        }
     }
 
-    public PayloadObject(ObjectId objectId) {
-        this();
-        this.objectId = objectId;
+    @Override
+    public boolean hasValidHandshake() {
+        if (handshakeStartTimestamp > 0) {
+            long ago = System.currentTimeMillis() - handshakeStartTimestamp;
+            long seconds = ago / 1000;
+            return seconds < 10;
+        }
+        return false;
     }
 
     @Override
@@ -53,19 +73,14 @@ public abstract class PayloadObject implements Payload<String> {
     }
 
     @Override
-    public boolean shouldSave() {
-        return this.getCache().getSettings().isEnableSync() || this.getCache().getSettings().isServerSpecific();
+    public boolean save() {
+        return this.getCache().save(this);
     }
 
+    @Nonnull
     @Override
-    public boolean shouldPrepareUpdate() {
-        return !this.getCache().getSettings().isEnableSync() && !this.getCache().getSettings().isServerSpecific();
-    }
-
-
-    @Override
-    public void save() {
-        this.getCache().save(this);
+    public ObjectCache getCache() {
+        return cache;
     }
 
     @Override

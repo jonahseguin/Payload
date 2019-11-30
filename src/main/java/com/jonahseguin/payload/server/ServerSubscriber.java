@@ -10,10 +10,10 @@ import redis.clients.jedis.JedisPubSub;
 
 public class ServerSubscriber extends JedisPubSub {
 
-    private final ServerManager serverManager;
+    private final PayloadServerService payloadServerService;
 
-    public ServerSubscriber(ServerManager serverManager) {
-        this.serverManager = serverManager;
+    public ServerSubscriber(PayloadServerService payloadServerService) {
+        this.payloadServerService = payloadServerService;
     }
 
     @Override
@@ -21,22 +21,22 @@ public class ServerSubscriber extends JedisPubSub {
         ServerEvent event = ServerEvent.fromChannel(channel);
         if (event != null) {
             if (event.equals(ServerEvent.JOIN)) {
-                if (!message.equalsIgnoreCase(this.serverManager.getThisServer().getName())) {
-                    serverManager.handleJoin(message);
+                if (!message.equalsIgnoreCase(this.payloadServerService.getThisServer().getName())) {
+                    payloadServerService.handleJoin(message);
                 }
             } else if (event.equals(ServerEvent.QUIT)) {
-                if (!message.equalsIgnoreCase(this.serverManager.getThisServer().getName())) {
-                    serverManager.handleQuit(message);
+                if (!message.equalsIgnoreCase(this.payloadServerService.getThisServer().getName())) {
+                    payloadServerService.handleQuit(message);
                 }
             } else if (event.equals(ServerEvent.PING)) {
-                if (!message.equalsIgnoreCase(this.serverManager.getThisServer().getName())) {
-                    serverManager.handlePing(message);
+                if (!message.equalsIgnoreCase(this.payloadServerService.getThisServer().getName())) {
+                    payloadServerService.handlePing(message);
                 }
             } else if (event.equals(ServerEvent.UPDATE_NAME)) {
                 Document data = Document.parse(message);
                 String oldName = data.getString("old");
                 String newName = data.getString("new");
-                serverManager.handleUpdateName(oldName, newName);
+                payloadServerService.handleUpdateName(oldName, newName);
             }
         }
     }

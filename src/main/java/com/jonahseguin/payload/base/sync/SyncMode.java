@@ -7,8 +7,7 @@ package com.jonahseguin.payload.base.sync;
 
 public enum SyncMode {
 
-    UPDATE, // We will only update locally stored objects with matching IDs
-
-    CACHE_ALL // We will cache all objects we receive updates for
+    ALWAYS,
+    IF_CACHED
 
 }
