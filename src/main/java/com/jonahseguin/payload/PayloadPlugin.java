@@ -40,7 +40,7 @@ public class PayloadPlugin extends JavaPlugin {
     private static PayloadPlugin plugin = null;
     private Injector injector = null;
     private boolean locked = false;
-    private PayloadLocal local = new PayloadLocal(this);
+    private final PayloadLocal local = new PayloadLocal(this);
     private PCommandHandler commandHandler;
     private LangService lang;
 
@@ -56,7 +56,7 @@ public class PayloadPlugin extends JavaPlugin {
             if (args.length > 0) {
                 for (int i = 0; i < args.length; i++) {
                     if (s.contains("{" + i + "}")) {
-                        s = s.replace("{" + i + "}", args[i].toString());
+                        s = s.replace("{" + i + "}", args[i] != null ? args[i].toString() : "null");
                     }
                 }
             }

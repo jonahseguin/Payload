@@ -31,7 +31,6 @@ public class PayloadDatabaseService implements DatabaseService {
     private final Morphia morphia;
     private final PayloadDatabase database;
     private Datastore datastore = null;
-    private ServerService serverService = null;
 
     @Inject
     public PayloadDatabaseService(Injector injector, @Database String name, @Database ErrorService error, PayloadDatabase database) {
@@ -92,7 +91,7 @@ public class PayloadDatabaseService implements DatabaseService {
 
     @Override
     public ServerService getServerService() {
-        return serverService;
+        return database.getServerService();
     }
 
     @Override

@@ -85,58 +85,70 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         if (cache.isCached(payload.getUniqueId())) {
             cache.uncache(payload.getUniqueId());
         }
-        if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
-            Optional<NetworkProfile> o = cache.getNetworkService().get(payload.getUniqueId());
-            if (o.isPresent()) {
-                NetworkProfile networkProfile = o.get();
-                networkProfile.markUnloaded(switchingServers);
-            }
+        Optional<NetworkProfile> o = cache.getNetworkService().get(payload.getUniqueId());
+        if (o.isPresent()) {
+            NetworkProfile networkProfile = o.get();
+            networkProfile.markUnloaded(switchingServers);
         }
     }
 
     private Optional<X> cacheStandalone() {
         // Iterate each layer in order
-        if (cache.getLocalStore().has(uuid)) {
-            return cache.getLocalStore().get(uuid);
+        Optional<X> localO = cache.getLocalStore().get(uuid);
+        if (localO.isPresent()) {
+            payload = localO.get();
         }
-        Optional<X> o = cache.getMongoStore().get(uuid);
+        else {
+            Optional<X> o = cache.getMongoStore().get(uuid);
 
-        if (!o.isPresent()) {
-            // Failed to load from all layers
+            if (!o.isPresent()) {
+                // Failed to load from all layers
 
-            // If there was a failure/error, start failure handling instead of making a new profile
-            if (failure || !cache.getDatabase().getState().canCacheFunction(cache)) {
-                denyJoin = true;
-                joinDenyReason = ChatColor.RED + "The database is currently offline.  Please try again soon.";
-                payload = null;
-            } else if (login) {
-                // Only make a new profile if they are logging in
-                getCache().getErrorService().debug("Creating a new profile for Payload " + username);
-                // Otherwise make a new profile
-                payload = cache.getInstantiator().instantiate(cache.getInjector());
-                if (username != null) {
-                    payload.setUsername(username);
-                }
-                payload.setUUID(uuid);
-                payload.setLoginIp(loginIp);
-                payload.setLoadingSource("New Profile");
-                cache.getPool().submit(() -> cache.save(payload));
-            }
-            // If they aren't logging in (getting a payload by UUID/username) and it wasn't found, return null as they don't exist.
-        } else {
-            payload = o.get();
-            if (login) {
-                // Update their login ip
-                if (loginIp != null) {
+                // If there was a failure/error, start failure handling instead of making a new profile
+                if (failure || !cache.getDatabase().getState().canCacheFunction(cache)) {
+                    denyJoin = true;
+                    joinDenyReason = ChatColor.RED + "The database is currently offline.  Please try again soon.";
+                    payload = null;
+                } else if (login) {
+                    // Only make a new profile if they are logging in
+                    getCache().getErrorService().debug("Creating a new profile for Payload " + username);
+                    // Otherwise make a new profile
+                    payload = cache.getInstantiator().instantiate(cache.getInjector());
+                    if (username != null) {
+                        payload.setUsername(username);
+                    }
+                    payload.setUUID(uuid);
                     payload.setLoginIp(loginIp);
+                    payload.setLoadingSource("New Profile");
+                    cache.getPool().submit(() -> cache.save(payload));
                 }
-                if (username != null) {
-                    payload.setUsername(username); // Update their username
-                }
+                // If they aren't logging in (getting a payload by UUID/username) and it wasn't found, return null as they don't exist.
+            } else {
+                payload = o.get();
             }
+            if (payload != null) {
+                if (login) {
 
-            // Cache the Payload if successful
-            cache.cache(payload);
+                    Optional<NetworkProfile> oNP = cache.getNetworked(payload);
+                    NetworkProfile networkProfile = oNP.orElseGet(() -> cache.getNetworkService().create(payload));
+
+                    if (networkProfile != null) {
+                        networkProfile.markLoaded(login);
+                        cache.runAsync(() -> cache.getNetworkService().save(networkProfile));
+                    }
+
+                    // Update their login ip
+                    if (loginIp != null) {
+                        payload.setLoginIp(loginIp);
+                    }
+                    if (username != null) {
+                        payload.setUsername(username); // Update their username
+                    }
+                }
+
+                // Cache the Payload if successful
+                cache.cache(payload);
+            }
         }
 
         return Optional.ofNullable(payload);
@@ -239,7 +251,11 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     public void initializeOnJoin(Player player) {
         this.player = player;
         if (payload != null) {
+            cache.getErrorService().debug("called initializeOnJoin() in controller for " + player.getName());
             payload.initializePlayer(player);
+        }
+        else {
+            cache.getErrorService().debug("failed to call initializeOnJoin() for " + player.getName() + " (payload is null in controller)");
         }
     }
 

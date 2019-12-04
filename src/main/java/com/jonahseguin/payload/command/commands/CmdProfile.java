@@ -63,10 +63,10 @@ public class CmdProfile implements PayloadCommand {
                     args.msg("&eNetwork Properties:");
                     args.msg("&7Online: &6{0}", (np.isOnline() ? "&aYes" : "&cNo"));
                     args.msg("&7Loaded: &6{0}", (np.isLoaded() ? "&aYes" : "&cNo"));
-                    args.msg("&7Last Seen On: &6{0}", np.getLastSeenServer());
-                    args.msg("&7Last Seen At: &6{0}", np.getLastSeen().toString());
-                    args.msg("&7Last Saved: &6{0}", np.getLastSaved().toString());
-                    args.msg("&7Last Cached: &6{0}", np.getLastCached().toString());
+                    args.msg("&7Last Seen On: &6{0}", np.getLastSeenServer() != null ? np.getLastSeenServer() : "&cN/A");
+                    args.msg("&7Last Seen At: &6{0}", np.getLastSeen() != null ? np.getLastSeen().toString() : "&cN/A");
+                    args.msg("&7Last Saved: &6{0}", np.getLastSaved() != null ? np.getLastSaved().toString() : "&cN/A");
+                    args.msg("&7Last Cached: &6{0}", np.getLastCached() != null ? np.getLastCached().toString() : "&cN/A");
                 }
             } else {
                 args.msg("&cPayload: A profile with username '{0}' does not exist in cache '{1}'.", playerName);

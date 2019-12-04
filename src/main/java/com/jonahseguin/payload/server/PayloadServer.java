@@ -5,6 +5,7 @@
 
 package com.jonahseguin.payload.server;
 
+import com.google.inject.Inject;
 import dev.morphia.annotations.Embedded;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +19,7 @@ public class PayloadServer {
     private long lastPing = 0;
     private boolean online = false;
 
+    @Inject
     public PayloadServer() {
     }
 

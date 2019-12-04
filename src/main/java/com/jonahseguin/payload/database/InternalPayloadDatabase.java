@@ -87,6 +87,15 @@ public class InternalPayloadDatabase implements PayloadDatabase {
             server = serverService.start();
         }
         running = true;
+        if (!mongo) {
+            payloadPlugin.getLogger().severe("Database " + name + ": Failed to start MongoDB");
+        }
+        if (!redis) {
+            payloadPlugin.getLogger().severe("Database " + name + ": Failed to start Redis");
+        }
+        if (!server) {
+            payloadPlugin.getLogger().severe("Database " + name + ": Failed to start Server Service");
+        }
         return mongo && redis && server;
     }
 
@@ -103,6 +112,15 @@ public class InternalPayloadDatabase implements PayloadDatabase {
         boolean mongo = this.disconnectMongo();
         boolean redis = this.disconnectRedis();
         this.running = false;
+        if (!mongo) {
+            payloadPlugin.getLogger().severe("Database " + name + ": Failed to shutdown MongoDB");
+        }
+        if (!redis) {
+            payloadPlugin.getLogger().severe("Database " + name + ": Failed to shutdown Redis");
+        }
+        if (!server) {
+            payloadPlugin.getLogger().severe("Database " + name + ": Failed to shutdown Server Service");
+        }
         return mongo && redis && server;
     }
 

@@ -64,7 +64,7 @@ public class ProfileListener implements Listener {
                 PayloadProfileCache cache = (PayloadProfileCache) c;
                 PayloadProfileController controller = cache.getController(player.getUniqueId());
                 if (controller != null) {
-                    cache.getErrorService().debug("Initializing player " + player.getName());
+                    cache.getErrorService().debug("Initializing player " + player.getName() + " for cache " + cache.getName());
                     controller.initializeOnJoin(player);
                 }
                 else {
@@ -90,6 +90,13 @@ public class ProfileListener implements Listener {
 
                                 PayloadProfileLogoutEvent payloadEvent = new PayloadProfileLogoutEvent(profile);
                                 cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
+
+                                Optional<NetworkProfile> oNP = cache.getNetworked(profile);
+                                oNP.ifPresent(networkProfile -> {
+                                    networkProfile.setOnline(false);
+                                    networkProfile.setLastSeen(new Date());
+                                    cache.runAsync(() -> cache.getNetworkService().save(networkProfile));
+                                });
 
                                 profile.uninitializePlayer();
                                 if (!cache.save(profile)) {
