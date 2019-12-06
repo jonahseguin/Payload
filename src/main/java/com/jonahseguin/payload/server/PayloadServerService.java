@@ -53,19 +53,24 @@ public class PayloadServerService implements Runnable, ServerService {
 
     @Override
     public boolean start() {
-        this.publisher = new ServerPublisher(this);
+        try {
+            this.publisher = new ServerPublisher(this);
 
-        this.executorService.submit(() -> {
-            this.jedisSubscriber = this.database.getJedisResource();
-            this.subscriber = new ServerSubscriber(this);
-            this.jedisSubscriber.subscribe(this.subscriber,
-                    "server-join", "server-ping", "server-quit", "server-update-name");
-        });
+            this.executorService.submit(() -> {
+                this.jedisSubscriber = this.database.getJedisResource();
+                this.subscriber = new ServerSubscriber(this);
+                this.jedisSubscriber.subscribe(this.subscriber,
+                        "server-join", "server-ping", "server-quit", "server-update-name");
+            });
 
-        this.publisher.publishJoin();
-        this.pingTask = payloadPlugin.getServer().getScheduler().runTaskTimerAsynchronously(payloadPlugin, this, (PING_FREQUENCY_SECONDS * 20), (PING_FREQUENCY_SECONDS * 20));
-        running = true;
-        return true;
+            this.publisher.publishJoin();
+            this.pingTask = payloadPlugin.getServer().getScheduler().runTaskTimerAsynchronously(payloadPlugin, this, (PING_FREQUENCY_SECONDS * 20), (PING_FREQUENCY_SECONDS * 20));
+            running = true;
+            return true;
+        } catch (Exception ex) {
+            error.capture(ex, "Error starting Server Service for database: " + name);
+            return false;
+        }
     }
 
     @Override
@@ -137,27 +142,32 @@ public class PayloadServerService implements Runnable, ServerService {
 
     @Override
     public boolean shutdown() {
-        if (this.pingTask != null) {
-            this.pingTask.cancel();
-        }
-
-        if (this.subscriber != null) {
-            if (this.subscriber.isSubscribed()) {
-                this.subscriber.unsubscribe();
+        try {
+            if (this.pingTask != null) {
+                this.pingTask.cancel();
             }
-            this.subscriber = null;
-        }
 
-        this.publisher.publishQuit(); // Sync.
-        this.shutdownExecutor();
+            if (this.subscriber != null) {
+                if (this.subscriber.isSubscribed()) {
+                    this.subscriber.unsubscribe();
+                }
+                this.subscriber = null;
+            }
 
-        this.publisher = null;
-        if (this.jedisSubscriber != null) {
-            this.jedisSubscriber.close();
-            this.jedisSubscriber = null;
+            this.publisher.publishQuit(); // Sync.
+            this.shutdownExecutor();
+
+            this.publisher = null;
+            if (this.jedisSubscriber != null) {
+                this.jedisSubscriber.close();
+                this.jedisSubscriber = null;
+            }
+            running = false;
+            return true;
+        } catch (Exception ex) {
+            error.capture("Error shutting down Server Service for database: " + name);
+            return false;
         }
-        running = false;
-        return true;
     }
 
     @Override

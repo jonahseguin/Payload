@@ -233,7 +233,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             }
         }
 
-        if (payload != null && !loadedFromLocal) {
+        if (payload != null) {
             if (username != null && !payload.getUsername().equalsIgnoreCase(username)) {
                 cache.getErrorService().debug("Updated username: " + payload.getUsername() + " to " + username);
                 payload.setUsername(username);
@@ -241,8 +241,10 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                     cache.getErrorService().capture("Error saving Payload during caching after username update: " + payload.getUsername());
                 }
             }
-            if (login || cache.getSettings().isAlwaysCacheOnLoadNetworkNode()) {
-                cache.cache(payload);
+            if (!loadedFromLocal) {
+                if (login || cache.getSettings().isAlwaysCacheOnLoadNetworkNode()) {
+                    cache.cache(payload);
+                }
             }
         }
         return Optional.ofNullable(payload);

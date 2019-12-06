@@ -90,7 +90,7 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
     protected boolean terminate() {
         boolean success = true;
         for (Player player : plugin.getServer().getOnlinePlayers()) {
-            player.kickPlayer(lang.module(this).format("shutdown"));
+            getFromCache(player).ifPresent(this::save);
         }
         controllers.clear();
         if (!localStore.shutdown()) {
@@ -332,28 +332,27 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
     @Override
     public boolean save(@Nonnull X payload) {
         Preconditions.checkNotNull(payload);
-        if (mode.equals(PayloadMode.NETWORK_NODE)) {
-            Optional<NetworkProfile> onp = networkService.get(payload);
-            if (onp.isPresent()) {
-                NetworkProfile np = onp.get();
-                if (this.saveNoSync(payload)) {
-                    np.markSaved();
-                    if (networkService.save(np)) {
-                        if (settings.isEnableSync()) {
-                            sync.update(payload.getIdentifier());
-                        }
-                        return true;
-                    } else {
-                        return false;
+        Optional<NetworkProfile> onp = networkService.get(payload);
+        if (onp.isPresent()) {
+            NetworkProfile np = onp.get();
+            if (this.saveNoSync(payload)) {
+                np.markSaved();
+                if (networkService.save(np)) {
+                    if (settings.isEnableSync()) {
+                        sync.update(payload.getIdentifier());
                     }
+                    return true;
                 } else {
+                    errorService.capture("Failed to save profile " + payload.getName() + ": Couldn't save network profile (but saved normal profile)");
                     return false;
                 }
             } else {
+                errorService.capture("Failed to save profile " + payload.getName() + ": Failed to save to database (via saveNoSync())");
                 return false;
             }
         } else {
-            return saveNoSync(payload);
+            errorService.capture("Failed to save profile " + payload.getName() + ": Network Profile doesn't exist");
+            return false;
         }
     }
 

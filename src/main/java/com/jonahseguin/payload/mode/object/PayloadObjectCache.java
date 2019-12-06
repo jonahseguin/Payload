@@ -65,6 +65,13 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
 
     @Override
     protected boolean terminate() {
+        getCached().forEach(payload -> {
+            getNetworked(payload).ifPresent(no -> {
+                if (no.isThisMostRelevantServer()) {
+                    save(payload);
+                }
+            });
+        });
         controllers.clear();
         return true;
     }
@@ -80,18 +87,21 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
     public boolean saveNoSync(@Nonnull X payload) {
         boolean success = true;
         if (!localStore.save(payload)) {
+            errorService.capture("Failed to save to local store for object " + payload.getIdentifier());
             success = false;
         }
         if (!mongoStore.save(payload)) {
+            errorService.capture("Failed to save to MongoDB store for object " + payload.getIdentifier());
             success = false;
         }
-        if (success && mode.equals(PayloadMode.NETWORK_NODE)) {
+        if (success) {
             Optional<NetworkObject> o = networkService.get(payload);
             if (o.isPresent()) {
                 NetworkObject no = o.get();
                 no.markSaved();
                 if (!networkService.save(no)) {
                     success = false;
+                    errorService.capture("Failed to save Network Object for object " + payload.getIdentifier());
                 }
             }
         }

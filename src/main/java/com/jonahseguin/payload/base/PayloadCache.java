@@ -353,6 +353,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
             }
             return true;
         }
+        errorService.capture("Failed to save payload " + keyToString(payload.getIdentifier()) + " (during saveNoSync())");
         return false;
     }
 
