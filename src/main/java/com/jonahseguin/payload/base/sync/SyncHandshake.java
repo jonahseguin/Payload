@@ -79,7 +79,7 @@ public class SyncHandshake<K, X extends Payload<K>, N extends NetworkPayload<K>>
 
     @Override
     public boolean shouldAccept() {
-        return cache.isCached(identifier);
+        return cache.isCached(identifier) || cache.getSyncMode().equals(SyncMode.ALWAYS);
     }
 
     @Override
