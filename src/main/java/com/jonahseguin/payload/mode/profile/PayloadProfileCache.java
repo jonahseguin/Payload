@@ -80,7 +80,7 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
             errorService.capture("Failed to start MongoDB store for cache " + name);
         }
         if (mode.equals(PayloadMode.NETWORK_NODE)) {
-            handshakeService.subscribe(new ProfileHandshake(this));
+            handshakeService.subscribe(new ProfileHandshake(injector, this));
         }
         database.getMorphia().map(NetworkProfile.class);
         return success;

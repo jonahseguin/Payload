@@ -59,7 +59,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
                         load(true);
                     } else {
                         // Handshake
-                        HandshakeHandler<ObjectHandshake> h = cache.getHandshakeService().publish(new ObjectHandshake(cache, identifier));
+                        HandshakeHandler<ObjectHandshake> h = cache.getHandshakeService().publish(new ObjectHandshake(cache.getInjector(), cache, identifier));
                         h.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
                         load(false);
                     }

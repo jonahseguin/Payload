@@ -6,6 +6,7 @@
 package com.jonahseguin.payload.mode.object;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Injector;
 import com.jonahseguin.payload.base.handshake.Handshake;
 import com.jonahseguin.payload.base.handshake.HandshakeData;
 
@@ -18,20 +19,21 @@ public class ObjectHandshake extends Handshake {
     private final ObjectCache cache;
     private String identifier = null;
 
-    public ObjectHandshake(@Nonnull ObjectCache cache) {
+    public ObjectHandshake(Injector injector, @Nonnull ObjectCache cache) {
+        super(injector);
         Preconditions.checkNotNull(cache);
         this.cache = cache;
     }
 
-    public ObjectHandshake(@Nonnull ObjectCache cache, @Nonnull String identifier) {
-        this(cache);
+    public ObjectHandshake(Injector injector, @Nonnull ObjectCache cache, @Nonnull String identifier) {
+        this(injector, cache);
         Preconditions.checkNotNull(identifier);
         this.identifier = identifier;
     }
 
     @Override
     public ObjectHandshake create() {
-        return new ObjectHandshake(cache);
+        return new ObjectHandshake(injector, cache);
     }
 
     @Override

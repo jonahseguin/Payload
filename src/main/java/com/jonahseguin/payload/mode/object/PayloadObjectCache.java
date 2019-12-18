@@ -57,7 +57,7 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
             }
         }
         if (mode.equals(PayloadMode.NETWORK_NODE)) {
-            handshakeService.subscribe(new ObjectHandshake(this));
+            handshakeService.subscribe(new ObjectHandshake(injector, this));
         }
         database.getMorphia().map(NetworkObject.class);
         return success;

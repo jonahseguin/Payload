@@ -6,6 +6,7 @@
 package com.jonahseguin.payload.base.sync;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Injector;
 import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.handshake.Handshake;
 import com.jonahseguin.payload.base.handshake.HandshakeData;
@@ -26,11 +27,13 @@ public class SyncHandshake<K, X extends Payload<K>, N extends NetworkPayload<K>>
     private K identifier;
     private SyncHandshakeMode mode;
 
-    public SyncHandshake(Cache<K, X, N> cache) {
+    public SyncHandshake(Injector injector, Cache<K, X, N> cache) {
+        super(injector);
         this.cache = cache;
     }
 
-    public SyncHandshake(Cache<K, X, N> cache, @Nonnull K identifier, @Nonnull SyncHandshakeMode mode) {
+    public SyncHandshake(Injector injector, Cache<K, X, N> cache, @Nonnull K identifier, @Nonnull SyncHandshakeMode mode) {
+        super(injector);
         Preconditions.checkNotNull(identifier);
         this.cache = cache;
         this.identifier = identifier;
@@ -39,7 +42,7 @@ public class SyncHandshake<K, X extends Payload<K>, N extends NetworkPayload<K>>
 
     @Override
     public SyncHandshake<K, X, N> create() {
-        return new SyncHandshake<>(cache);
+        return new SyncHandshake<>(injector, cache);
     }
 
     @Override

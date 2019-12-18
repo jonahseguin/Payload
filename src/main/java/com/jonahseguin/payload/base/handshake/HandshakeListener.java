@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.base.handshake;
 
 import org.bson.Document;
@@ -20,8 +25,7 @@ public class HandshakeListener extends JedisPubSub {
             service.receive(controller.channelPublish(), mapData(json));
         } else if (channel.equalsIgnoreCase(controller.channelReply())) {
             // Receiving handshake reply
-            service.receive(controller.channelReply(), mapData(json));
-
+            service.receiveReply(controller.channelReply(), mapData(json));
         }
     }
 

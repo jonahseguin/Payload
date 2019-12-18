@@ -5,6 +5,7 @@
 
 package com.jonahseguin.payload.base;
 
+import com.google.inject.Injector;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.error.ErrorService;
@@ -155,6 +156,8 @@ public interface Cache<K, X extends Payload<K>, N extends NetworkPayload<K>> ext
     N createNetworked();
 
     HandshakeService getHandshakeService();
+
+    Injector getInjector();
 
 }
 

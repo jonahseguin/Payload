@@ -91,7 +91,7 @@ public class PayloadServerService implements Runnable, ServerService {
     @Override
     public Optional<PayloadServer> get(@Nonnull String name) {
         Preconditions.checkNotNull(name);
-        return Optional.of(this.servers.get(name.toLowerCase()));
+        return Optional.ofNullable(this.servers.get(name.toLowerCase()));
     }
 
     void handlePing(@Nonnull String serverName) {

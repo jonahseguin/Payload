@@ -6,6 +6,7 @@
 package com.jonahseguin.payload.base.handshake;
 
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.jonahseguin.payload.database.DatabaseService;
 import lombok.Getter;
 import redis.clients.jedis.Jedis;
@@ -15,6 +16,7 @@ import javax.annotation.Nonnull;
 @Getter
 public abstract class Handshake {
 
+    protected final Injector injector;
     @Inject
     protected HandshakeService handshakeService;
     @Inject
@@ -23,9 +25,11 @@ public abstract class Handshake {
     protected HandshakeHandler handler;
 
     @Inject
-    public Handshake() {
-        // No-args constructor required by Guice to create an instance
+    public Handshake(Injector injector) {
+        this.injector = injector;
+        injector.injectMembers(this);
     }
+
 
     public abstract String channelPublish();
 
@@ -63,6 +67,7 @@ public abstract class Handshake {
             subscriber.subscribe(listener, channelPublish(), channelReply());
         } catch (Exception ex) {
             database.getErrorService().capture(ex, "Error during listening for handshake " + this.getClass().getSimpleName());
+            ex.printStackTrace();
         }
     }
 

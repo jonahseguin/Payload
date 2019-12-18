@@ -6,6 +6,7 @@
 package com.jonahseguin.payload.base.handshake;
 
 import com.jonahseguin.payload.base.Service;
+import com.jonahseguin.payload.database.DatabaseService;
 
 import javax.annotation.Nonnull;
 
@@ -21,5 +22,7 @@ public interface HandshakeService extends Service {
 
     @Nonnull
     String getName();
+
+    DatabaseService getDatabaseService();
 
 }

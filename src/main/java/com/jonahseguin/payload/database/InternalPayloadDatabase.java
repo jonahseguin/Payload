@@ -76,6 +76,7 @@ public class InternalPayloadDatabase implements PayloadDatabase {
     @Override
     public boolean start() {
         Preconditions.checkState(!running, "Database " + name + " is already running");
+        errorService.debug("Starting database " + name);
         fromConfigFile("database.yml");
         boolean mongo = this.connectMongo();
         boolean redis = this.connectRedis();
@@ -96,6 +97,7 @@ public class InternalPayloadDatabase implements PayloadDatabase {
         if (!server) {
             payloadPlugin.getLogger().severe("Database " + name + ": Failed to start Server Service");
         }
+        errorService.debug("Started database " + name);
         return mongo && redis && server;
     }
 
@@ -121,6 +123,7 @@ public class InternalPayloadDatabase implements PayloadDatabase {
         if (!server) {
             payloadPlugin.getLogger().severe("Database " + name + ": Failed to shutdown Server Service");
         }
+        errorService.debug("Shutdown database " + name);
         return mongo && redis && server;
     }
 

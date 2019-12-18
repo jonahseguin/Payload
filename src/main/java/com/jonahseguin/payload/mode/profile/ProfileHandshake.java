@@ -6,6 +6,7 @@
 package com.jonahseguin.payload.mode.profile;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Injector;
 import com.jonahseguin.payload.base.handshake.Handshake;
 import com.jonahseguin.payload.base.handshake.HandshakeData;
 
@@ -16,23 +17,27 @@ import java.util.UUID;
 public class ProfileHandshake extends Handshake {
 
     public static final String KEY_UUID = "uuid";
+    public static final String KEY_SERVER = "targetServer";
     private final ProfileCache cache;
     private UUID uuid = null;
+    private String targetServer = null;
 
-    public ProfileHandshake(@Nonnull ProfileCache cache) {
+    public ProfileHandshake(Injector injector, @Nonnull ProfileCache cache) {
+        super(injector);
         Preconditions.checkNotNull(cache);
         this.cache = cache;
     }
 
-    public ProfileHandshake(@Nonnull ProfileCache cache, @Nonnull UUID uuid) {
-        this(cache);
+    public ProfileHandshake(Injector injector, @Nonnull ProfileCache cache, @Nonnull UUID uuid, @Nonnull String targetServer) {
+        this(injector, cache);
         Preconditions.checkNotNull(uuid);
         this.uuid = uuid;
+        this.targetServer = targetServer;
     }
 
     @Override
     public ProfileHandshake create() {
-        return new ProfileHandshake(cache);
+        return new ProfileHandshake(injector, cache);
     }
 
     @Override
@@ -47,12 +52,22 @@ public class ProfileHandshake extends Handshake {
 
     @Override
     public void load(@Nonnull HandshakeData data) {
-        this.uuid = UUID.fromString(data.getDocument().getString(KEY_UUID));
+        try {
+            this.uuid = UUID.fromString(data.getDocument().getString(KEY_UUID));
+            this.targetServer = data.getDocument().getString(KEY_SERVER);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     @Override
     public void write(@Nonnull HandshakeData data) {
-        data.append(KEY_UUID, this.uuid);
+        try {
+            data.append(KEY_UUID, this.uuid.toString());
+            data.append(KEY_SERVER, this.targetServer);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     @Override
@@ -68,8 +83,13 @@ public class ProfileHandshake extends Handshake {
     }
 
     @Override
+    public boolean shouldReply() {
+        return true;
+    }
+
+    @Override
     public boolean shouldAccept() {
         Optional<PayloadProfile> o = cache.getLocalStore().get(uuid);
-        return o.isPresent() && o.get().isOnline();
+        return targetServer.equalsIgnoreCase(cache.getDatabase().getServerService().getThisServer().getName()) && o.isPresent() && o.get().isOnline();
     }
 }

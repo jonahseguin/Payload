@@ -82,13 +82,16 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
 
     @Override
     public void uncache(@Nonnull X payload, boolean switchingServers) {
-        if (cache.isCached(payload.getUniqueId())) {
-            cache.uncache(payload.getUniqueId());
+        if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
+            if (cache.isCached(payload.getUniqueId())) {
+                cache.uncache(payload.getUniqueId());
+            }
         }
         Optional<NetworkProfile> o = cache.getNetworkService().get(payload.getUniqueId());
         if (o.isPresent()) {
             NetworkProfile networkProfile = o.get();
             networkProfile.markUnloaded(switchingServers);
+            cache.runAsync(() -> cache.getNetworkService().save(networkProfile));
         }
     }
 
@@ -187,49 +190,52 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     }
 
     private Optional<X> cacheNetworkNode() {
-        Player player = cache.getPlugin().getServer().getPlayer(uuid);
-        if (player != null && player.isOnline()) {
-            load(true);
-        } else {
-            cache.getErrorService().debug("Starting caching Payload [network-node] " + uuid.toString() + "(login: " + login + ")");
-            Optional<NetworkProfile> oNP = cache.getNetworkService().get(uuid);
-            NetworkProfile networkProfile = null;
-            if (oNP.isPresent()) {
-                networkProfile = oNP.get();
-                if (networkProfile.isOnlineOtherServer()) {
-                    PayloadServer server = cache.getServerService().get(networkProfile.getLastSeenServer()).orElse(null);
-                    if (server != null && server.isOnline()) {
-                        // Handshake
-                        HandshakeHandler<ProfileHandshake> handshake = cache.getHandshakeService().publish(new ProfileHandshake(cache, uuid));
-                        Optional<ProfileHandshake> o = handshake.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
-                        if (o.isPresent()) {
-                            load(false);
-                        } else {
-                            // Timed out
-                            denyJoin = true;
-                            joinDenyReason = ChatColor.RED + "Timed out while loading your profile.  Please try again.";
-                        }
-                    } else {
-                        // Target server isn't online
-                        load(false);
-                    }
-                } else {
-                    load(networkProfile.isOnlineThisServer()); // only load from local if they're online this server
-                }
-            } else {
-                // Create the network profile
+        if (!login) {
+            Player player = cache.getPlugin().getServer().getPlayer(uuid);
+            if (player != null && player.isOnline()) {
                 load(true);
+                // Just getting them from the cache when they are online, skip all the other shit and just return this.
+                // For performance :)
                 if (payload != null) {
-                    if (login) {
-                        networkProfile = cache.getNetworkService().create(payload);
-                    }
+                    return Optional.of(payload);
                 }
             }
+        }
 
-            if (networkProfile != null) {
-                networkProfile.markLoaded(login);
-                NetworkProfile finalNetworkProfile = networkProfile;
-                cache.runAsync(() -> cache.getNetworkService().save(finalNetworkProfile));
+        NetworkProfile networkProfile = cache.getNetworkService().get(uuid).orElse(null);
+        cache.getErrorService().debug("Caching Payload [network-node] " + uuid.toString() + " (login: " + login + ")");
+        if (networkProfile != null) {
+            if (networkProfile.isOnlineOtherServer()) {
+                PayloadServer server = cache.getServerService().get(networkProfile.getLastSeenServer()).orElse(null);
+                if (server != null && server.isOnline()) {
+                    // Handshake
+                    cache.getErrorService().debug("Handshaking " + uuid.toString() + " from server " + server.getName());
+                    HandshakeHandler<ProfileHandshake> handshake = cache.getHandshakeService().publish(new ProfileHandshake(cache.getInjector(), cache, uuid, server.getName()));
+                    Optional<ProfileHandshake> o = handshake.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
+                    if (o.isPresent()) {
+                        cache.getErrorService().debug("Handshake complete for " + uuid.toString() + ", loading from DB");
+                        load(false);
+                    } else {
+                        // Timed out
+                        denyJoin = true;
+                        joinDenyReason = ChatColor.RED + "Timed out while loading your profile.  Please try again.";
+                        cache.getErrorService().debug("Handshake timed out for " + uuid.toString());
+                    }
+                } else {
+                    // Target server isn't online, or there is no recent server
+                    cache.getErrorService().debug("Target server '" + (server != null ? server.getName() : "n/a") + "' not online for handshake for " + uuid.toString(), ", loading from database");
+                    load(false);
+                }
+            } else {
+                load(networkProfile.isOnlineThisServer()); // only load from local if they're online this server
+            }
+        } else {
+            // Create the network profile
+            load(true);
+            if (payload != null) {
+                if (login) {
+                    networkProfile = cache.getNetworkService().create(payload);
+                }
             }
         }
 
@@ -245,6 +251,15 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 if (login || cache.getSettings().isAlwaysCacheOnLoadNetworkNode()) {
                     cache.cache(payload);
                 }
+            }
+            if (login) {
+                if (networkProfile == null) {
+                    networkProfile = cache.getNetworkService().create(payload);
+                }
+
+                networkProfile.markLoaded(true);
+                NetworkProfile finalNetworkProfile = networkProfile;
+                cache.runAsync(() -> cache.getNetworkService().save(finalNetworkProfile));
             }
         }
         return Optional.ofNullable(payload);

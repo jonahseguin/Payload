@@ -178,9 +178,7 @@ public class PayloadAPI {
             for (Cache cache : getCaches().values()) {
                 cache.updatePayloadID();
             }
-            for (PayloadDatabase database : getDatabases().values()) {
-                database.getServerService().getPublisher().publishUpdateName(oldName, name);
-            }
+            serverServices.values().forEach(s -> s.getPublisher().publishUpdateName(oldName, name));
         } else {
             throw new IllegalArgumentException("Payload ID must be alphanumeric, '" + name + "' is not valid.");
         }

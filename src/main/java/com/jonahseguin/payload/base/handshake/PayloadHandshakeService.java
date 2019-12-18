@@ -41,6 +41,11 @@ public class PayloadHandshakeService implements HandshakeService {
     }
 
     @Override
+    public DatabaseService getDatabaseService() {
+        return database;
+    }
+
+    @Override
     public boolean shutdown() {
         this.containers.values().stream()
                 .map(HandshakeContainer::getSubscriberController)
@@ -107,10 +112,9 @@ public class PayloadHandshakeService implements HandshakeService {
     public <H extends Handshake> void subscribe(@Nonnull H subscriber) {
         Preconditions.checkNotNull(subscriber);
         HandshakeContainer container = new HandshakeContainer(subscriber);
-        Handshake controller = container.getSubscriberController();
-        containers.put(controller.channelPublish(), container);
-        containers.put(controller.channelReply(), container);
-        executor.submit(controller::listen);
+        containers.put(subscriber.channelPublish(), container);
+        containers.put(subscriber.channelReply(), container);
+        executor.submit(subscriber::listen);
     }
 
     @Override

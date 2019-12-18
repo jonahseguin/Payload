@@ -15,7 +15,7 @@ import com.jonahseguin.payload.base.type.Payload;
 import javax.annotation.Nonnull;
 import java.util.Optional;
 
-public class CacheSyncService<K, X extends Payload<K>, N extends NetworkPayload<K>, D> implements SyncService<K, X, N> {
+public class CacheSyncService<K, X extends Payload<K>, N extends NetworkPayload<K>> implements SyncService<K, X, N> {
 
     private final Cache<K, X, N> cache;
     private final HandshakeService handshakeService;
@@ -36,7 +36,7 @@ public class CacheSyncService<K, X extends Payload<K>, N extends NetworkPayload<
             if (np.isThisMostRelevantServer()) {
                 callback.callback(Optional.of(payload));
             } else {
-                handshakeService.publish(new SyncHandshake<>(cache, payload.getIdentifier(), SyncHandshakeMode.UPDATE)).afterReply(h -> {
+                handshakeService.publish(new SyncHandshake<>(cache.getInjector(), cache, payload.getIdentifier(), SyncHandshakeMode.UPDATE)).afterReply(h -> {
                     Optional<X> ox = cache.getFromDatabase(payload.getIdentifier());
                     callback.callback(ox);
                 });
@@ -49,19 +49,19 @@ public class CacheSyncService<K, X extends Payload<K>, N extends NetworkPayload<
     @Override
     public void update(@Nonnull K key) {
         Preconditions.checkNotNull(key);
-        handshakeService.publish(new SyncHandshake<>(cache, key, SyncHandshakeMode.UPDATE));
+        handshakeService.publish(new SyncHandshake<>(cache.getInjector(), cache, key, SyncHandshakeMode.UPDATE));
     }
 
     @Override
     public void uncache(@Nonnull K key) {
         Preconditions.checkNotNull(key);
-        handshakeService.publish(new SyncHandshake<>(cache, key, SyncHandshakeMode.UNCACHE));
+        handshakeService.publish(new SyncHandshake<>(cache.getInjector(), cache, key, SyncHandshakeMode.UNCACHE));
     }
 
     @Override
     public boolean start() {
         running = true;
-        handshakeService.subscribe(new SyncHandshake<>(cache));
+        handshakeService.subscribe(new SyncHandshake<>(cache.getInjector(), cache));
         return true;
     }
 
