@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Getter
@@ -65,15 +66,31 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
 
     @Override
     protected boolean terminate() {
+        boolean success = true;
+        AtomicInteger failedSaves = new AtomicInteger(0);
         getCached().forEach(payload -> {
             getNetworked(payload).ifPresent(no -> {
                 if (no.isThisMostRelevantServer()) {
-                    save(payload);
+                    if (!save(payload)) {
+                        failedSaves.getAndIncrement();
+                    }
                 }
             });
         });
+        if (failedSaves.get() > 0) {
+            errorService.capture(failedSaves + " objects failed to save during shutdown");
+            success = false;
+        }
+
         controllers.clear();
-        return true;
+        if (!localStore.shutdown()) {
+            success = false;
+        }
+        if (!mongoStore.shutdown()) {
+            success = false;
+        }
+
+        return success;
     }
 
     @Nonnull
@@ -94,7 +111,7 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
             errorService.capture("Failed to save to MongoDB store for object " + payload.getIdentifier());
             success = false;
         }
-        if (success) {
+        if (success && mode.equals(PayloadMode.NETWORK_NODE)) {
             Optional<NetworkObject> o = networkService.get(payload);
             if (o.isPresent()) {
                 NetworkObject no = o.get();
@@ -152,13 +169,33 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
 
     @Override
     public int saveAll() {
-        int failures = 0;
-        for (X object : localStore.getLocalCache().values()) {
-            if (!save(object)) {
-                failures++;
+        AtomicInteger failures = new AtomicInteger();
+        if (mode.equals(PayloadMode.NETWORK_NODE)) {
+            for (X object : localStore.getAll()) {
+                getNetworked(object).ifPresent(networkObject -> {
+                    if (networkObject.isThisMostRelevantServer()) {
+                        networkObject.markSaved();
+                        boolean fail = false;
+                        if (!getNetworkService().save(networkObject)) {
+                            fail = true;
+                        }
+                        if (!save(object)) {
+                            fail = true;
+                        }
+                        if (fail) {
+                            failures.getAndIncrement();
+                        }
+                    }
+                });
+            }
+        } else {
+            for (X object : localStore.getAll()) {
+                if (!save(object)) {
+                    failures.getAndIncrement();
+                }
             }
         }
-        return failures;
+        return failures.get();
     }
 
     @Override

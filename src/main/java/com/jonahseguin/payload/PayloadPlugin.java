@@ -17,12 +17,10 @@ import com.jonahseguin.payload.command.PCommandHandler;
 import com.jonahseguin.payload.mode.profile.listener.ProfileListener;
 import lombok.Getter;
 import org.bukkit.ChatColor;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 
 /**
  * Created by Jonah on 11/16/2017.
@@ -96,30 +94,14 @@ public class PayloadPlugin extends JavaPlugin {
         injector = Guice.createInjector(Stage.PRODUCTION, PayloadAPI.install(this, "PayloadDatabase"));
 
         lang = new PayloadLangService(this);
+        lang.lang().load();
+        lang.lang().save();
         commandHandler = new PCommandHandler(this, lang, injector);
 
         this.getServer().getPluginManager().registerEvents(injector.getInstance(LockListener.class), this);
         this.getServer().getPluginManager().registerEvents(injector.getInstance(ProfileListener.class), this);
         this.getCommand("payload").setExecutor(this.commandHandler);
         this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", getDescription().getVersion()));
-    }
-
-    /**
-     * Get the simple IP address from an {@link InetAddress}
-     * @param inetAddress The InetAddress
-     * @return The simple IP in {@link String} form
-     */
-    public static String getIP(InetAddress inetAddress) {
-        return inetAddress.toString().split("/")[1];
-    }
-
-    /**
-     * Run a task async. via Bukkit scheduler
-     * @param plugin {@link JavaPlugin} to run via
-     * @param runnable What to run
-     */
-    public static void runASync(Plugin plugin, Runnable runnable) {
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, runnable);
     }
 
     /**
@@ -157,6 +139,8 @@ public class PayloadPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        lang.lang().load();
+        lang.lang().save();
         this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin disabled.", getDescription().getVersion()));
         plugin = null;
     }
@@ -169,10 +153,6 @@ public class PayloadPlugin extends JavaPlugin {
      */
     public PCommandHandler getCommandHandler() {
         return commandHandler;
-    }
-
-    public ClassLoader getPayloadClassLoader() {
-        return this.getClassLoader();
     }
 
     public void setDebug(boolean debug) {

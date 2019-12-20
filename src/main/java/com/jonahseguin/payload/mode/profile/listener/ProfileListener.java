@@ -119,13 +119,8 @@ public class ProfileListener implements Listener {
 
                                     // Not switching servers (no incoming handshake) -- we can assume they are actually
                                     // Logging out, and not switching servers
+                                    cache.save(profile);
                                     cache.controller(event.getPlayer().getUniqueId()).uncache(profile, false);
-                                    cache.save(profile); // Don't publish a sync since we're switching servers
-                                    // In network node mode, join is handled before quit when switching servers
-                                    // so we don't want to save on quit
-                                    // but we do want to remove their locally cached profile because the data will be outdated
-                                    // and we want to prevent accidental data rollbacks
-                                    cache.getLocalStore().remove(player.getUniqueId());
                                     cache.removeController(player.getUniqueId());
                                     cache.getErrorService().debug("Saving player " + player.getName() + " on logout (not switching servers)");
                                 } else {
@@ -133,9 +128,6 @@ public class ProfileListener implements Listener {
                                     cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
 
                                     cache.controller(event.getPlayer().getUniqueId()).uncache(profile, true);
-
-                                    // Switching servers, don't save their data -- just remove
-                                    cache.getLocalStore().remove(player.getUniqueId()); // remove on quit to prevent accidental data rollbacks
                                     cache.getErrorService().debug("Not saving player " + player.getName() + " on quit (is switching servers)");
                                 }
                             } else {

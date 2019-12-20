@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Getter
@@ -89,8 +90,16 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
     @Override
     protected boolean terminate() {
         boolean success = true;
+        AtomicInteger failedSaves = new AtomicInteger(0);
         for (Player player : plugin.getServer().getOnlinePlayers()) {
-            getFromCache(player).ifPresent(this::save);
+            getFromCache(player).ifPresent(payload -> {
+                if (!save(payload)) {
+                    failedSaves.getAndIncrement();
+                }
+            });
+        }
+        if (failedSaves.get() > 0) {
+            errorService.capture(failedSaves + " objects failed to save during shutdown");
         }
         controllers.clear();
         if (!localStore.shutdown()) {
@@ -99,6 +108,8 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
         if (!mongoStore.shutdown()) {
             success = false;
         }
+
+
         return success;
     }
 

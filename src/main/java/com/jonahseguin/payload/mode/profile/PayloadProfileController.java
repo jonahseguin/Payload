@@ -34,6 +34,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     private Player player = null;
     private boolean failure = false;
     private boolean loadedFromLocal = false;
+    private int timeoutAttempts = 0;
 
     PayloadProfileController(@Nonnull PayloadProfileCache<X> cache, @Nonnull UUID uuid) {
         Preconditions.checkNotNull(cache);
@@ -131,6 +132,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             }
             if (payload != null) {
                 if (login) {
+                    timeoutAttempts = 0;
 
                     Optional<NetworkProfile> oNP = cache.getNetworked(payload);
                     NetworkProfile networkProfile = oNP.orElseGet(() -> cache.getNetworkService().create(payload));
@@ -213,13 +215,21 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                     HandshakeHandler<ProfileHandshake> handshake = cache.getHandshakeService().publish(new ProfileHandshake(cache.getInjector(), cache, uuid, server.getName()));
                     Optional<ProfileHandshake> o = handshake.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
                     if (o.isPresent()) {
+                        timeoutAttempts = 0;
                         cache.getErrorService().debug("Handshake complete for " + uuid.toString() + ", loading from DB");
                         load(false);
                     } else {
                         // Timed out
-                        denyJoin = true;
-                        joinDenyReason = ChatColor.RED + "Timed out while loading your profile.  Please try again.";
-                        cache.getErrorService().debug("Handshake timed out for " + uuid.toString());
+                        timeoutAttempts++;
+                        if (timeoutAttempts >= cache.getSettings().getHandshakeTimeOutAttemptsAllowJoin()) {
+                            timeoutAttempts = 0;
+                            load(false);
+                            // They timed out past the max threshold specified, allow them to join / load from database
+                        } else {
+                            denyJoin = true;
+                            joinDenyReason = ChatColor.RED + "Timed out while loading your profile.  Please try again.";
+                            cache.getErrorService().debug("Handshake timed out for " + uuid.toString());
+                        }
                     }
                 } else {
                     // Target server isn't online, or there is no recent server
@@ -253,6 +263,7 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 }
             }
             if (login) {
+                timeoutAttempts = 0;
                 if (networkProfile == null) {
                     networkProfile = cache.getNetworkService().create(payload);
                 }

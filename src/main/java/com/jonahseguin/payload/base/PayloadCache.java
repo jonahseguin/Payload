@@ -147,9 +147,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
      */
     public final boolean shutdown() {
         Preconditions.checkState(running, "Cache " + name + " is not running!");
-
-        int failedSaves = saveAll(); // First, save everything.
-
         boolean success = true;
 
         if (!terminate()) {
@@ -170,10 +167,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
         }
         shutdownPool();
         running = false;
-        if (failedSaves > 0) {
-            errorService.capture(failedSaves + " Payload objects failed to save during shutdown");
-            success = false;
-        }
         lang.lang().load();
         lang.lang().save();
         return success;
