@@ -7,8 +7,6 @@ package com.jonahseguin.payload.mode.object;
 
 import com.google.common.base.Preconditions;
 import com.jonahseguin.payload.PayloadMode;
-import com.jonahseguin.payload.base.handshake.HandshakeHandler;
-import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.type.PayloadController;
 import lombok.Getter;
 import lombok.Setter;
@@ -48,7 +46,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
 
     @Override
     public Optional<X> cache() {
-        if (cache.getSyncMode().equals(SyncMode.ALWAYS) && cache.getSettings().isEnableSync() && cache.isCached(identifier)) {
+        /*if (cache.getSyncMode().equals(SyncMode.ALWAYS) && cache.getSettings().isEnableSync() && cache.isCached(identifier)) {
             load(true);
         } else {
             if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
@@ -84,7 +82,8 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
                 // Standalone mode
                 load(true);
             }
-        }
+        }*/
+        load(true);
 
         if (payload != null && !loadedFromLocal) {
             this.cache.cache(payload);

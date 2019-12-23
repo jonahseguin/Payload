@@ -20,7 +20,6 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,7 +61,7 @@ public class ProfileListener implements Listener {
         api.getSortedCachesByDepends().forEach(c -> {
             if (c instanceof PayloadProfileCache) {
                 PayloadProfileCache cache = (PayloadProfileCache) c;
-                PayloadProfileController controller = cache.getController(player.getUniqueId());
+                PayloadProfileController controller = cache.controller(player.getUniqueId());
                 if (controller != null) {
                     cache.getErrorService().debug("Initializing player " + player.getName() + " for cache " + cache.getName());
                     controller.initializeOnJoin(player);
@@ -94,7 +93,7 @@ public class ProfileListener implements Listener {
                                 Optional<NetworkProfile> oNP = cache.getNetworked(profile);
                                 oNP.ifPresent(networkProfile -> {
                                     networkProfile.setOnline(false);
-                                    networkProfile.setLastSeen(new Date());
+                                    networkProfile.setLastSeen(System.currentTimeMillis());
                                     cache.runAsync(() -> cache.getNetworkService().save(networkProfile));
                                 });
 
@@ -110,29 +109,22 @@ public class ProfileListener implements Listener {
                         if (o.isPresent()) {
                             PayloadProfile profile = o.get();
                             profile.uninitializePlayer();
-                            Optional<NetworkProfile> onp = cache.getNetworked(profile);
-                            if (onp.isPresent()) {
-                                NetworkProfile networkProfile = onp.get();
-                                if (!profile.hasValidHandshake()) {
-                                    PayloadProfileLogoutEvent payloadEvent = new PayloadProfileLogoutEvent(profile);
-                                    cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
+                            if (!profile.hasValidHandshake()) {
+                                PayloadProfileLogoutEvent payloadEvent = new PayloadProfileLogoutEvent(profile);
+                                cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
 
-                                    // Not switching servers (no incoming handshake) -- we can assume they are actually
-                                    // Logging out, and not switching servers
-                                    cache.save(profile);
-                                    cache.controller(event.getPlayer().getUniqueId()).uncache(profile, false);
-                                    cache.removeController(player.getUniqueId());
-                                    cache.getErrorService().debug("Saving player " + player.getName() + " on logout (not switching servers)");
-                                } else {
-                                    PayloadProfileSwitchServersEvent payloadEvent = new PayloadProfileSwitchServersEvent(profile);
-                                    cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
-
-                                    cache.controller(event.getPlayer().getUniqueId()).uncache(profile, true);
-                                    cache.getErrorService().debug("Not saving player " + player.getName() + " on quit (is switching servers)");
-                                }
+                                // Not switching servers (no incoming handshake) -- we can assume they are actually
+                                // Logging out, and not switching servers
+                                cache.save(profile);
+                                cache.controller(event.getPlayer().getUniqueId()).uncache(profile, false);
+                                cache.removeController(player.getUniqueId());
+                                cache.getErrorService().debug("Saving player " + player.getName() + " on logout (not switching servers)");
                             } else {
-                                // no network profile?
-                                cache.getErrorService().debug("No network profile during logout for Payload" + player.getName());
+                                PayloadProfileSwitchServersEvent payloadEvent = new PayloadProfileSwitchServersEvent(profile);
+                                cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
+
+                                cache.controller(event.getPlayer().getUniqueId()).uncache(profile, true);
+                                cache.getErrorService().debug("Not saving player " + player.getName() + " on quit (is switching servers)");
                             }
                         } else {
                             // This shouldn't happen

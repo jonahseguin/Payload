@@ -12,12 +12,11 @@ import com.jonahseguin.payload.server.ServerService;
 import dev.morphia.annotations.Entity;
 
 import javax.annotation.Nonnull;
-import java.util.Date;
 
 @Entity
 public class NetworkObject extends NetworkPayload<String> {
 
-    private String identifier = null;
+    private String identifier = "";
 
     @Inject
     public NetworkObject(ServerService serverService) {
@@ -26,19 +25,17 @@ public class NetworkObject extends NetworkPayload<String> {
 
     public void markLoaded() {
         loaded = true;
-        loadedServers.add(serverService.getThisServer().getName());
-        lastCached = new Date();
+        lastCached = System.currentTimeMillis();
         mostRecentServer = serverService.getThisServer().getName();
     }
 
     public void markUnloaded() {
-        loadedServers.remove(serverService.getThisServer().getName());
-        loaded = loadedServers.size() > 0;
+        loaded = false;
     }
 
     public void markSaved() {
         mostRecentServer = serverService.getThisServer().getName();
-        lastSaved = new Date();
+        lastSaved = System.currentTimeMillis();
     }
 
     @Override

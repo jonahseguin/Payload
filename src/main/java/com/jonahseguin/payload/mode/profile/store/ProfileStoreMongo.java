@@ -31,7 +31,9 @@ public class ProfileStoreMongo<X extends PayloadProfile> extends ProfileCacheSto
         try {
             Query<X> q = getQuery(key);
             Stream<X> stream = q.find().toList().stream();
-            return stream.findFirst();
+            Optional<X> o = stream.findFirst();
+            o.ifPresent(x -> x.setLoadingSource(layerName()));
+            return o;
         } catch (MongoException ex) {
             getCache().getErrorService().capture(ex, "MongoDB error getting Profile from MongoDB Layer: " + key.toString());
             return Optional.empty();

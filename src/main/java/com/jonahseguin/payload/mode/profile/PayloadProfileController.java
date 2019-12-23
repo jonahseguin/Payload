@@ -27,13 +27,12 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     private final UUID uuid;
     private String username = null;
     private String loginIp = null;
-    private boolean login = true; // whether this controller is being used during a login operation
+    private boolean login = false; // whether this controller is being used during a login operation
     private boolean denyJoin = false;
     private String joinDenyReason = ChatColor.RED + "A caching error occurred.  Please try again.";
     private X payload = null;
     private Player player = null;
     private boolean failure = false;
-    private boolean loadedFromLocal = false;
     private int timeoutAttempts = 0;
 
     PayloadProfileController(@Nonnull PayloadProfileCache<X> cache, @Nonnull UUID uuid) {
@@ -164,7 +163,6 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
             Optional<X> o = cache.getLocalStore().get(uuid);
             if (o.isPresent()) {
                 payload = o.get();
-                loadedFromLocal = true;
                 return;
             }
         }
@@ -199,6 +197,9 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
                 // Just getting them from the cache when they are online, skip all the other shit and just return this.
                 // For performance :)
                 if (payload != null) {
+                    if (!cache.isCached(uuid)) {
+                        cache.cache(payload);
+                    }
                     return Optional.of(payload);
                 }
             }
@@ -250,16 +251,14 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
         }
 
         if (payload != null) {
+            if (login || cache.getSettings().isAlwaysCacheOnLoadNetworkNode()) {
+                cache.cache(payload);
+            }
             if (username != null && !payload.getUsername().equalsIgnoreCase(username)) {
                 cache.getErrorService().debug("Updated username: " + payload.getUsername() + " to " + username);
                 payload.setUsername(username);
                 if (!cache.save(payload)) {
                     cache.getErrorService().capture("Error saving Payload during caching after username update: " + payload.getUsername());
-                }
-            }
-            if (!loadedFromLocal) {
-                if (login || cache.getSettings().isAlwaysCacheOnLoadNetworkNode()) {
-                    cache.cache(payload);
                 }
             }
             if (login) {
@@ -278,11 +277,13 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
 
     public void initializeOnJoin(Player player) {
         this.player = player;
+        if (payload == null) {
+            payload = cache.getFromCache(player).orElse(null);
+        }
         if (payload != null) {
             cache.getErrorService().debug("called initializeOnJoin() in controller for " + player.getName());
             payload.initializePlayer(player);
-        }
-        else {
+        } else {
             cache.getErrorService().debug("failed to call initializeOnJoin() for " + player.getName() + " (payload is null in controller)");
         }
     }

@@ -188,6 +188,12 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
         if (player != null && player.isOnline()) {
             return get(player);
         }
+        UUID uuid = uuidService.get(username).orElse(null);
+        if (uuid != null) {
+            if (isCached(uuid)) {
+                return getFromCache(uuid);
+            }
+        }
         return mongoStore.getByUsername(username);
     }
 

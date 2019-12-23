@@ -21,8 +21,9 @@ public abstract class Handshake {
     protected HandshakeService handshakeService;
     @Inject
     protected DatabaseService database;
-    protected HandshakeListener listener;
+    protected HandshakeListener listener = null;
     protected HandshakeHandler handler;
+    protected Jedis subscriber = null;
 
     @Inject
     public Handshake(Injector injector) {
@@ -62,12 +63,19 @@ public abstract class Handshake {
     }
 
     public void listen() {
-        listener = new HandshakeListener(handshakeService, this);
-        try (Jedis subscriber = database.getJedisResource()) {
-            subscriber.subscribe(listener, channelPublish(), channelReply());
-        } catch (Exception ex) {
-            database.getErrorService().capture(ex, "Error during listening for handshake " + this.getClass().getSimpleName());
-            ex.printStackTrace();
+        if (listener == null) {
+            listener = new HandshakeListener(handshakeService, this);
+        }
+        if (subscriber == null) {
+            subscriber = database.getJedisResource();
+        }
+        if (!listener.isSubscribed()) {
+            try {
+                subscriber.subscribe(listener, channelPublish(), channelReply());
+            } catch (Exception ex) {
+                database.getErrorService().capture(ex, "Error during listening for handshake " + this.getClass().getSimpleName());
+                ex.printStackTrace();
+            }
         }
     }
 
@@ -76,6 +84,10 @@ public abstract class Handshake {
             if (listener.isSubscribed()) {
                 listener.unsubscribe();
             }
+        }
+        if (subscriber != null) {
+            subscriber.close();
+            subscriber = null;
         }
     }
 

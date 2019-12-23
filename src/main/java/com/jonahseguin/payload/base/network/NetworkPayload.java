@@ -10,14 +10,12 @@ import com.jonahseguin.payload.server.ServerService;
 import dev.morphia.annotations.Embedded;
 import dev.morphia.annotations.Entity;
 import dev.morphia.annotations.Id;
+import dev.morphia.annotations.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import org.bson.types.ObjectId;
 
 import javax.annotation.Nonnull;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 
 @Getter
 @Setter
@@ -27,13 +25,12 @@ public abstract class NetworkPayload<K> {
     @Id
     private ObjectId id = new ObjectId(); // required for morphia mapping
 
+    @Transient
     protected transient final ServerService serverService;
-    protected ObjectId objectId;
-    protected Date lastCached = new Date();
-    protected Date lastSaved = new Date();
+    protected long lastCached = System.currentTimeMillis();
+    protected long lastSaved = System.currentTimeMillis();
     protected boolean loaded = false;
     @Embedded
-    protected Set<String> loadedServers = new HashSet<>();
     protected String mostRecentServer;
 
     @Inject
@@ -43,7 +40,7 @@ public abstract class NetworkPayload<K> {
 
     public boolean isThisMostRelevantServer() {
         if (mostRecentServer != null) {
-            return mostRecentServer.equalsIgnoreCase(serverService.getThisServer().getName()) && loadedServers.contains(serverService.getThisServer().getName()) && loaded;
+            return mostRecentServer.equalsIgnoreCase(serverService.getThisServer().getName()) && loaded;
         }
         return false;
     }

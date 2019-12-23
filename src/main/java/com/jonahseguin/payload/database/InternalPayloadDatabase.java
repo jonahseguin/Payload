@@ -177,9 +177,9 @@ public class InternalPayloadDatabase implements PayloadDatabase {
             if (this.jedisPool == null) {
 
                 GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
-                poolConfig.setMaxTotal(256);
-                poolConfig.setMaxIdle(32);
-                poolConfig.setMinIdle(2);
+                poolConfig.setMaxTotal(64);
+                poolConfig.setMaxIdle(16);
+                poolConfig.setMinIdle(8);
 
                 if (payloadRedis.useURI()) {
                     jedisPool = new JedisPool(poolConfig, URI.create(payloadRedis.getUri()));

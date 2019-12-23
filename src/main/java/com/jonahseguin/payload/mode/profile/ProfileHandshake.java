@@ -79,6 +79,9 @@ public class ProfileHandshake extends Handshake {
             if (!cache.save(profile)) {
                 cache.getErrorService().capture("Failed to save during handshake for " + profile.getName());
             }
+        } else {
+            // We don't have them but they tried to handshake from here
+            cache.getErrorService().debug("Skipping saving for Profile Handshake (not cached), replying: " + uuid.toString());
         }
     }
 
@@ -89,7 +92,6 @@ public class ProfileHandshake extends Handshake {
 
     @Override
     public boolean shouldAccept() {
-        Optional<PayloadProfile> o = cache.getLocalStore().get(uuid);
-        return targetServer.equalsIgnoreCase(cache.getDatabase().getServerService().getThisServer().getName()) && o.isPresent() && o.get().isOnline();
+        return targetServer.equalsIgnoreCase(cache.getDatabase().getServerService().getThisServer().getName());
     }
 }

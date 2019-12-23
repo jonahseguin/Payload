@@ -14,7 +14,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.annotation.Nonnull;
-import java.util.Date;
 import java.util.UUID;
 
 @Entity
@@ -24,7 +23,7 @@ public class NetworkProfile extends NetworkPayload<UUID> {
 
     protected String identifier;
     protected String lastSeenServer;
-    protected Date lastSeen = new Date();
+    protected long lastSeen = 0L;
     protected boolean online = false;
     protected transient UUID uuidID = null;
 
@@ -48,7 +47,7 @@ public class NetworkProfile extends NetworkPayload<UUID> {
     }
 
     public boolean isOnline() {
-        boolean shouldBeOnline = (System.currentTimeMillis() - lastSeen.getTime()) < (1000 * 60 * 60);
+        boolean shouldBeOnline = (System.currentTimeMillis() - lastSeen) < (1000 * 60 * 60);
         if (online && !shouldBeOnline) {
             online = false;
         }
@@ -58,26 +57,24 @@ public class NetworkProfile extends NetworkPayload<UUID> {
     public void markLoaded(boolean online) {
         this.online = online;
         loaded = true;
-        loadedServers.add(serverService.getThisServer().getName());
-        lastCached = new Date();
+        lastCached = System.currentTimeMillis();
         if (online) {
             mostRecentServer = serverService.getThisServer().getName();
             lastSeenServer = serverService.getThisServer().getName();
-            lastSeen = new Date();
+            lastSeen = System.currentTimeMillis();
         }
     }
 
     public void markUnloaded(boolean switchingServers) {
         online = switchingServers;
-        loadedServers.remove(serverService.getThisServer().getName());
-        loaded = loadedServers.size() > 0 || switchingServers;
-        lastSeen = new Date();
+        loaded = switchingServers;
+        lastSeen = System.currentTimeMillis();
     }
 
     public void markSaved() {
-        lastSaved = new Date();
+        lastSaved = System.currentTimeMillis();
         if (isOnlineThisServer()) {
-            lastSeen = new Date();
+            lastSeen = System.currentTimeMillis();
         }
     }
 

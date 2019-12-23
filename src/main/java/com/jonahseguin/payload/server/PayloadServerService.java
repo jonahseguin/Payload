@@ -56,8 +56,15 @@ public class PayloadServerService implements Runnable, ServerService {
         try {
             this.publisher = new ServerPublisher(this);
 
+            payloadPlugin.getServer().getScheduler().runTaskAsynchronously(payloadPlugin, () -> {
+                this.jedisSubscriber = database.getJedisResource();
+                this.subscriber = new ServerSubscriber(this);
+                this.jedisSubscriber.subscribe(this.subscriber,
+                        "server-join", "server-ping", "server-quit", "server-update-name");
+            });
+
             this.executorService.submit(() -> {
-                this.jedisSubscriber = this.database.getJedisResource();
+                this.jedisSubscriber = database.getJedisResource();
                 this.subscriber = new ServerSubscriber(this);
                 this.jedisSubscriber.subscribe(this.subscriber,
                         "server-join", "server-ping", "server-quit", "server-update-name");
@@ -146,7 +153,7 @@ public class PayloadServerService implements Runnable, ServerService {
             if (this.pingTask != null) {
                 this.pingTask.cancel();
             }
-
+            this.shutdownExecutor();
             if (this.subscriber != null) {
                 if (this.subscriber.isSubscribed()) {
                     this.subscriber.unsubscribe();
@@ -155,7 +162,6 @@ public class PayloadServerService implements Runnable, ServerService {
             }
 
             this.publisher.publishQuit(); // Sync.
-            this.shutdownExecutor();
 
             this.publisher = null;
             if (this.jedisSubscriber != null) {

@@ -20,7 +20,6 @@ import lombok.Getter;
 import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -57,9 +56,9 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
                 errorService.capture("Failed to start MongoDB store for cache " + name);
             }
         }
-        if (mode.equals(PayloadMode.NETWORK_NODE)) {
+        /*if (mode.equals(PayloadMode.NETWORK_NODE)) {
             handshakeService.subscribe(new ObjectHandshake(injector, this));
-        }
+        }*/
         database.getMorphia().map(NetworkObject.class);
         return success;
     }
@@ -111,17 +110,18 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
             errorService.capture("Failed to save to MongoDB store for object " + payload.getIdentifier());
             success = false;
         }
-        if (success && mode.equals(PayloadMode.NETWORK_NODE)) {
-            Optional<NetworkObject> o = networkService.get(payload);
-            if (o.isPresent()) {
-                NetworkObject no = o.get();
-                no.markSaved();
-                if (!networkService.save(no)) {
-                    success = false;
-                    errorService.capture("Failed to save Network Object for object " + payload.getIdentifier());
+        /*if (success && mode.equals(PayloadMode.NETWORK_NODE)) {
+            runAsync(() -> {
+                Optional<NetworkObject> o = networkService.get(payload);
+                if (o.isPresent()) {
+                    NetworkObject no = o.get();
+                    no.markSaved();
+                    if (!networkService.save(no)) {
+                        errorService.capture("Failed to save Network Object for object " + payload.getIdentifier());
+                    }
                 }
-            }
-        }
+            });
+        }*/
         return success;
     }
 
@@ -171,7 +171,8 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
     public int saveAll() {
         AtomicInteger failures = new AtomicInteger();
         if (mode.equals(PayloadMode.NETWORK_NODE)) {
-            for (X object : localStore.getAll()) {
+            /*for (X object : localStore.getAll()) {
+                save(object);
                 getNetworked(object).ifPresent(networkObject -> {
                     if (networkObject.isThisMostRelevantServer()) {
                         networkObject.markSaved();
@@ -187,6 +188,11 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
                         }
                     }
                 });
+            }*/
+            for (X object : localStore.getAll()) {
+                if (!save(object)) {
+                    failures.getAndIncrement();
+                }
             }
         } else {
             for (X object : localStore.getAll()) {
