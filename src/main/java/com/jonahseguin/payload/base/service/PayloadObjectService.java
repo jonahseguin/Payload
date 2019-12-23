@@ -5,7 +5,6 @@
 
 package com.jonahseguin.payload.base.service;
 
-import com.jonahseguin.payload.mode.object.NetworkObject;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.PayloadObject;
 

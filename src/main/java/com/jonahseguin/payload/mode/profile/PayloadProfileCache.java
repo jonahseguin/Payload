@@ -9,14 +9,15 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
-import com.jonahseguin.lang.LangDefinitions;
-import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.store.PayloadStore;
-import com.jonahseguin.payload.base.sync.SyncService;
 import com.jonahseguin.payload.base.type.PayloadInstantiator;
 import com.jonahseguin.payload.base.uuid.UUIDService;
+import com.jonahseguin.payload.mode.profile.handshake.ProfileHandshakeService;
+import com.jonahseguin.payload.mode.profile.network.NetworkProfile;
+import com.jonahseguin.payload.mode.profile.network.NetworkService;
+import com.jonahseguin.payload.mode.profile.network.RedisNetworkService;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import com.jonahseguin.payload.mode.profile.store.ProfileStoreLocal;
 import com.jonahseguin.payload.mode.profile.store.ProfileStoreMongo;
@@ -30,24 +31,24 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Getter
 @Singleton
-public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X, NetworkProfile> implements LangModule, ProfileCache<X> {
+public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<UUID, X> implements ProfileCache<X> {
 
     private final ProfileCacheSettings settings = new ProfileCacheSettings();
     private final ConcurrentMap<UUID, PayloadProfileController<X>> controllers = new ConcurrentHashMap<>();
     private final ProfileStoreLocal<X> localStore = new ProfileStoreLocal<>(this);
     private final ProfileStoreMongo<X> mongoStore = new ProfileStoreMongo<>(this);
     @Inject private UUIDService uuidService;
+    private NetworkService<X> networkService = null;
+    private ProfileHandshakeService<X> handshakeService = null;
 
     public PayloadProfileCache(Injector injector, PayloadInstantiator<UUID, X> instantiator, String name, Class<X> payload) {
-        super(injector, instantiator, name, UUID.class, payload, NetworkProfile.class);
+        super(injector, instantiator, name, UUID.class, payload);
         this.setupModule();
-        lang.register(this);
     }
 
     @Override
@@ -55,18 +56,8 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
         super.injectMe();
         super.setupModule();
         injector.injectMembers(this);
-    }
-
-    @Override
-    public void define(LangDefinitions l) {
-        l.define("deny-join-database", "&cThe database is currently offline.  We are working on resolving this issue as soon as possible, please try again soon.");
-        l.define("no-profile", "&cYour profile is not loaded.  Please wait as we will continue to attempt to load it.");
-        l.define("shutdown", "&cThe server has shutdown.");
-    }
-
-    @Override
-    public String langModule() {
-        return "profile-cache";
+        networkService = new RedisNetworkService<>(this);
+        handshakeService = new ProfileHandshakeService<>(this, database);
     }
 
     @Override
@@ -74,14 +65,17 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
         boolean success = true;
         if (!localStore.start()) {
             success = false;
-            errorService.capture("Failed to start Local store for cache " + name);
+            errorService.capture("Failed to start Local store for cache: " + name);
         }
         if (!mongoStore.start()) {
             success = false;
-            errorService.capture("Failed to start MongoDB store for cache " + name);
+            errorService.capture("Failed to start MongoDB store for cache: " + name);
         }
         if (mode.equals(PayloadMode.NETWORK_NODE)) {
-            handshakeService.subscribe(new ProfileHandshake(injector, this));
+            if (!networkService.start()) {
+                success = false;
+                errorService.capture("Failed to start Network Service (Network Node mode) for cache: " + name);
+            }
         }
         database.getMorphia().map(NetworkProfile.class);
         return success;
@@ -108,8 +102,14 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
         if (!mongoStore.shutdown()) {
             success = false;
         }
-
-
+        if (mode.equals(PayloadMode.NETWORK_NODE)) {
+            if (networkService.isRunning()) {
+                if (!networkService.shutdown()) {
+                    success = false;
+                    errorService.capture("Failed to start Network Service (Network Node mode) for cache: " + name);
+                }
+            }
+        }
         return success;
     }
 
@@ -123,24 +123,6 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
     public Optional<NetworkProfile> getNetworked(@Nonnull X payload) {
         Preconditions.checkNotNull(payload);
         return networkService.get(payload);
-    }
-
-    @Override
-    public Future<Optional<X>> getAsync(@Nonnull UUID key) {
-        Preconditions.checkNotNull(key);
-        return runAsync(() -> get(key));
-    }
-
-    @Override
-    public Future<Optional<X>> getAsync(@Nonnull String username) {
-        Preconditions.checkNotNull(username);
-        return runAsync(() -> get(username));
-    }
-
-    @Override
-    public Future<Optional<X>> getAsync(@Nonnull Player player) {
-        Preconditions.checkNotNull(player);
-        return runAsync(() -> get(player));
     }
 
     @Override
@@ -166,12 +148,6 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
     @Override
     public Collection<X> getCached() {
         return localStore.getAll();
-    }
-
-    @Nonnull
-    @Override
-    public SyncService<UUID, X, NetworkProfile> getSyncService() {
-        return sync;
     }
 
     @Nonnull
@@ -340,52 +316,52 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
     }
 
     @Override
-    public Future<Boolean> saveAsync(@Nonnull X payload) {
+    public void saveAsync(@Nonnull X payload) {
         Preconditions.checkNotNull(payload);
         this.cache(payload);
-        return this.runAsync(() -> this.save(payload));
+        this.runAsync(() -> this.save(payload));
     }
 
     @Override
     public boolean save(@Nonnull X payload) {
-        Preconditions.checkNotNull(payload);
-        Optional<NetworkProfile> onp = networkService.get(payload);
-        if (onp.isPresent()) {
-            NetworkProfile np = onp.get();
-            if (this.saveNoSync(payload)) {
-                np.markSaved();
-                if (networkService.save(np)) {
-                    if (settings.isEnableSync()) {
-                        sync.update(payload.getIdentifier());
+        Preconditions.checkNotNull(payload, "Cannot save a null Payload");
+        cache(payload);
+        if (mode.equals(PayloadMode.NETWORK_NODE)) {
+            Optional<NetworkProfile> onp = networkService.get(payload);
+            if (onp.isPresent()) {
+                NetworkProfile np = onp.get();
+                if (saveMongo(payload)) {
+                    np.markSaved();
+                    if (networkService.save(np)) {
+                        return true;
+                    } else {
+                        errorService.capture("Failed to save profile " + payload.getName() + ": Couldn't save network profile (but saved normal profile)");
+                        return false;
                     }
-                    return true;
                 } else {
-                    errorService.capture("Failed to save profile " + payload.getName() + ": Couldn't save network profile (but saved normal profile)");
+                    errorService.capture("Failed to save profile " + payload.getName() + ": Failed to save to database (via saveMongo())");
                     return false;
                 }
             } else {
-                errorService.capture("Failed to save profile " + payload.getName() + ": Failed to save to database (via saveNoSync())");
+                errorService.capture("Failed to save profile " + payload.getName() + ": Network Profile doesn't exist (should have been created)");
                 return false;
             }
         } else {
-            errorService.capture("Failed to save profile " + payload.getName() + ": Network Profile doesn't exist");
-            return false;
+            return saveMongo(payload);
         }
     }
 
-    @Override
-    public boolean saveNoSync(@Nonnull X payload) {
-        Preconditions.checkNotNull(payload);
-        cache(payload);
-        if (mongoStore.save(payload)) {
+    private boolean saveMongo(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload, "Cannot save a null Payload (saveMongo)");
+        boolean mongo = mongoStore.save(payload);
+        if (mongo) {
             payload.setSaveFailed(false);
             payload.setLastSaveTimestamp(System.currentTimeMillis());
             payload.interact();
-            return true;
         } else {
             payload.setSaveFailed(true);
-            return false;
         }
+        return mongo;
     }
 
     @Override
@@ -443,7 +419,6 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
                 }
             });
         }
-        this.pool.submit(this::saveAll);
     }
 
     @Override

@@ -51,7 +51,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
     // Profile has been saved successfully
     protected transient String loadingSource = null;
     protected transient Player player = null;
-    protected transient long handshakeStartTimestamp = 0;
+    protected transient long handshakeStartTimestamp = 0; // the time when a handshake starts (when another server requests that we save this profile)
 
     @Inject
     public PayloadProfile(ProfileCache cache) {

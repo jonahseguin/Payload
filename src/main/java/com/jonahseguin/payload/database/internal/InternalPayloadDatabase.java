@@ -3,7 +3,7 @@
  * www.jonahseguin.com
  */
 
-package com.jonahseguin.payload.database;
+package com.jonahseguin.payload.database.internal;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -13,6 +13,9 @@ import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.annotation.Database;
 import com.jonahseguin.payload.base.error.ErrorService;
 import com.jonahseguin.payload.base.exception.runtime.PayloadConfigException;
+import com.jonahseguin.payload.database.DatabaseDependent;
+import com.jonahseguin.payload.database.DatabaseState;
+import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.database.mongo.PayloadMongo;
 import com.jonahseguin.payload.database.mongo.PayloadMongoMonitor;
 import com.jonahseguin.payload.database.redis.PayloadRedis;
@@ -20,18 +23,17 @@ import com.jonahseguin.payload.database.redis.PayloadRedisMonitor;
 import com.jonahseguin.payload.server.ServerService;
 import com.mongodb.*;
 import com.mongodb.client.MongoDatabase;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 
 import java.io.*;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashSet;
@@ -60,8 +62,9 @@ public class InternalPayloadDatabase implements PayloadDatabase {
 
     // Redis
     private PayloadRedis payloadRedis = null;
-    private JedisPool jedisPool = null;
-    private Jedis monitorJedis = null;
+    private RedisClient redisClient = null;
+    private StatefulRedisConnection<String, String> redis = null;
+    private StatefulRedisPubSubConnection<String, String> redisPubSub = null;
     private PayloadRedisMonitor redisMonitor = null;
 
     @Inject
@@ -174,27 +177,16 @@ public class InternalPayloadDatabase implements PayloadDatabase {
             this.state.setLastRedisConnectionAttempt(System.currentTimeMillis());
             // Try connection
 
-            if (this.jedisPool == null) {
-
-                GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
-                poolConfig.setMaxTotal(64);
-                poolConfig.setMaxIdle(16);
-                poolConfig.setMinIdle(8);
-
-                if (payloadRedis.useURI()) {
-                    jedisPool = new JedisPool(poolConfig, URI.create(payloadRedis.getUri()));
-                } else {
-                    if (payloadRedis.isAuth()) {
-                        jedisPool = new JedisPool(poolConfig, payloadRedis.getAddress(), payloadRedis.getPort(), 2000, payloadRedis.getPassword(), payloadRedis.isSsl());
-                    } else {
-                        jedisPool = new JedisPool(poolConfig, payloadRedis.getAddress(), payloadRedis.getPort());
-                    }
-                }
+            if (redisClient == null) {
+                redisClient = RedisClient.create(payloadRedis.getRedisURI());
             }
 
-            if (this.monitorJedis == null) {
-                this.monitorJedis = this.jedisPool.getResource();
-                this.monitorJedis.ping();
+            if (redis == null) {
+                redis = redisClient.connect();
+            }
+
+            if (redisPubSub == null) {
+                redisPubSub = redisClient.connectPubSub();
             }
 
             return true; // No errors if we got here; success
@@ -223,7 +215,16 @@ public class InternalPayloadDatabase implements PayloadDatabase {
         if (this.redisMonitor != null) {
             this.redisMonitor.stop();
         }
-        this.jedisPool.close();
+        if (this.redis != null) {
+            if (this.redis.isOpen()) {
+                this.redis.close();
+            }
+            this.redis = null;
+        }
+        if (this.redisClient != null) {
+            this.redisClient.shutdown();
+            this.redisClient = null;
+        }
         return true;
     }
 

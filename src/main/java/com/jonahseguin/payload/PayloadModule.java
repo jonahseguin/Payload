@@ -10,8 +10,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
 import com.jonahseguin.payload.base.CacheService;
 import com.jonahseguin.payload.base.DatabaseCacheService;
-import com.jonahseguin.payload.base.lang.LangService;
-import com.jonahseguin.payload.base.lang.PayloadLangService;
+import com.jonahseguin.payload.base.lang.PLangService;
 import com.jonahseguin.payload.base.lifecycle.LifecycleService;
 import com.jonahseguin.payload.base.lifecycle.PluginLifecycleService;
 import com.jonahseguin.payload.base.uuid.UUIDService;
@@ -40,7 +39,7 @@ public class PayloadModule extends AbstractModule {
         bind(PayloadAPI.class).toInstance(payloadPlugin.getApi());
         bind(PayloadPlugin.class).toInstance(payloadPlugin);
         bind(PayloadLocal.class).toInstance(payloadPlugin.getLocal());
-        bind(LangService.class).to(PayloadLangService.class);
+        bind(PLangService.class).toInstance(payloadPlugin.getLang());
 
         bind(Plugin.class).toInstance(plugin);
         bind(JavaPlugin.class).toInstance(plugin);

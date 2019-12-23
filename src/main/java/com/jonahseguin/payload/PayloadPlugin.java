@@ -10,9 +10,7 @@ import com.google.inject.Injector;
 import com.google.inject.Singleton;
 import com.google.inject.Stage;
 import com.jonahseguin.payload.base.PayloadPermission;
-import com.jonahseguin.payload.base.lang.LangService;
-import com.jonahseguin.payload.base.lang.PayloadLangService;
-import com.jonahseguin.payload.base.listener.LockListener;
+import com.jonahseguin.payload.base.lang.PLangService;
 import com.jonahseguin.payload.command.PCommandHandler;
 import com.jonahseguin.payload.mode.profile.listener.ProfileListener;
 import lombok.Getter;
@@ -37,10 +35,9 @@ public class PayloadPlugin extends JavaPlugin {
     private final PayloadAPI api = new PayloadAPI(this);
     private static PayloadPlugin plugin = null;
     private Injector injector = null;
-    private boolean locked = false;
     private final PayloadLocal local = new PayloadLocal(this);
     private PCommandHandler commandHandler;
-    private LangService lang;
+    private PLangService lang;
 
     /**
      * Format a string with arguments
@@ -91,33 +88,15 @@ public class PayloadPlugin extends JavaPlugin {
             this.getLogger().info("This is the first startup for Payload on this server instance.  Files created.");
         }
 
+        this.lang = new PLangService(this);
+
         injector = Guice.createInjector(Stage.PRODUCTION, PayloadAPI.install(this, "PayloadDatabase"));
 
-        lang = new PayloadLangService(this);
-        lang.lang().load();
-        lang.lang().save();
         commandHandler = new PCommandHandler(this, lang, injector);
 
-        this.getServer().getPluginManager().registerEvents(injector.getInstance(LockListener.class), this);
         this.getServer().getPluginManager().registerEvents(injector.getInstance(ProfileListener.class), this);
         this.getCommand("payload").setExecutor(this.commandHandler);
         this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin enabled.", getDescription().getVersion()));
-    }
-
-    /**
-     * Whether to globally lock the server from players joining that don't have the bypass permission
-     * @return Locked
-     */
-    public boolean isLocked() {
-        return locked;
-    }
-
-    /**
-     * Change the status of server join lock
-     * @param locked is it locked?
-     */
-    public void setLocked(boolean locked) {
-        this.locked = locked;
     }
 
     /**
@@ -139,8 +118,8 @@ public class PayloadPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        lang.lang().load();
-        lang.lang().save();
+        lang.load();
+        lang.save();
         this.getLogger().info(PayloadPlugin.format("Payload v{0} by Jonah Seguin disabled.", getDescription().getVersion()));
         plugin = null;
     }
@@ -166,12 +145,6 @@ public class PayloadPlugin extends JavaPlugin {
                 ex.printStackTrace();
             }
         }
-    }
-
-    public void alert(PayloadPermission permission, String module, String key, Object... args) {
-        String l = lang.get(module, key, args);
-        getLogger().info(l);
-        getServer().getOnlinePlayers().stream().filter(p -> p.hasPermission(permission.getPermission())).forEach(p -> p.sendMessage(l));
     }
 
     public void alert(PayloadPermission permission, String msg) {

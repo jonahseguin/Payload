@@ -15,6 +15,9 @@ import com.jonahseguin.payload.annotation.Database;
 import com.jonahseguin.payload.base.error.ErrorService;
 import com.jonahseguin.payload.base.handshake.HandshakeService;
 import com.jonahseguin.payload.base.handshake.PayloadHandshakeService;
+import com.jonahseguin.payload.database.error.DatabaseErrorService;
+import com.jonahseguin.payload.database.internal.InternalPayloadDatabase;
+import com.jonahseguin.payload.database.internal.PayloadDatabaseService;
 import com.jonahseguin.payload.server.PayloadServerService;
 import com.jonahseguin.payload.server.ServerService;
 

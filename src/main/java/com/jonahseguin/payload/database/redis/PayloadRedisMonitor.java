@@ -6,10 +6,8 @@
 package com.jonahseguin.payload.database.redis;
 
 import com.jonahseguin.payload.PayloadPlugin;
-import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.PayloadDatabase;
 import org.bukkit.scheduler.BukkitTask;
-import redis.clients.jedis.Jedis;
 
 public class PayloadRedisMonitor implements Runnable {
 
@@ -48,18 +46,15 @@ public class PayloadRedisMonitor implements Runnable {
     @Override
     public void run() {
         // Check if connection is alive
-        if (database.getJedisPool() == null) return;
+        if (database.getRedis() == null) return;
         try {
-            Jedis jedis = database.getMonitorJedis();
-            if (jedis != null) {
-                if (jedis.isConnected()) {
-                    jedis.ping();
-                    // Connected
-                    this.handleConnected();
-                } else {
-                    // Disconnected
-                    this.handleDisconnected();
-                }
+            String reply = database.getRedis().sync().ping();
+
+            if (reply.contains("OK")) {
+                this.handleConnected();
+            } else {
+                this.handleDisconnected();
+                database.getErrorService().capture("Non-OK ping reply in Redis Monitor: " + reply);
             }
         }
         catch (Exception ex) {
@@ -72,21 +67,19 @@ public class PayloadRedisMonitor implements Runnable {
     private void handleConnected() {
         if (!this.database.getState().isRedisConnected()) {
             this.database.getState().setRedisConnected(true);
-            if (this.database.getState().isRedisInitConnect()) {
-                this.database.getHooks().forEach(DatabaseDependent::onRedisReconnect);
-            } else {
+            if (!this.database.getState().isRedisInitConnect()) {
                 this.database.getState().setRedisInitConnect(true);
-                this.database.getHooks().forEach(DatabaseDependent::onRedisInitConnect);
+                database.getErrorService().debug("Redis initial connection succeeded");
+            } else {
+                database.getErrorService().debug("Redis connection restored");
             }
-            database.getErrorService().debug("Redis connected");
         }
     }
 
     private void handleDisconnected() {
         if (this.database.getState().isRedisConnected()) {
             this.database.getState().setRedisConnected(false);
-            this.database.getHooks().forEach(DatabaseDependent::onRedisDisconnect);
-            database.getErrorService().debug("Redis connection lost");
+            database.getErrorService().capture("Redis connection lost");
         }
         this.database.connectRedis();
     }

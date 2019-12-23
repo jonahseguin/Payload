@@ -1,5 +1,11 @@
+/*
+ * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * www.jonahseguin.com
+ */
+
 package com.jonahseguin.payload.database.redis;
 
+import io.lettuce.core.RedisURI;
 import lombok.Data;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -37,6 +43,21 @@ public class PayloadRedis {
         }
 
         return new PayloadRedis(address, port, auth, password, ssl, uri, retryTimeout);
+    }
+
+    public RedisURI getRedisURI() {
+        if (useURI()) {
+            return RedisURI.create(this.uri);
+        } else {
+            RedisURI.Builder builder = RedisURI.builder()
+                    .withPort(port)
+                    .withHost(address)
+                    .withSsl(ssl);
+            if (auth) {
+                builder.withPassword(password);
+            }
+            return builder.build();
+        }
     }
 
     public boolean useURI() {

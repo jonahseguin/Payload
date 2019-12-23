@@ -16,6 +16,5 @@ public class ObjectCacheSettings extends CacheSettings {
     private boolean useRedis = true;
     private boolean useMongo = true;
     private boolean createOnNull = false;
-    private int handshakeTimeoutSeconds = 5;
 
 }
