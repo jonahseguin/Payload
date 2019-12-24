@@ -12,13 +12,10 @@ import com.jonahseguin.payload.base.type.Payload;
 import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.Optional;
-import java.util.concurrent.Future;
 
 public interface PayloadService<K, X extends Payload<K>> extends Service {
 
     Optional<X> get(@Nonnull K key);
-
-    Future<Optional<X>> getAsync(@Nonnull K key);
 
     Optional<X> getFromCache(@Nonnull K key);
 
@@ -26,9 +23,7 @@ public interface PayloadService<K, X extends Payload<K>> extends Service {
 
     boolean save(@Nonnull X payload);
 
-    Future<Boolean> saveAsync(@Nonnull X payload);
-
-    boolean saveNoSync(@Nonnull X payload);
+    void saveAsync(@Nonnull X payload);
 
     void cache(@Nonnull X payload);
 

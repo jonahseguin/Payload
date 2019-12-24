@@ -16,5 +16,6 @@ public abstract class CacheSettings {
 
     private int autoSaveIntervalSeconds = 600;
     private boolean serverSpecific = false; // should we associate each object with a server, and only cache objects that match this server
+    private boolean enableUpdater = true;
 
 }

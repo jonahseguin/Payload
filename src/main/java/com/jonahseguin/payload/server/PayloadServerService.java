@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 public class PayloadServerService implements Runnable, ServerService {
 
     public static final long ASSUME_OFFLINE_SECONDS = 60;
-    public static final long PING_FREQUENCY_SECONDS = 20;
+    public static final long PING_FREQUENCY_SECONDS = 30;
 
     private final PayloadAPI api;
     private final String name;
@@ -203,10 +203,12 @@ public class PayloadServerService implements Runnable, ServerService {
         this.thisServer.setOnline(true);
         this.servers.forEach((name, server) -> {
             if (!name.equalsIgnoreCase(this.thisServer.getName())) {
-                long pingExpiredAt = System.currentTimeMillis() - (PayloadServerService.ASSUME_OFFLINE_SECONDS * 1000);
-                if (server.getLastPing() <= pingExpiredAt) {
-                    // Assume they're offline
-                    server.setOnline(false);
+                if (server.isOnline()) {
+                    long pingExpiredAt = System.currentTimeMillis() - (PayloadServerService.ASSUME_OFFLINE_SECONDS * 1000);
+                    if (server.getLastPing() <= pingExpiredAt) {
+                        // Assume they're offline
+                        server.setOnline(false);
+                    }
                 }
             }
         });

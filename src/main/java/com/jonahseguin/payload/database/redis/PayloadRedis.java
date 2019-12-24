@@ -50,8 +50,8 @@ public class PayloadRedis {
             return RedisURI.create(this.uri);
         } else {
             RedisURI.Builder builder = RedisURI.builder()
-                    .withPort(port)
                     .withHost(address)
+                    .withPort(port)
                     .withSsl(ssl);
             if (auth) {
                 builder.withPassword(password);
@@ -61,7 +61,7 @@ public class PayloadRedis {
     }
 
     public boolean useURI() {
-        return this.uri != null;
+        return this.uri != null && uri.length() > 0 && !uri.equalsIgnoreCase("null");
     }
 
 }

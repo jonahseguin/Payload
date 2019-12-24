@@ -45,7 +45,7 @@ public class ProfileHandshakePacket {
     public Document toDocument() {
         Document document = new Document();
         document.append(KEY_TARGET_SERVER, targetServer);
-        document.append(KEY_UUID, uuid);
+        document.append(KEY_UUID, uuid.toString());
         document.append(KEY_SENDER_SERVER, senderServer);
         return document;
     }

@@ -73,11 +73,16 @@ public abstract class PayloadProfile implements Payload<UUID> {
     }
 
     @Override
+    public void onReceiveUpdate() {
+
+    }
+
+    @Override
     public boolean hasValidHandshake() {
         if (handshakeStartTimestamp > 0) {
             long ago = System.currentTimeMillis() - handshakeStartTimestamp;
             long seconds = ago / 1000;
-            return seconds < 10;
+            return seconds <= cache.getSettings().getHandshakeTimeoutSeconds() + 1;
         }
         return false;
     }

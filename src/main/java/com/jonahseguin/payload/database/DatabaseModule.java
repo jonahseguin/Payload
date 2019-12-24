@@ -13,8 +13,6 @@ import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.annotation.Database;
 import com.jonahseguin.payload.base.error.ErrorService;
-import com.jonahseguin.payload.base.handshake.HandshakeService;
-import com.jonahseguin.payload.base.handshake.PayloadHandshakeService;
 import com.jonahseguin.payload.database.error.DatabaseErrorService;
 import com.jonahseguin.payload.database.internal.InternalPayloadDatabase;
 import com.jonahseguin.payload.database.internal.PayloadDatabaseService;
@@ -59,18 +57,6 @@ public class DatabaseModule extends AbstractModule {
         } else {
             ServerService service = injector.getInstance(PayloadServerService.class);
             api.registerServerService(service);
-            return service;
-        }
-    }
-
-    @Provides
-    @Singleton
-    HandshakeService provideHandshakeService(PayloadAPI api, Injector injector) {
-        if (api.isHandshakeServiceRegistered(name)) {
-            return api.getHandshakeService(name);
-        } else {
-            HandshakeService service = injector.getInstance(PayloadHandshakeService.class);
-            api.registerHandshakeService(service);
             return service;
         }
     }

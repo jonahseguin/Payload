@@ -71,13 +71,18 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
             success = false;
             errorService.capture("Failed to start MongoDB store for cache: " + name);
         }
+        database.getMorphia().map(NetworkProfile.class);
+
         if (mode.equals(PayloadMode.NETWORK_NODE)) {
+            if (!handshakeService.start()) {
+                success = false;
+                errorService.capture("Failed to start Profile Handshake Service (Network Node mode) for cache: " + name);
+            }
             if (!networkService.start()) {
                 success = false;
                 errorService.capture("Failed to start Network Service (Network Node mode) for cache: " + name);
             }
         }
-        database.getMorphia().map(NetworkProfile.class);
         return success;
     }
 
@@ -87,6 +92,12 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
         AtomicInteger failedSaves = new AtomicInteger(0);
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             getFromCache(player).ifPresent(payload -> {
+                if (settings.isSetOfflineOnShutdown()) {
+                    getNetworked(payload).ifPresent(networkProfile -> {
+                        networkProfile.markUnloaded(false);
+                        networkService.save(networkProfile);
+                    });
+                }
                 if (!save(payload)) {
                     failedSaves.getAndIncrement();
                 }
@@ -103,10 +114,16 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
             success = false;
         }
         if (mode.equals(PayloadMode.NETWORK_NODE)) {
+            if (handshakeService.isRunning()) {
+                if (!handshakeService.shutdown()) {
+                    success = false;
+                    errorService.capture("Failed to shutdown Profile Handshake Service (Network Node mode) for cache: " + name);
+                }
+            }
             if (networkService.isRunning()) {
                 if (!networkService.shutdown()) {
                     success = false;
-                    errorService.capture("Failed to start Network Service (Network Node mode) for cache: " + name);
+                    errorService.capture("Failed to shutdown Network Service (Network Node mode) for cache: " + name);
                 }
             }
         }

@@ -45,6 +45,11 @@ public abstract class PayloadObject implements Payload<String> {
     }
 
     @Override
+    public void onReceiveUpdate() {
+
+    }
+
+    @Override
     public long cachedTimestamp() {
         return this.cachedTimestamp;
     }

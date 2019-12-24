@@ -92,15 +92,18 @@ public class PayloadProfileController<X extends PayloadProfile> implements Paylo
     @Override
     public void uncache(@Nonnull X payload, boolean switchingServers) {
         if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
+            Optional<NetworkProfile> o = cache.getNetworkService().get(payload);
+            if (o.isPresent()) {
+                NetworkProfile networkProfile = o.get();
+                networkProfile.markUnloaded(switchingServers);
+                cache.getNetworkService().save(networkProfile);
+                cache.getErrorService().debug("Set NetworkProfile to offline for " + payload.getName());
+            } else {
+                cache.getErrorService().capture("Couldn't set NetworkProfile to offline for player " + payload.getName() + ", no NetworkProfile was found");
+            }
             if (cache.isCached(payload.getUniqueId())) {
                 cache.uncache(payload.getUniqueId());
             }
-        }
-        Optional<NetworkProfile> o = cache.getNetworkService().get(payload.getUniqueId());
-        if (o.isPresent()) {
-            NetworkProfile networkProfile = o.get();
-            networkProfile.markUnloaded(switchingServers);
-            cache.runAsync(() -> cache.getNetworkService().save(networkProfile));
         }
     }
 

@@ -50,11 +50,11 @@ public class PayloadRedisMonitor implements Runnable {
         try {
             String reply = database.getRedis().sync().ping();
 
-            if (reply.contains("OK")) {
+            if (reply.contains("PONG")) {
                 this.handleConnected();
             } else {
                 this.handleDisconnected();
-                database.getErrorService().capture("Non-OK ping reply in Redis Monitor: " + reply);
+                database.getErrorService().capture("Non-PONG ping reply in Redis Monitor: " + reply);
             }
         }
         catch (Exception ex) {

@@ -78,4 +78,6 @@ public interface Payload<K> {
 
     boolean hasValidHandshake();
 
+    void onReceiveUpdate();
+
 }

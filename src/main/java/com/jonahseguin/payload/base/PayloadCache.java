@@ -18,6 +18,7 @@ import com.jonahseguin.payload.base.lang.PLangService;
 import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadInstantiator;
+import com.jonahseguin.payload.base.update.PayloadUpdater;
 import com.jonahseguin.payload.database.DatabaseService;
 import com.jonahseguin.payload.server.ServerService;
 import lombok.Getter;
@@ -52,6 +53,7 @@ public abstract class PayloadCache<K, X extends Payload<K>> implements Comparabl
     @Inject protected DatabaseService database;
     @Inject protected PLangService lang;
     @Inject protected ServerService serverService;
+    protected PayloadUpdater<K, X> updater;
     protected ErrorService errorService;
     protected PayloadInstantiator<K, X> instantiator;
     protected boolean debug = true;
@@ -98,7 +100,14 @@ public abstract class PayloadCache<K, X extends Payload<K>> implements Comparabl
         boolean success = true;
         if (!initialize()) {
             success = false;
-            errorService.capture("Failed to initialize internally for cache " + name);
+            errorService.capture("Failed to initialize internally for cache: " + name);
+        }
+        updater = new PayloadUpdater<>(this, database);
+        if (getSettings().isEnableUpdater() && mode.equals(PayloadMode.NETWORK_NODE)) {
+            if (!updater.start()) {
+                success = false;
+                errorService.capture("Failed to start Payload Updater for cache: " + name);
+            }
         }
         autoSaveTask.start();
         running = true;
@@ -118,6 +127,15 @@ public abstract class PayloadCache<K, X extends Payload<K>> implements Comparabl
             success = false;
         }
 
+        if (updater != null) {
+            if (updater.isRunning()) {
+                if (!updater.shutdown()) {
+                    success = false;
+                    errorService.capture("Failed to shutdown Payload Updater for cache: " + name);
+                }
+            }
+        }
+
         autoSaveTask.stop();
         running = false;
         return success;
@@ -135,8 +153,28 @@ public abstract class PayloadCache<K, X extends Payload<K>> implements Comparabl
      */
     protected abstract boolean terminate();
 
+    @Override
+    public boolean pushUpdate(@Nonnull X payload) {
+        Preconditions.checkNotNull(payload, "Payload cannot be null for pushUpdate");
+        if (!getSettings().isEnableUpdater()) {
+            errorService.debug("Not pushing update for Payload " + keyToString(payload.getIdentifier()) + ": Updater is not enabled!");
+            return true;
+        }
+        if (!mode.equals(PayloadMode.NETWORK_NODE)) {
+            errorService.debug("Not pushing update for Payload " + keyToString(payload.getIdentifier()) + ": Cache mode is not Network Node!");
+            return true;
+        }
+        if (updater != null) {
+            return updater.pushUpdate(payload);
+        } else {
+            errorService.capture("Couldn't pushUpdate for Payload " + keyToString(payload.getIdentifier()) + ": PayloadUpdater is null!");
+            return false;
+        }
+    }
+
     /**
      * Get a number of objects currently stored locally in this cache
+     *
      * @return int number of objects cached
      */
     @Override

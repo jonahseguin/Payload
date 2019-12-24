@@ -55,7 +55,7 @@ public class ProfileHandshakeService<X extends PayloadProfile> implements Servic
             reactive.unsubscribe(channelRequest, channelReply);
         }
         running = false;
-        return false;
+        return true;
     }
 
     @Override
@@ -78,7 +78,7 @@ public class ProfileHandshakeService<X extends PayloadProfile> implements Servic
                             if (packet.getTargetServer().equalsIgnoreCase(database.getServerService().getThisServer().getName())) {
                                 if (patternMessage.getChannel().equals(channelRequest)) {
                                     handleRequest(packet);
-                                } else if (patternMessage.getChannel().equals(channelRequest)) {
+                                } else if (patternMessage.getChannel().equals(channelReply)) {
                                     handleReply(packet);
                                 }
                             }
@@ -98,7 +98,8 @@ public class ProfileHandshakeService<X extends PayloadProfile> implements Servic
         requestPacket.setSenderServer(database.getServerService().getThisServer().getName());
         String json = requestPacket.toDocument().toJson();
         Preconditions.checkNotNull(json, "JSON cannot be null for sendReply in ProfileHandshakeService");
-        database.getRedisPubSub().async().publish(channelReply, json);
+        database.getRedis().async().publish(channelReply, json);
+        cache.getErrorService().debug("Sending reply for handshake for UUID " + requestPacket.getUuid() + " [" + requestPacket.getSenderServer() + " -> " + requestPacket.getTargetServer() + "]");
     }
 
     private void handleRequest(@Nonnull final ProfileHandshakePacket packet) {
@@ -106,10 +107,14 @@ public class ProfileHandshakeService<X extends PayloadProfile> implements Servic
         // Another server is being joined by the player (who is assumingly on this server)
         // - check if they're online, if they are: save them
         // - after save (or if they're not online) send reply
+        cache.getErrorService().debug("Received handshake request for " + packet.getUuid() + " [" + packet.getSenderServer() + " -> " + packet.getTargetServer() + "]");
         final Player player = cache.getPlugin().getServer().getPlayer(packet.getUuid());
         cache.runAsync(() -> {
             if (player != null && player.isOnline()) {
-                cache.getFromCache(player).ifPresent(cache::save);
+                cache.getFromCache(player).ifPresent(profile -> {
+                    profile.setHandshakeStartTimestamp(System.currentTimeMillis());
+                    cache.save(profile);
+                });
             }
             sendReply(packet);
         });
@@ -132,7 +137,7 @@ public class ProfileHandshakeService<X extends PayloadProfile> implements Servic
         controller.setHandshakeTimedOut(false);
         controller.setHandshakeComplete(false);
         controller.setHandshakeRequestStartTime(System.currentTimeMillis());
-        database.getRedisPubSub().async().publish(channelRequest, json);
+        database.getRedis().async().publish(channelRequest, json);
     }
 
 }

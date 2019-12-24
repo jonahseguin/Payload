@@ -25,6 +25,8 @@ import java.util.Optional;
 
 public interface Cache<K, X extends Payload<K>> extends Service, DatabaseDependent {
 
+    boolean pushUpdate(@Nonnull X payload);
+
     Optional<X> get(@Nonnull K key);
 
     Optional<X> getFromCache(@Nonnull K key);
