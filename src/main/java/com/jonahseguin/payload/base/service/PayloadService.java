@@ -5,7 +5,6 @@
 
 package com.jonahseguin.payload.base.service;
 
-import com.jonahseguin.payload.base.PayloadCallback;
 import com.jonahseguin.payload.base.Service;
 import com.jonahseguin.payload.base.type.Payload;
 
@@ -36,10 +35,6 @@ public interface PayloadService<K, X extends Payload<K>> extends Service {
     void delete(@Nonnull X payload);
 
     boolean isCached(@Nonnull K key);
-
-    void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback);
-
-    void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback);
 
     void cacheAll();
 

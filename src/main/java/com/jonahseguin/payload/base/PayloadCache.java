@@ -348,22 +348,6 @@ public abstract class PayloadCache<K, X extends Payload<K>> implements Comparabl
     }
 
     @Override
-    public void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback) {
-        Preconditions.checkNotNull(payload);
-        Preconditions.checkNotNull(callback);
-        //sync.prepareUpdate(payload, callback);
-        callback.callback(Optional.of(payload)); // TODO
-    }
-
-    @Override
-    public void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback) {
-        Preconditions.checkNotNull(payload);
-        Preconditions.checkNotNull(callback);
-        //runAsync(() -> sync.prepareUpdate(payload, callback));
-        callback.callback(Optional.of(payload)); // TODO
-    }
-
-    @Override
     public void setErrorService(@Nonnull ErrorService errorService) {
         Preconditions.checkNotNull(errorService);
         this.errorService = errorService;

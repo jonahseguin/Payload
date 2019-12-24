@@ -49,10 +49,6 @@ public interface Cache<K, X extends Payload<K>> extends Service, DatabaseDepende
 
     boolean isCached(@Nonnull K key);
 
-    void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback);
-
-    void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback);
-
     void cacheAll();
 
     @Nonnull
