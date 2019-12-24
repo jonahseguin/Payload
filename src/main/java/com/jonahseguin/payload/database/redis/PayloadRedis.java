@@ -14,24 +14,19 @@ public class PayloadRedis {
 
     private final String address;
     private final int port;
-
     private final boolean auth;
     private final String password;
     private final boolean ssl;
-
     private final String uri;
-
-    private final int retryTimeout; // Retry connections every X seconds
 
     public static PayloadRedis fromConfig(ConfigurationSection section) {
         String address = section.getString("address");
         int port = section.getInt("port");
-        int retryTimeout = section.getInt("retryTimeout");
 
         ConfigurationSection authSection = section.getConfigurationSection("auth");
-        boolean auth = authSection.getBoolean("enabled");
+        boolean auth = authSection.getBoolean("enabled", false);
         String password = authSection.getString("password");
-        boolean ssl = authSection.getBoolean("ssl");
+        boolean ssl = authSection.getBoolean("ssl", false);
 
         String uri = section.getString("uri", null); // Default uri to null
         // The connection URI, if provided, will completely overwrite all other properties.
@@ -42,7 +37,7 @@ public class PayloadRedis {
             }
         }
 
-        return new PayloadRedis(address, port, auth, password, ssl, uri, retryTimeout);
+        return new PayloadRedis(address, port, auth, password, ssl, uri);
     }
 
     public RedisURI getRedisURI() {

@@ -39,5 +39,6 @@ redis:
 
   # If using authentication (recommended) **only if NOT using URI field**
   auth:
+    ssl: false
     enabled: false # Change to true if using authentication, which will then use this password to authenticate:
     password: 'password' # Your password: will be used with redis.auth(password)
