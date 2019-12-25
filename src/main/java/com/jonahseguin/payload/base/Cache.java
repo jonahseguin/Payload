@@ -27,6 +27,8 @@ public interface Cache<K, X extends Payload<K>> extends Service, DatabaseDepende
 
     boolean pushUpdate(@Nonnull X payload);
 
+    boolean pushUpdate(@Nonnull X payload, boolean forceLoad);
+
     Optional<X> get(@Nonnull K key);
 
     Optional<X> getFromCache(@Nonnull K key);

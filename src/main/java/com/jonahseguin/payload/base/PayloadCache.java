@@ -155,6 +155,11 @@ public abstract class PayloadCache<K, X extends Payload<K>> implements Comparabl
 
     @Override
     public boolean pushUpdate(@Nonnull X payload) {
+        return pushUpdate(payload, false);
+    }
+
+    @Override
+    public boolean pushUpdate(@Nonnull X payload, boolean forceLoad) {
         Preconditions.checkNotNull(payload, "Payload cannot be null for pushUpdate");
         if (!getSettings().isEnableUpdater()) {
             errorService.debug("Not pushing update for Payload " + keyToString(payload.getIdentifier()) + ": Updater is not enabled!");
@@ -165,7 +170,7 @@ public abstract class PayloadCache<K, X extends Payload<K>> implements Comparabl
             return true;
         }
         if (updater != null) {
-            return updater.pushUpdate(payload);
+            return updater.pushUpdate(payload, forceLoad);
         } else {
             errorService.capture("Couldn't pushUpdate for Payload " + keyToString(payload.getIdentifier()) + ": PayloadUpdater is null!");
             return false;

@@ -20,6 +20,7 @@ public class PayloadUpdater<K, X extends Payload<K>> implements Service {
 
     private static final String KEY_SOURCE_SERVER = "sourceServer";
     private static final String KEY_IDENTIFIER = "identifier";
+    private static final String KEY_FORCE_LOAD = "forceLoad";
 
     private final Cache<K, X> cache;
     private final DatabaseService database;
@@ -83,17 +84,16 @@ public class PayloadUpdater<K, X extends Payload<K>> implements Service {
             if (document != null) {
                 String sourceServerString = document.getString(KEY_SOURCE_SERVER);
                 String identifierString = document.getString(KEY_IDENTIFIER);
+                boolean force = document.getBoolean(KEY_FORCE_LOAD, false);
                 if (sourceServerString != null && identifierString != null) {
                     if (!sourceServerString.equalsIgnoreCase(database.getServerService().getThisServer().getName())) {
                         // As long as the source server wasn't us
-                        K identifier = cache.keyFromString(identifierString);
-                        if (cache.isCached(identifier)) {
-                            cache.runAsync(() -> {
-                                cache.getFromDatabase(identifier).ifPresent(payload -> {
-                                    cache.cache(payload);
-                                    payload.onReceiveUpdate();
-                                });
-                            });
+                        final K identifier = cache.keyFromString(identifierString);
+                        if (cache.isCached(identifier) || force) {
+                            cache.runAsync(() -> cache.getFromDatabase(identifier).ifPresent(payload -> {
+                                cache.cache(payload);
+                                payload.onReceiveUpdate();
+                            }));
                         }
                     }
                 } else {
@@ -108,11 +108,16 @@ public class PayloadUpdater<K, X extends Payload<K>> implements Service {
     }
 
     public boolean pushUpdate(@Nonnull X payload) {
+        return pushUpdate(payload, false);
+    }
+
+    public boolean pushUpdate(@Nonnull X payload, boolean force) {
         try {
             Preconditions.checkNotNull(payload, "Payload cannot be null in PayloadUpdater (pushUpdate)");
             final Document document = new Document();
             document.append(KEY_SOURCE_SERVER, database.getServerService().getThisServer().getName());
             document.append(KEY_IDENTIFIER, cache.keyToString(payload.getIdentifier()));
+            document.append(KEY_FORCE_LOAD, force);
             final String json = document.toJson();
             cache.runAsync(() -> database.getRedis().async().publish(channel, json));
             return true;
