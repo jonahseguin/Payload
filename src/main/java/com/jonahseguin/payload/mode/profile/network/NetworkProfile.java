@@ -3,34 +3,43 @@
  * www.jonahseguin.com
  */
 
-package com.jonahseguin.payload.mode.profile;
+package com.jonahseguin.payload.mode.profile.network;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.server.ServerService;
 import dev.morphia.annotations.Entity;
+import dev.morphia.annotations.Id;
+import dev.morphia.annotations.Transient;
 import lombok.Getter;
 import lombok.Setter;
+import org.bson.types.ObjectId;
 
 import javax.annotation.Nonnull;
-import java.util.Date;
 import java.util.UUID;
 
-@Entity
+@Entity("NetworkProfile")
 @Getter
 @Setter
-public class NetworkProfile extends NetworkPayload<UUID> {
+public class NetworkProfile {
+
+    @Id
+    private ObjectId id = new ObjectId(); // required for morphia mapping
+
+    @Transient
+    protected transient final ServerService serverService;
+    protected long lastCached = System.currentTimeMillis();
+    protected long lastSaved = System.currentTimeMillis();
 
     protected String identifier;
     protected String lastSeenServer;
-    protected Date lastSeen = new Date();
+    protected long lastSeen = 0L;
     protected boolean online = false;
     protected transient UUID uuidID = null;
 
     @Inject
     public NetworkProfile(ServerService serverService) {
-        super(serverService);
+        this.serverService = serverService;
     }
 
     public boolean isOnlineOtherServer() {
@@ -48,7 +57,7 @@ public class NetworkProfile extends NetworkPayload<UUID> {
     }
 
     public boolean isOnline() {
-        boolean shouldBeOnline = (System.currentTimeMillis() - lastSeen.getTime()) < (1000 * 60 * 60);
+        boolean shouldBeOnline = (System.currentTimeMillis() - lastSeen) < (1000 * 60 * 60);
         if (online && !shouldBeOnline) {
             online = false;
         }
@@ -57,37 +66,30 @@ public class NetworkProfile extends NetworkPayload<UUID> {
 
     public void markLoaded(boolean online) {
         this.online = online;
-        loaded = true;
-        loadedServers.add(serverService.getThisServer().getName());
-        lastCached = new Date();
+        lastCached = System.currentTimeMillis();
         if (online) {
-            mostRecentServer = serverService.getThisServer().getName();
             lastSeenServer = serverService.getThisServer().getName();
-            lastSeen = new Date();
+            lastSeen = System.currentTimeMillis();
         }
     }
 
     public void markUnloaded(boolean switchingServers) {
         online = switchingServers;
-        loadedServers.remove(serverService.getThisServer().getName());
-        loaded = loadedServers.size() > 0 || switchingServers;
-        lastSeen = new Date();
+        lastSeen = System.currentTimeMillis();
     }
 
     public void markSaved() {
-        lastSaved = new Date();
+        lastSaved = System.currentTimeMillis();
         if (isOnlineThisServer()) {
-            lastSeen = new Date();
+            lastSeen = System.currentTimeMillis();
         }
     }
 
-    @Override
     public UUID getIdentifier() {
         setUUID();
         return uuidID;
     }
 
-    @Override
     public void setIdentifier(@Nonnull UUID identifier) {
         Preconditions.checkNotNull(identifier);
         this.identifier = identifier.toString();

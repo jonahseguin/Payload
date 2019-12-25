@@ -6,9 +6,6 @@
 package com.jonahseguin.payload.mode.object;
 
 import com.google.common.base.Preconditions;
-import com.jonahseguin.payload.PayloadMode;
-import com.jonahseguin.payload.base.handshake.HandshakeHandler;
-import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.type.PayloadController;
 import lombok.Getter;
 import lombok.Setter;
@@ -48,7 +45,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
 
     @Override
     public Optional<X> cache() {
-        if (cache.getSyncMode().equals(SyncMode.ALWAYS) && cache.getSettings().isEnableSync() && cache.isCached(identifier)) {
+        /*if (cache.getSyncMode().equals(SyncMode.ALWAYS) && cache.getSettings().isEnableSync() && cache.isCached(identifier)) {
             load(true);
         } else {
             if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
@@ -59,7 +56,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
                         load(true);
                     } else {
                         // Handshake
-                        HandshakeHandler<ObjectHandshake> h = cache.getHandshakeService().publish(new ObjectHandshake(cache, identifier));
+                        HandshakeHandler<ObjectHandshake> h = cache.getHandshakeService().publish(new ObjectHandshake(cache.getInjector(), cache, identifier));
                         h.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
                         load(false);
                     }
@@ -84,7 +81,8 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
                 // Standalone mode
                 load(true);
             }
-        }
+        }*/
+        load(true);
 
         if (payload != null && !loadedFromLocal) {
             this.cache.cache(payload);
@@ -97,13 +95,6 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
     public void uncache(@Nonnull X payload, boolean switchingServers) {
         if (cache.isCached(payload.getIdentifier())) {
             cache.uncache(payload);
-        }
-        if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
-            Optional<NetworkObject> o = cache.getNetworkService().get(payload.getIdentifier());
-            if (o.isPresent()) {
-                NetworkObject networkObject = o.get();
-                networkObject.markUnloaded();
-            }
         }
     }
 }

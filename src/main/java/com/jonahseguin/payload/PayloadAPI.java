@@ -8,8 +8,6 @@ package com.jonahseguin.payload;
 import com.google.common.base.Preconditions;
 import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.PayloadCache;
-import com.jonahseguin.payload.base.handshake.HandshakeService;
-import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.database.DatabaseModule;
 import com.jonahseguin.payload.database.PayloadDatabase;
@@ -31,7 +29,6 @@ public class PayloadAPI {
     private final ConcurrentMap<String, Cache> caches = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, PayloadDatabase> databases = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, ServerService> serverServices = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, HandshakeService> handshakeServices = new ConcurrentHashMap<>();
     private final Set<String> requested = new HashSet<>();
 
     private List<Cache> _sortedCaches = null;
@@ -105,33 +102,17 @@ public class PayloadAPI {
         }
     }
 
-    public boolean isHandshakeServiceRegistered(String name) {
-        return this.handshakeServices.containsKey(name.toLowerCase());
-    }
-
-    public HandshakeService getHandshakeService(String name) {
-        return this.handshakeServices.get(name.toLowerCase());
-    }
-
-    public void registerHandshakeService(HandshakeService handshakeService) {
-        if (!isHandshakeServiceRegistered(handshakeService.getName())) {
-            this.handshakeServices.put(handshakeService.getName(), handshakeService);
-        } else {
-            throw new IllegalArgumentException("A Payload Server Service (database) with the name '" + handshakeService.getName() + "' has already been registered.  Choose a different name.");
-        }
-    }
-
-
     /**
      * Get a cache by name
+     *
      * @param name Name of the cache
-     * @param <K> Key type (i.e String for uuid)
-     * @param <X> Value type (object to cache; i.e Profile)
+     * @param <K>  Key type (i.e String for uuid)
+     * @param <X>  Value type (object to cache; i.e Profile)
      * @return The Cache
      */
     @SuppressWarnings("unchecked") // bad, oops
-    public <K, X extends Payload<K>, N extends NetworkPayload<K>> Cache<K, X, N> getCache(String name) {
-        return (Cache<K, X, N>) this.caches.get(convertCacheName(name));
+    public <K, X extends Payload<K>> Cache<K, X> getCache(String name) {
+        return (Cache<K, X>) this.caches.get(convertCacheName(name));
     }
 
     public Cache getCacheRaw(String name) {
@@ -178,9 +159,7 @@ public class PayloadAPI {
             for (Cache cache : getCaches().values()) {
                 cache.updatePayloadID();
             }
-            for (PayloadDatabase database : getDatabases().values()) {
-                database.getServerService().getPublisher().publishUpdateName(oldName, name);
-            }
+            serverServices.values().forEach(s -> s.getPublisher().publishUpdateName(oldName, name));
         } else {
             throw new IllegalArgumentException("Payload ID must be alphanumeric, '" + name + "' is not valid.");
         }

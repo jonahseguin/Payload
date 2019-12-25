@@ -5,11 +5,10 @@
 
 package com.jonahseguin.payload.base.service;
 
-import com.jonahseguin.payload.mode.object.NetworkObject;
 import com.jonahseguin.payload.mode.object.ObjectCache;
 import com.jonahseguin.payload.mode.object.PayloadObject;
 
-public interface PayloadObjectService<X extends PayloadObject> extends PayloadService<String, X, NetworkObject> {
+public interface PayloadObjectService<X extends PayloadObject> extends PayloadService<String, X> {
 
     ObjectCache<X> cache();
 

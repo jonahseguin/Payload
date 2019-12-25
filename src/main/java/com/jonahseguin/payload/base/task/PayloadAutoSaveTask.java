@@ -7,19 +7,18 @@ package com.jonahseguin.payload.base.task;
 
 import com.google.common.base.Preconditions;
 import com.jonahseguin.payload.base.Cache;
-import com.jonahseguin.payload.base.network.NetworkPayload;
 import com.jonahseguin.payload.base.type.Payload;
 import org.bukkit.scheduler.BukkitTask;
 
 import javax.annotation.Nonnull;
 
-public class PayloadAutoSaveTask<K, X extends Payload<K>, N extends NetworkPayload<K>> implements Runnable {
+public class PayloadAutoSaveTask<K, X extends Payload<K>> implements Runnable {
 
-    private final Cache<K, X, N> cache;
+    private final Cache<K, X> cache;
 
     private BukkitTask task = null;
 
-    public PayloadAutoSaveTask(@Nonnull Cache<K, X, N> cache) {
+    public PayloadAutoSaveTask(@Nonnull Cache<K, X> cache) {
         Preconditions.checkNotNull(cache);
         this.cache = cache;
     }

@@ -5,116 +5,51 @@
 
 package com.jonahseguin.payload.base.error;
 
-import com.jonahseguin.lang.LangDefinitions;
-import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.base.Cache;
-import com.jonahseguin.payload.base.lang.LangService;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
-public class CacheErrorService implements ErrorService, LangModule {
+public class CacheErrorService implements ErrorService {
 
     protected final Cache cache;
-    protected final LangService lang;
 
-    public CacheErrorService(Cache cache, LangService lang) {
+    public CacheErrorService(Cache cache) {
         this.cache = cache;
-        this.lang = lang;
-        lang.register(this);
+    }
+
+    public boolean isDebug() {
+        return cache.isDebug() || cache.getApi().getPlugin().isDebug();
+    }
+
+    public String getMsg(String msg) {
+        return "[" + cache.getName() + "] " + msg;
     }
 
     @Override
-    public void define(LangDefinitions l) {
-        l.define("error-generic", "&7[Error][{0}] {1}");
-        l.define("error-specific", "&7[Error][{0}] {1} - {2}");
-        l.define("debug", "&7[Debug][{0}] {1}");
-    }
-
-    @Override
-    public String langModule() {
-        return "error";
-    }
-
-    @Override
-    public String capture(@Nonnull Throwable throwable) {
-        String s = lang.module(this).format("error-generic", cache.getName(), throwable.getMessage());
-        cache.getPlugin().getLogger().severe(s);
-        if (cache.isDebug()) {
+    public void capture(@Nonnull Throwable throwable) {
+        cache.getPlugin().getLogger().severe(getMsg(throwable.getMessage()));
+        if (isDebug()) {
             throwable.printStackTrace();
         }
-        return s;
     }
 
+
     @Override
-    public String capture(@Nonnull Throwable throwable, @Nonnull String msg) {
-        String s = lang.module(this).format("error-specific", cache.getName(), throwable.getMessage(), msg);
-        cache.getPlugin().getLogger().severe(s);
-        if (cache.isDebug()) {
+    public void capture(@Nonnull Throwable throwable, @Nonnull String msg) {
+        cache.getPlugin().getLogger().severe(msg + " - " + getMsg(throwable.getMessage()));
+        if (isDebug()) {
             throwable.printStackTrace();
         }
-        return s;
     }
 
     @Override
-    public String capture(@Nonnull String msg) {
-        String s = lang.module(this).format("error-generic", cache.getName(), msg);
-        cache.getPlugin().getLogger().severe(s);
-        return s;
+    public void capture(@Nonnull String msg) {
+        cache.getPlugin().getLogger().severe(getMsg(msg));
     }
 
-    @Override
-    public String capture(@Nonnull String module, @Nonnull String key, @Nullable Object... args) {
-        String s = lang.module(module).format(key, args);
-        cache.getPlugin().getLogger().severe(s);
-        return s;
-    }
 
     @Override
-    public String capture(@Nonnull Throwable throwable, @Nonnull String module, @Nonnull String key, @Nullable Object... args) {
-        String s = lang.module(module).format(key, args);
-        cache.getPlugin().getLogger().severe(s);
-        if (cache.isDebug()) {
-            throwable.printStackTrace();
-        }
-        return s;
-    }
-
-    @Override
-    public String capture(@Nonnull LangModule module, @Nonnull String key, @Nullable Object... args) {
-        String s = lang.module(module).format(key, args);
-        cache.getPlugin().getLogger().severe(s);
-        return s;
-    }
-
-    @Override
-    public String capture(@Nonnull Throwable throwable, @Nonnull LangModule module, @Nonnull String key, @Nullable Object... args) {
-        String s = lang.module(module).format(key, args);
-        cache.getPlugin().getLogger().severe(s);
-        if (cache.isDebug()) {
-            throwable.printStackTrace();
-        }
-        return s;
-    }
-
-    @Override
-    public String debug(@Nonnull String msg) {
-        String s = lang.module(this).format("debug", cache.getName(), msg);
-        cache.getPlugin().getLogger().info(s);
-        return s;
-    }
-
-    @Override
-    public String debug(@Nonnull String module, @Nonnull String key, @Nullable Object... args) {
-        String s = lang.module(module).format(key, args);
-        cache.getPlugin().getLogger().info(s);
-        return s;
-    }
-
-    @Override
-    public String debug(@Nonnull LangModule module, @Nonnull String key, @Nullable Object... args) {
-        String s = lang.module(module).format(key, args);
-        cache.getPlugin().getLogger().info(s);
-        return s;
+    public void debug(@Nonnull String msg) {
+        cache.getPlugin().getLogger().info("[Debug]" + getMsg(msg));
     }
 }

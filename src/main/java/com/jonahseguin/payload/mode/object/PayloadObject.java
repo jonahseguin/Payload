@@ -32,14 +32,6 @@ public abstract class PayloadObject implements Payload<String> {
         if (cache != null && cache.getApi().getPayloadID() != null) {
             this.payloadId = cache.getApi().getPayloadID();
         }
-        if (cache == null) {
-            System.out.println("cache is null");
-        }
-        if (cache != null) {
-            if (cache.getApi().getPayloadID() == null) {
-                System.out.println("payload id is null");
-            }
-        }
     }
 
     @Override
@@ -50,6 +42,11 @@ public abstract class PayloadObject implements Payload<String> {
             return seconds < 10;
         }
         return false;
+    }
+
+    @Override
+    public void onReceiveUpdate() {
+
     }
 
     @Override

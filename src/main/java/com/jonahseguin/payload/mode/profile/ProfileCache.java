@@ -6,6 +6,9 @@
 package com.jonahseguin.payload.mode.profile;
 
 import com.jonahseguin.payload.base.Cache;
+import com.jonahseguin.payload.base.PayloadCallback;
+import com.jonahseguin.payload.mode.profile.network.NetworkProfile;
+import com.jonahseguin.payload.mode.profile.network.NetworkService;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import org.bukkit.entity.Player;
 
@@ -13,17 +16,20 @@ import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.Future;
 
-public interface ProfileCache<X extends PayloadProfile> extends Cache<UUID, X, NetworkProfile> {
+public interface ProfileCache<X extends PayloadProfile> extends Cache<UUID, X> {
+
+    void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<X> callback);
+
+    void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<X> callback);
+
+    Optional<NetworkProfile> getNetworked(@Nonnull UUID key);
+
+    Optional<NetworkProfile> getNetworked(@Nonnull X payload);
 
     Optional<X> get(@Nonnull String username);
 
     Optional<X> get(@Nonnull Player player);
-
-    Future<Optional<X>> getAsync(@Nonnull String username);
-
-    Future<Optional<X>> getAsync(@Nonnull Player player);
 
     Optional<X> getFromCache(@Nonnull String username);
 
@@ -46,5 +52,9 @@ public interface ProfileCache<X extends PayloadProfile> extends Cache<UUID, X, N
     @Override
     @Nonnull
     PayloadProfileController<X> controller(@Nonnull UUID key);
+
+    NetworkService<X> getNetworkService();
+
+    NetworkProfile createNetworked();
 
 }

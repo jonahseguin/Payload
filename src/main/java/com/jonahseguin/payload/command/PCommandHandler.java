@@ -8,11 +8,10 @@ package com.jonahseguin.payload.command;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.jonahseguin.lang.LangDefinitions;
-import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.PayloadPermission;
-import com.jonahseguin.payload.base.lang.LangService;
+import com.jonahseguin.payload.base.lang.PLang;
+import com.jonahseguin.payload.base.lang.PLangService;
 import com.jonahseguin.payload.command.commands.*;
 import lombok.Getter;
 import org.bukkit.command.Command;
@@ -26,21 +25,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Getter
-public class PCommandHandler implements CommandExecutor, LangModule {
+public class PCommandHandler implements CommandExecutor {
 
     private final PayloadPlugin plugin;
-    private final LangService langService;
-    private final LangDefinitions lang;
     private final Map<String, PayloadCommand> commands = new HashMap<>();
+    private final PLangService lang;
 
     @Inject
-    public PCommandHandler(@Nonnull PayloadPlugin plugin, @Nonnull LangService langService, @Nonnull Injector injector) {
+    public PCommandHandler(@Nonnull PayloadPlugin plugin, @Nonnull PLangService lang, @Nonnull Injector injector) {
         Preconditions.checkNotNull(plugin);
-        Preconditions.checkNotNull(langService);
+        Preconditions.checkNotNull(lang);
         Preconditions.checkNotNull(injector);
         this.plugin = plugin;
-        this.langService = langService;
-        this.lang = langService.module(this);
+        this.lang = lang;
         register(injector.getInstance(CmdHelp.class));
         register(injector.getInstance(CmdCache.class));
         register(injector.getInstance(CmdCacheList.class));
@@ -53,19 +50,6 @@ public class PCommandHandler implements CommandExecutor, LangModule {
         register(injector.getInstance(CmdDatabaseList.class));
         register(injector.getInstance(CmdDatabase.class));
         register(injector.getInstance(CmdServers.class));
-    }
-
-    @Override
-    public void define(LangDefinitions l) {
-        l.define("no-permission", "&cNo permission.");
-        l.define("player-only", "&cThis command is player-only.");
-        l.define("incorrect-usage", "&cIncorrect usage. (needs {0} arguments)  Use: {1} {2}");
-        l.define("unknown", "&cUnknown command: '{0}'.  Use /payload for help.");
-    }
-
-    @Override
-    public String langModule() {
-        return "cmd";
     }
 
     private void register(PayloadCommand cmd) {
@@ -106,15 +90,15 @@ public class PCommandHandler implements CommandExecutor, LangModule {
             }
             if (command != null) {
                 if (command.playerOnly() && !(sender instanceof Player)) {
-                    sender.sendMessage(lang.format("player-only"));
+                    sender.sendMessage(lang.format(PLang.PLAYER_ONLY));
                     return true;
                 }
                 if (!command.permission().has(sender)) {
-                    sender.sendMessage(lang.format("no-permission"));
+                    sender.sendMessage(lang.format(PLang.NO_PERMISSION));
                     return true;
                 }
                 if (args.length < command.minArgs()) {
-                    sender.sendMessage(lang.format("incorrect-usage", command.minArgs() + "", "/" + command.name() + " " + command.usage()));
+                    sender.sendMessage(lang.format(PLang.INCORRECT_USAGE, command.minArgs() + "", "/" + command.name() + " " + command.usage()));
                     return true;
                 }
                 CmdArgs cmdArgs = new CmdArgs(sender, pCmd, args);
@@ -129,7 +113,7 @@ public class PCommandHandler implements CommandExecutor, LangModule {
                     }
                 }
             } else {
-                sender.sendMessage(lang.format("unknown", pCmd));
+                sender.sendMessage(lang.format(PLang.UNKNOWN_COMMAND, pCmd));
             }
 
             return true;

@@ -7,10 +7,10 @@ package com.jonahseguin.payload.server;
 
 public enum ServerEvent {
 
-    JOIN("server-join"),
-    PING("server-ping"),
-    QUIT("server-quit"),
-    UPDATE_NAME("server-update-name");
+    JOIN("payload-server-join"),
+    PING("payload-server-ping"),
+    QUIT("payload-server-quit"),
+    UPDATE_NAME("payload-server-update-name");
 
     private final String event;
 
