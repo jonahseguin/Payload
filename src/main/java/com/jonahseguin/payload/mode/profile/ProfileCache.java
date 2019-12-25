@@ -6,6 +6,7 @@
 package com.jonahseguin.payload.mode.profile;
 
 import com.jonahseguin.payload.base.Cache;
+import com.jonahseguin.payload.base.PayloadCallback;
 import com.jonahseguin.payload.mode.profile.network.NetworkProfile;
 import com.jonahseguin.payload.mode.profile.network.NetworkService;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
@@ -17,6 +18,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ProfileCache<X extends PayloadProfile> extends Cache<UUID, X> {
+
+    void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<X> callback);
+
+    void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<X> callback);
 
     Optional<NetworkProfile> getNetworked(@Nonnull UUID key);
 

@@ -11,6 +11,7 @@ import com.google.inject.Injector;
 import com.google.inject.Singleton;
 import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.PayloadCache;
+import com.jonahseguin.payload.base.PayloadCallback;
 import com.jonahseguin.payload.base.store.PayloadStore;
 import com.jonahseguin.payload.base.type.PayloadInstantiator;
 import com.jonahseguin.payload.base.uuid.UUIDService;
@@ -21,6 +22,8 @@ import com.jonahseguin.payload.mode.profile.network.RedisNetworkService;
 import com.jonahseguin.payload.mode.profile.settings.ProfileCacheSettings;
 import com.jonahseguin.payload.mode.profile.store.ProfileStoreLocal;
 import com.jonahseguin.payload.mode.profile.store.ProfileStoreMongo;
+import com.jonahseguin.payload.mode.profile.update.ProfileUpdater;
+import com.jonahseguin.payload.server.PayloadServer;
 import lombok.Getter;
 import org.bukkit.entity.Player;
 
@@ -45,6 +48,7 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
     @Inject private UUIDService uuidService;
     private NetworkService<X> networkService = null;
     private ProfileHandshakeService<X> handshakeService = null;
+    private ProfileUpdater<X> profileUpdater = null;
 
     public PayloadProfileCache(Injector injector, PayloadInstantiator<UUID, X> instantiator, String name, Class<X> payload) {
         super(injector, instantiator, name, UUID.class, payload);
@@ -58,6 +62,7 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
         injector.injectMembers(this);
         networkService = new RedisNetworkService<>(this);
         handshakeService = new ProfileHandshakeService<>(this, database);
+        profileUpdater = new ProfileUpdater<>(this, database);
     }
 
     @Override
@@ -81,6 +86,10 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
             if (!networkService.start()) {
                 success = false;
                 errorService.capture("Failed to start Network Service (Network Node mode) for cache: " + name);
+            }
+            if (!profileUpdater.start()) {
+                success = false;
+                errorService.capture("Failed to start Profile Updater (Network Node mode) for cache: " + name);
             }
         }
         return success;
@@ -126,8 +135,58 @@ public class PayloadProfileCache<X extends PayloadProfile> extends PayloadCache<
                     errorService.capture("Failed to shutdown Network Service (Network Node mode) for cache: " + name);
                 }
             }
+            if (profileUpdater.isRunning()) {
+                if (!profileUpdater.shutdown()) {
+                    success = false;
+                    errorService.capture("Failed to shutdown Profile Updater (Network Node mode) for cache: " + name);
+                }
+            }
         }
         return success;
+    }
+
+    @Override
+    public void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<X> callback) {
+        Preconditions.checkNotNull(payload, "Payload cannot be null for prepareUpdate");
+        Preconditions.checkNotNull(callback, "Callback cannot be null for prepareUpdate");
+        if (mode.equals(PayloadMode.NETWORK_NODE)) {
+            NetworkProfile networkProfile = getNetworked(payload).orElse(null);
+            if (networkProfile != null) {
+                if (networkProfile.isOnline()) {
+                    if (!networkProfile.isOnlineThisServer()) {
+                        PayloadServer server = database.getServerService().get(networkProfile.getLastSeenServer()).orElse(null);
+                        if (server != null && server.isOnline()) {
+                            if (!profileUpdater.requestSave(payload, server.getName(), callback)) {
+                                errorService.capture("Failed to requestSave for prepareUpdate for Profile: " + payload.getName());
+                            }
+                        } else {
+                            callback.callback(payload);
+                            // Their last seen server isn't accurate / the server is offline
+                        }
+                    } else {
+                        callback.callback(payload);
+                        // They're online THIS server, meaning we already have the most up-to-date Profile instance
+                    }
+                } else {
+                    callback.callback(payload);
+                    // They aren't online at all, meaning we already have the most up-to-date Profile instance
+                    // (since they are saved on logout/shutdown)
+                }
+            } else {
+                // Fail hard.  They should have a NetworkProfile
+                errorService.capture("Couldn't get a NetworkProfile (null) during prepareUpdate for Profile: " + payload.getName());
+                callback.callback(null);
+            }
+        } else {
+            // Fail nicely, so that end user doesn't have to check the cache's mode.  Instead just callback in STANDALONE
+            // Since their version will be the most updated anyways.
+            callback.callback(payload);
+        }
+    }
+
+    @Override
+    public void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<X> callback) {
+        runAsync(() -> prepareUpdate(payload, callback));
     }
 
     @Override
