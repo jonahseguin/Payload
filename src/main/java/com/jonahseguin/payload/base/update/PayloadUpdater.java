@@ -87,12 +87,14 @@ public class PayloadUpdater<K, X extends Payload<K>> implements Service {
                     if (!sourceServerString.equalsIgnoreCase(database.getServerService().getThisServer().getName())) {
                         // As long as the source server wasn't us
                         K identifier = cache.keyFromString(identifierString);
-                        cache.runAsync(() -> {
-                            cache.getFromDatabase(identifier).ifPresent(payload -> {
-                                cache.cache(payload);
-                                payload.onReceiveUpdate();
+                        if (cache.isCached(identifier)) {
+                            cache.runAsync(() -> {
+                                cache.getFromDatabase(identifier).ifPresent(payload -> {
+                                    cache.cache(payload);
+                                    payload.onReceiveUpdate();
+                                });
                             });
-                        });
+                        }
                     }
                 } else {
                     cache.getErrorService().capture("Source Server or Identifier were null during receiveUpdateRequest in PayloadUpdater for packet: " + msg);
