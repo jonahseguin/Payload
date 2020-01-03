@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * Copyright (c) 2020 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
  * www.jonahseguin.com
  */
 
@@ -8,6 +8,7 @@ package com.jonahseguin.payload.command.commands;
 import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.PayloadPlugin;
+import com.jonahseguin.payload.base.Cache;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
 import com.jonahseguin.payload.command.PayloadCommand;
@@ -26,18 +27,13 @@ public class CmdDebug implements PayloadCommand {
     @Override
     public void execute(CmdArgs args) {
         if (args.length() == 0) {
-            args.msg("&7Payload: Debug is {0} &7(use &e/payload debug [on/off]&7 to toggle)", (payloadPlugin.isDebug() ? "&aon" : "&coff"));
+            args.msg("&7Payload: Debug is {0} &7(global debug can only be toggled from the config)", (payloadPlugin.isDebug() ? "&aon" : "&coff"));
+            args.msg("&7Use /payload debug <cache> to toggle debug for a specific cache.");
         } else {
-            String toggle = args.arg(0).toLowerCase();
-            if (toggle.startsWith("on")) {
-                payloadPlugin.setDebug(true);
-                api.getCaches().values().forEach(cache -> cache.setDebug(true));
-                args.msg("&7Payload: Debug &aon");
-            } else if (toggle.startsWith("off")) {
-                payloadPlugin.setDebug(false);
-                args.msg("&7Payload: Debug &coff");
-                api.getCaches().values().forEach(cache -> cache.setDebug(false));
-            }
+            String name = args.arg(0);
+            Cache cache = api.getCache(name);
+            cache.setDebug(!cache.isDebug());
+            args.msg("&7Payload: Debug is now {0} &7for the cache: '&6" + cache.getName() + "&7'", (cache.isDebug() ? "&aon" : "&coff"));
         }
     }
 
@@ -53,7 +49,7 @@ public class CmdDebug implements PayloadCommand {
 
     @Override
     public String desc() {
-        return "View debug status and toggle";
+        return "Toggle debug status for a cache";
     }
 
     @Override
@@ -63,7 +59,7 @@ public class CmdDebug implements PayloadCommand {
 
     @Override
     public String usage() {
-        return "[on/off]";
+        return "<cache>";
     }
 
     @Override
@@ -73,7 +69,7 @@ public class CmdDebug implements PayloadCommand {
 
     @Override
     public int minArgs() {
-        return 0;
+        return 1;
     }
 
 }
