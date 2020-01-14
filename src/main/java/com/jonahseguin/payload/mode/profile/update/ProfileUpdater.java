@@ -72,7 +72,7 @@ public class ProfileUpdater<X extends PayloadProfile> implements Service {
             reactive.subscribe(channel).subscribe();
 
             reactive.observeChannels()
-                    .filter(pm -> !pm.getChannel().equals(channel))
+                    .filter(pm -> pm.getChannel().equals(channel))
                     .doOnNext(patternMessage -> {
                         try {
                             String json = patternMessage.getMessage();

@@ -31,7 +31,7 @@ public class PayloadUpdater<K, X extends Payload<K>> implements Service {
     public PayloadUpdater(Cache<K, X> cache, DatabaseService database) {
         this.cache = cache;
         this.database = database;
-        this.channel = "payload-update-" + cache.getName();
+        this.channel = "payload-updater-" + cache.getName();
     }
 
     @Override
@@ -63,7 +63,7 @@ public class PayloadUpdater<K, X extends Payload<K>> implements Service {
             reactive.subscribe(channel).subscribe();
 
             reactive.observeChannels()
-                    .filter(pm -> !pm.getChannel().equals(channel))
+                    .filter(pm -> pm.getChannel().equals(channel))
                     .doOnNext(patternMessage -> {
                         if (patternMessage != null && patternMessage.getMessage() != null) {
                             receiveUpdateRequest(patternMessage.getMessage());
