@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * Copyright (c) 2020 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
  * www.jonahseguin.com
  */
 
@@ -52,7 +52,7 @@ public class PayloadUpdater<K, X extends Payload<K>> implements Service {
             reactive.unsubscribe(channel);
         }
         running = false;
-        return false;
+        return true;
     }
 
     private boolean subscribe() {
