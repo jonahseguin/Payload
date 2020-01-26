@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * Copyright (c) 2020 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
  * www.jonahseguin.com
  */
 
@@ -99,10 +99,11 @@ public class ProfileListener implements Listener {
                     Optional<PayloadProfile> o = cache.getFromCache(player.getUniqueId());
                     if (o.isPresent()) {
                         PayloadProfile profile = o.get();
-                        profile.uninitializePlayer();
                         if (!profile.hasValidHandshake()) {
                             PayloadProfileLogoutEvent payloadEvent = new PayloadProfileLogoutEvent(profile);
                             cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
+
+                            profile.uninitializePlayer();
 
                             // Not switching servers (no incoming handshake) -- we can assume they are actually
                             // Logging out, and not switching servers
@@ -115,6 +116,8 @@ public class ProfileListener implements Listener {
                         } else {
                             PayloadProfileSwitchServersEvent payloadEvent = new PayloadProfileSwitchServersEvent(profile);
                             cache.getPlugin().getServer().getPluginManager().callEvent(payloadEvent);
+
+                            profile.uninitializePlayer();
 
                             cache.controller(event.getPlayer().getUniqueId()).uncache(profile, true);
                             cache.getErrorService().debug("Not saving player " + player.getName() + " on quit (is switching servers)");
