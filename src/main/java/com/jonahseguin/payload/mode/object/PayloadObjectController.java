@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * Copyright (c) 2020 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
  * www.jonahseguin.com
  */
 
@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.annotation.Nonnull;
+import java.lang.ref.WeakReference;
 import java.util.Optional;
 
 @Getter
@@ -20,7 +21,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
     private final PayloadObjectCache<X> cache;
     private final String identifier;
 
-    private X payload = null;
+    private WeakReference<X> payload = null;
     private boolean loadedFromLocal = false;
 
     PayloadObjectController(@Nonnull PayloadObjectCache<X> cache, String identifier) {
@@ -34,13 +35,13 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
         if (fromLocal) {
             Optional<X> local = cache.getFromCache(identifier);
             if (local.isPresent()) {
-                payload = local.get();
+                payload = new WeakReference<>(local.get());
                 loadedFromLocal = true;
                 return;
             }
         }
         Optional<X> db = cache.getFromDatabase(identifier);
-        db.ifPresent(x -> payload = x);
+        db.ifPresent(x -> payload = new WeakReference<>(x));
     }
 
     @Override
@@ -84,11 +85,15 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
         }*/
         load(true);
 
-        if (payload != null && !loadedFromLocal) {
-            this.cache.cache(payload);
-            this.cache.getErrorService().debug("Cached payload " + payload.getIdentifier());
+        if (payload != null) {
+            X p = payload.get();
+            if (p != null && !loadedFromLocal) {
+                this.cache.cache(p);
+                this.cache.getErrorService().debug("Cached payload " + p.getIdentifier());
+            }
+            return Optional.ofNullable(p);
         }
-        return Optional.ofNullable(payload);
+        return Optional.empty();
     }
 
     @Override
