@@ -5,7 +5,6 @@
 
 package com.jonahseguin.payload.base.service;
 
-import com.jonahseguin.payload.mode.profile.NetworkProfile;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.ProfileCache;
 import org.bukkit.entity.Player;
@@ -14,17 +13,12 @@ import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.Future;
 
-public interface PayloadProfileService<X extends PayloadProfile> extends PayloadService<UUID, X, NetworkProfile> {
+public interface PayloadProfileService<X extends PayloadProfile> extends PayloadService<UUID, X> {
 
     Optional<X> get(@Nonnull String username);
 
     Optional<X> get(@Nonnull Player player);
-
-    Future<Optional<X>> getAsync(@Nonnull String username);
-
-    Future<Optional<X>> getAsync(@Nonnull Player player);
 
     Optional<X> getFromCache(@Nonnull String username);
 

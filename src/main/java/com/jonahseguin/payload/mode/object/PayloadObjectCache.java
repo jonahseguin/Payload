@@ -8,7 +8,6 @@ package com.jonahseguin.payload.mode.object;
 import com.google.common.base.Preconditions;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
-import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.store.PayloadStore;
 import com.jonahseguin.payload.base.type.PayloadInstantiator;
@@ -20,15 +19,15 @@ import lombok.Getter;
 import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Getter
 @Singleton
-public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<String, X, NetworkObject> implements ObjectCache<X> {
+public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<String, X> implements ObjectCache<X> {
 
     private final ObjectCacheSettings settings = new ObjectCacheSettings();
     private final ConcurrentMap<String, PayloadObjectController<X>> controllers = new ConcurrentHashMap<>();
@@ -36,7 +35,7 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
     private final ObjectStoreMongo<X> mongoStore = new ObjectStoreMongo<>(this);
 
     public PayloadObjectCache(Injector injector, PayloadInstantiator<String, X> instantiator, String name, Class<X> payload) {
-        super(injector, instantiator, name, String.class, payload, NetworkObject.class);
+        super(injector, instantiator, name, String.class, payload);
         setupModule();
     }
 
@@ -53,20 +52,35 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
         if (settings.isUseMongo()) {
             if (!mongoStore.start()) {
                 success = false;
-                errorService.capture("Failed to start MongoDB store for cache " + name);
+                errorService.capture("Failed to start MongoDB store");
             }
         }
-        if (mode.equals(PayloadMode.NETWORK_NODE)) {
-            handshakeService.subscribe(new ObjectHandshake(this));
-        }
-        database.getMorphia().map(NetworkObject.class);
         return success;
     }
 
     @Override
     protected boolean terminate() {
+        boolean success = true;
+        AtomicInteger failedSaves = new AtomicInteger(0);
+        getCached().forEach(payload -> {
+            if (!save(payload)) {
+                failedSaves.getAndIncrement();
+            }
+        });
+        if (failedSaves.get() > 0) {
+            errorService.capture(failedSaves + " objects failed to save during shutdown");
+            success = false;
+        }
+
         controllers.clear();
-        return true;
+        if (!localStore.shutdown()) {
+            success = false;
+        }
+        if (!mongoStore.shutdown()) {
+            success = false;
+        }
+
+        return success;
     }
 
     @Nonnull
@@ -74,33 +88,6 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
     public PayloadObjectController<X> controller(@Nonnull String key) {
         Preconditions.checkNotNull(key);
         return controllers.computeIfAbsent(key, s -> new PayloadObjectController<>(this, s));
-    }
-
-    @Override
-    public boolean saveNoSync(@Nonnull X payload) {
-        boolean success = true;
-        if (!localStore.save(payload)) {
-            success = false;
-        }
-        if (!mongoStore.save(payload)) {
-            success = false;
-        }
-        if (success && mode.equals(PayloadMode.NETWORK_NODE)) {
-            Optional<NetworkObject> o = networkService.get(payload);
-            if (o.isPresent()) {
-                NetworkObject no = o.get();
-                no.markSaved();
-                if (!networkService.save(no)) {
-                    success = false;
-                }
-            }
-        }
-        return success;
-    }
-
-    @Override
-    public NetworkObject createNetworked() {
-        return injector.getInstance(NetworkObject.class);
     }
 
     @Nonnull
@@ -142,13 +129,13 @@ public class PayloadObjectCache<X extends PayloadObject> extends PayloadCache<St
 
     @Override
     public int saveAll() {
-        int failures = 0;
-        for (X object : localStore.getLocalCache().values()) {
+        AtomicInteger failures = new AtomicInteger();
+        for (X object : localStore.getAll()) {
             if (!save(object)) {
-                failures++;
+                failures.getAndIncrement();
             }
         }
-        return failures;
+        return failures.get();
     }
 
     @Override

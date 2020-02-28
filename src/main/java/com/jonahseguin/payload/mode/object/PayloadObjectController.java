@@ -1,19 +1,17 @@
 /*
- * Copyright (c) 2019 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
+ * Copyright (c) 2020 Jonah Seguin.  All rights reserved.  You may not modify, decompile, distribute or use any code/text contained in this document(plugin) without explicit signed permission from Jonah Seguin.
  * www.jonahseguin.com
  */
 
 package com.jonahseguin.payload.mode.object;
 
 import com.google.common.base.Preconditions;
-import com.jonahseguin.payload.PayloadMode;
-import com.jonahseguin.payload.base.handshake.HandshakeHandler;
-import com.jonahseguin.payload.base.sync.SyncMode;
 import com.jonahseguin.payload.base.type.PayloadController;
 import lombok.Getter;
 import lombok.Setter;
 
 import javax.annotation.Nonnull;
+import java.lang.ref.WeakReference;
 import java.util.Optional;
 
 @Getter
@@ -23,7 +21,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
     private final PayloadObjectCache<X> cache;
     private final String identifier;
 
-    private X payload = null;
+    private WeakReference<X> payload = null;
     private boolean loadedFromLocal = false;
 
     PayloadObjectController(@Nonnull PayloadObjectCache<X> cache, String identifier) {
@@ -37,18 +35,18 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
         if (fromLocal) {
             Optional<X> local = cache.getFromCache(identifier);
             if (local.isPresent()) {
-                payload = local.get();
+                payload = new WeakReference<>(local.get());
                 loadedFromLocal = true;
                 return;
             }
         }
         Optional<X> db = cache.getFromDatabase(identifier);
-        db.ifPresent(x -> payload = x);
+        db.ifPresent(x -> payload = new WeakReference<>(x));
     }
 
     @Override
     public Optional<X> cache() {
-        if (cache.getSyncMode().equals(SyncMode.ALWAYS) && cache.getSettings().isEnableSync() && cache.isCached(identifier)) {
+        /*if (cache.getSyncMode().equals(SyncMode.ALWAYS) && cache.getSettings().isEnableSync() && cache.isCached(identifier)) {
             load(true);
         } else {
             if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
@@ -59,7 +57,7 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
                         load(true);
                     } else {
                         // Handshake
-                        HandshakeHandler<ObjectHandshake> h = cache.getHandshakeService().publish(new ObjectHandshake(cache, identifier));
+                        HandshakeHandler<ObjectHandshake> h = cache.getHandshakeService().publish(new ObjectHandshake(cache.getInjector(), cache, identifier));
                         h.waitForReply(cache.getSettings().getHandshakeTimeoutSeconds());
                         load(false);
                     }
@@ -84,26 +82,24 @@ public class PayloadObjectController<X extends PayloadObject> implements Payload
                 // Standalone mode
                 load(true);
             }
-        }
+        }*/
+        load(true);
 
-        if (payload != null && !loadedFromLocal) {
-            this.cache.cache(payload);
-            this.cache.getErrorService().debug("Cached payload " + payload.getIdentifier());
+        if (payload != null) {
+            X p = payload.get();
+            if (p != null && !loadedFromLocal) {
+                this.cache.cache(p);
+                this.cache.getErrorService().debug("Cached payload " + p.getIdentifier());
+            }
+            return Optional.ofNullable(p);
         }
-        return Optional.ofNullable(payload);
+        return Optional.empty();
     }
 
     @Override
     public void uncache(@Nonnull X payload, boolean switchingServers) {
         if (cache.isCached(payload.getIdentifier())) {
             cache.uncache(payload);
-        }
-        if (cache.getMode().equals(PayloadMode.NETWORK_NODE)) {
-            Optional<NetworkObject> o = cache.getNetworkService().get(payload.getIdentifier());
-            if (o.isPresent()) {
-                NetworkObject networkObject = o.get();
-                networkObject.markUnloaded();
-            }
         }
     }
 }

@@ -12,8 +12,9 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
 import dev.morphia.Morphia;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 
 import javax.annotation.Nonnull;
 import java.util.Set;
@@ -28,11 +29,11 @@ public interface DatabaseService extends Service {
 
     MongoDatabase getDatabase();
 
-    Jedis getJedisResource();
+    RedisClient getRedisClient();
 
-    Jedis getMonitorJedis();
+    StatefulRedisConnection<String, String> getRedis();
 
-    JedisPool getJedisPool();
+    StatefulRedisPubSubConnection<String, String> getRedisPubSub();
 
     ServerService getServerService();
 

@@ -9,7 +9,7 @@ import com.jonahseguin.payload.base.Cache;
 
 import javax.annotation.Nonnull;
 
-public interface ObjectCache<X extends PayloadObject> extends Cache<String, X, NetworkObject> {
+public interface ObjectCache<X extends PayloadObject> extends Cache<String, X> {
 
     @Override
     @Nonnull

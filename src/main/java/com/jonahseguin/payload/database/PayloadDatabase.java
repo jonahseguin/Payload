@@ -14,9 +14,10 @@ import com.jonahseguin.payload.database.redis.PayloadRedisMonitor;
 import com.jonahseguin.payload.server.ServerService;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import org.bukkit.plugin.Plugin;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 
 import java.util.Set;
 
@@ -54,10 +55,12 @@ public interface PayloadDatabase {
 
     PayloadRedis getPayloadRedis();
 
-    JedisPool getJedisPool();
-
-    Jedis getMonitorJedis();
-
     PayloadRedisMonitor getRedisMonitor();
+
+    StatefulRedisConnection<String, String> getRedis();
+
+    StatefulRedisPubSubConnection<String, String> getRedisPubSub();
+
+    RedisClient getRedisClient();
 
 }

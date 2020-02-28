@@ -5,8 +5,6 @@
 
 package com.jonahseguin.payload;
 
-import com.jonahseguin.lang.LangDefinitions;
-import com.jonahseguin.lang.LangModule;
 import com.jonahseguin.payload.base.PayloadPermission;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,7 +24,7 @@ import java.util.UUID;
  */
 @Getter
 @Setter
-public class PayloadLocal implements LangModule {
+public class PayloadLocal {
 
     private final PayloadPlugin plugin;
     private String payloadID = null;
@@ -37,16 +35,6 @@ public class PayloadLocal implements LangModule {
 
     PayloadLocal(PayloadPlugin plugin) {
         this.plugin = plugin;
-    }
-
-    @Override
-    public void define(LangDefinitions l) {
-        l.define("loading-failed", "&cFailed to load payload.yml file, necessary for Payload to function.");
-    }
-
-    @Override
-    public String langModule() {
-        return "local";
     }
 
     public String getPayloadID() {
@@ -134,8 +122,7 @@ public class PayloadLocal implements LangModule {
     }
 
     private void handleError() {
-        plugin.setLocked(true); // Lock server
-        plugin.alert(PayloadPermission.ADMIN, langModule(), "loading-failed"); // Alert online staff if any + console
+        plugin.alert(PayloadPermission.ADMIN, "&cFailed to load payload.yml file, necessary for Payload to function."); // Alert online staff if any + console
     }
 
 }

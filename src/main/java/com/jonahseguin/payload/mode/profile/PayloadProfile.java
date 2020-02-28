@@ -51,7 +51,7 @@ public abstract class PayloadProfile implements Payload<UUID> {
     // Profile has been saved successfully
     protected transient String loadingSource = null;
     protected transient Player player = null;
-    protected transient long handshakeStartTimestamp = 0;
+    protected transient long handshakeStartTimestamp = 0; // the time when a handshake starts (when another server requests that we save this profile)
 
     @Inject
     public PayloadProfile(ProfileCache cache) {
@@ -73,11 +73,16 @@ public abstract class PayloadProfile implements Payload<UUID> {
     }
 
     @Override
+    public void onReceiveUpdate() {
+
+    }
+
+    @Override
     public boolean hasValidHandshake() {
         if (handshakeStartTimestamp > 0) {
             long ago = System.currentTimeMillis() - handshakeStartTimestamp;
             long seconds = ago / 1000;
-            return seconds < 10;
+            return seconds <= cache.getSettings().getHandshakeTimeoutSeconds() + 1;
         }
         return false;
     }

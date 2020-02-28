@@ -8,13 +8,12 @@ package com.jonahseguin.payload.command.commands;
 import com.google.inject.Inject;
 import com.jonahseguin.payload.PayloadAPI;
 import com.jonahseguin.payload.base.Cache;
-import com.jonahseguin.payload.base.PayloadCache;
 import com.jonahseguin.payload.base.PayloadPermission;
 import com.jonahseguin.payload.command.CmdArgs;
 import com.jonahseguin.payload.command.PayloadCommand;
-import com.jonahseguin.payload.mode.profile.NetworkProfile;
 import com.jonahseguin.payload.mode.profile.PayloadProfile;
 import com.jonahseguin.payload.mode.profile.PayloadProfileCache;
+import com.jonahseguin.payload.mode.profile.network.NetworkProfile;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -62,11 +61,10 @@ public class CmdProfile implements PayloadCommand {
                     NetworkProfile np = onp.get();
                     args.msg("&eNetwork Properties:");
                     args.msg("&7Online: &6{0}", (np.isOnline() ? "&aYes" : "&cNo"));
-                    args.msg("&7Loaded: &6{0}", (np.isLoaded() ? "&aYes" : "&cNo"));
-                    args.msg("&7Last Seen On: &6{0}", np.getLastSeenServer());
-                    args.msg("&7Last Seen At: &6{0}", np.getLastSeen().toString());
-                    args.msg("&7Last Saved: &6{0}", np.getLastSaved().toString());
-                    args.msg("&7Last Cached: &6{0}", np.getLastCached().toString());
+                    args.msg("&7Last Seen On: &6{0}", np.getLastSeenServer() != null ? np.getLastSeenServer() : "&cN/A");
+                    args.msg("&7Last Seen At: &6{0}", np.getLastSeen() > 0 ? formatDateTime(np.getLastSeen()) : "&cN/A");
+                    args.msg("&7Last Saved: &6{0}", np.getLastSaved() > 0 ? formatDateTime(np.getLastSaved()) : "&cN/A");
+                    args.msg("&7Last Cached: &6{0}", np.getLastCached() > 0 ? formatDateTime(np.getLastCached()) : "&cN/A");
                 }
             } else {
                 args.msg("&cPayload: A profile with username '{0}' does not exist in cache '{1}'.", playerName);

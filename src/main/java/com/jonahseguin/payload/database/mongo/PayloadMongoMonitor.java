@@ -5,7 +5,6 @@
 
 package com.jonahseguin.payload.database.mongo;
 
-import com.jonahseguin.payload.database.DatabaseDependent;
 import com.jonahseguin.payload.database.PayloadDatabase;
 import com.mongodb.event.ServerHeartbeatFailedEvent;
 import com.mongodb.event.ServerHeartbeatStartedEvent;
@@ -15,7 +14,6 @@ import com.mongodb.event.ServerMonitorListener;
 public class PayloadMongoMonitor implements ServerMonitorListener {
 
     private final PayloadDatabase database;
-    private boolean connected = false;
 
     public PayloadMongoMonitor(PayloadDatabase database) {
         this.database = database;
@@ -23,38 +21,31 @@ public class PayloadMongoMonitor implements ServerMonitorListener {
 
     @Override
     public void serverHearbeatStarted(ServerHeartbeatStartedEvent event) {
-        if (!this.connected && !this.database.getState().isMongoInitConnect()) {
-            // MongoDB connection attempting for first time
+        if (!this.database.getState().isMongoInitConnect()) {
             this.database.getErrorService().debug("Attempting MongoDB initial connection");
         }
     }
 
     @Override
     public void serverHeartbeatSucceeded(ServerHeartbeatSucceededEvent event) {
-        // Connected
-        this.database.getState().setMongoConnected(true);
         if (!this.database.getState().isMongoInitConnect()) {
-            this.database.getHooks().forEach(DatabaseDependent::onMongoDbInitConnect);
             this.database.getState().setMongoInitConnect(true);
             this.database.getErrorService().debug("MongoDB initial connection succeeded");
         }
         else {
-            if (!this.connected) {
-                this.database.getHooks().forEach(DatabaseDependent::onMongoDbReconnect);
-                this.database.getErrorService().debug("MongoDB re-connection succeeded");
+            if (!database.getState().isMongoConnected()) {
+                this.database.getErrorService().debug("MongoDB connection restored");
             }
         }
-        this.connected = true;
+        this.database.getState().setMongoConnected(true);
     }
 
     @Override
     public void serverHeartbeatFailed(ServerHeartbeatFailedEvent event) {
         // Lost connection or failed to connect
-        this.database.getState().setMongoConnected(false);
-        if (this.connected) {
-            this.database.getHooks().forEach(DatabaseDependent::onMongoDbDisconnect);
-            this.database.getErrorService().debug("MongoDB disconnected");
+        if (this.database.getState().isMongoConnected()) {
+            this.database.getErrorService().capture("MongoDB connection lost");
         }
-        this.connected = false;
+        this.database.getState().setMongoConnected(false);
     }
 }

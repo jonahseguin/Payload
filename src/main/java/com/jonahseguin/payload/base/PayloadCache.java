@@ -14,17 +14,11 @@ import com.jonahseguin.payload.PayloadMode;
 import com.jonahseguin.payload.PayloadPlugin;
 import com.jonahseguin.payload.base.error.CacheErrorService;
 import com.jonahseguin.payload.base.error.ErrorService;
-import com.jonahseguin.payload.base.handshake.HandshakeService;
-import com.jonahseguin.payload.base.lang.LangService;
-import com.jonahseguin.payload.base.network.NetworkPayload;
-import com.jonahseguin.payload.base.network.NetworkService;
-import com.jonahseguin.payload.base.network.RedisNetworkService;
-import com.jonahseguin.payload.base.sync.CacheSyncService;
-import com.jonahseguin.payload.base.sync.SyncMode;
-import com.jonahseguin.payload.base.sync.SyncService;
+import com.jonahseguin.payload.base.lang.PLangService;
 import com.jonahseguin.payload.base.task.PayloadAutoSaveTask;
 import com.jonahseguin.payload.base.type.Payload;
 import com.jonahseguin.payload.base.type.PayloadInstantiator;
+import com.jonahseguin.payload.base.update.PayloadUpdater;
 import com.jonahseguin.payload.database.DatabaseService;
 import com.jonahseguin.payload.server.ServerService;
 import lombok.Getter;
@@ -34,11 +28,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
 
 /**
  * The abstract backbone of all Payload cache systems.
@@ -46,45 +39,37 @@ import java.util.concurrent.*;
  */
 @Getter
 @Singleton
-public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPayload<K>> implements Comparable<PayloadCache>, Cache<K, X, N> {
+public abstract class PayloadCache<K, X extends Payload<K>> implements Comparable<PayloadCache>, Cache<K, X> {
 
-    protected final ExecutorService pool = Executors.newCachedThreadPool();
-    protected final PayloadAutoSaveTask<K, X, N> autoSaveTask = new PayloadAutoSaveTask<>(this);
+    protected final PayloadAutoSaveTask<K, X> autoSaveTask = new PayloadAutoSaveTask<>(this);
     protected final Set<String> dependingCaches = new HashSet<>();
     protected final Class<K> keyClass;
     protected final Class<X> payloadClass;
-    protected final Class<N> networkClass;
     protected final String name;
     protected final Injector injector;
     @Inject protected Plugin plugin;
     @Inject protected PayloadPlugin payloadPlugin;
     @Inject protected PayloadAPI api;
     @Inject protected DatabaseService database;
-    @Inject protected LangService lang;
-    @Inject protected HandshakeService handshakeService;
+    @Inject protected PLangService lang;
     @Inject protected ServerService serverService;
+    protected PayloadUpdater<K, X> updater;
     protected ErrorService errorService;
-    protected SyncService<K, X, N> sync;
-    protected NetworkService<K, X, N> networkService;
     protected PayloadInstantiator<K, X> instantiator;
-    protected SyncMode syncMode = SyncMode.IF_CACHED;
     protected boolean debug = true;
     protected PayloadMode mode = PayloadMode.STANDALONE;
     protected boolean running = false;
 
-    public PayloadCache(Injector injector, PayloadInstantiator<K, X> instantiator, String name, Class<K> key, Class<X> payload, Class<N> network) {
+    public PayloadCache(Injector injector, PayloadInstantiator<K, X> instantiator, String name, Class<K> key, Class<X> payload) {
         this.injector = injector;
         this.instantiator = instantiator;
         this.name = name;
         this.keyClass = key;
         this.payloadClass = payload;
-        this.networkClass = network;
     }
 
     protected void setupModule() {
-        this.sync = new CacheSyncService<>(this, handshakeService);
-        this.networkService = new RedisNetworkService<>(this, networkClass, database);
-        this.errorService = new CacheErrorService(this, lang);
+        this.errorService = new CacheErrorService(this);
     }
 
     protected void injectMe() {
@@ -115,27 +100,16 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
         boolean success = true;
         if (!initialize()) {
             success = false;
-            errorService.capture("Failed to initialize internally for cache " + name);
+            errorService.capture("Failed to initialize internally for cache: " + name);
         }
-        if (!handshakeService.start()) {
-            success = false;
-            errorService.capture("Failed to start Handshake Service for cache " + name);
-        }
-        if (getMode().equals(PayloadMode.NETWORK_NODE)) {
-            if (!networkService.start()) {
+        updater = new PayloadUpdater<>(this, database);
+        if (getSettings().isEnableUpdater() && mode.equals(PayloadMode.NETWORK_NODE)) {
+            if (!updater.start()) {
                 success = false;
-                errorService.capture("Failed to start Network Service for cache " + name);
+                errorService.capture("Failed to start Payload Updater for cache: " + name);
             }
         }
         autoSaveTask.start();
-        if (getSettings().isEnableSync()) {
-            if (!sync.start()) {
-                success = false;
-                errorService.capture("Failed to start Sync Service for cache " + name);
-            }
-        }
-        lang.lang().load();
-        lang.lang().save();
         running = true;
         return success;
     }
@@ -147,51 +121,24 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
      */
     public final boolean shutdown() {
         Preconditions.checkState(running, "Cache " + name + " is not running!");
-
-        int failedSaves = saveAll(); // First, save everything.
-
         boolean success = true;
 
         if (!terminate()) {
             success = false;
         }
 
-        autoSaveTask.stop();
-        if (!handshakeService.shutdown()) {
-            success = false;
-        }
-        if (getMode().equals(PayloadMode.NETWORK_NODE)) {
-            if (!networkService.shutdown()) {
-                success = false;
+        if (updater != null) {
+            if (updater.isRunning()) {
+                if (!updater.shutdown()) {
+                    success = false;
+                    errorService.capture("Failed to shutdown Payload Updater for cache: " + name);
+                }
             }
         }
-        if (getSettings().isEnableSync()) {
-            this.sync.shutdown();
-        }
-        shutdownPool();
-        running = false;
-        if (failedSaves > 0) {
-            errorService.capture(failedSaves + " Payload objects failed to save during shutdown");
-            success = false;
-        }
-        lang.lang().load();
-        lang.lang().save();
-        return success;
-    }
 
-    /**
-     * Internal method to safely shutdown the internal cache thread pool.
-     * This allows time for processes to finish executing before continuing.
-     */
-    private void shutdownPool() {
-        try {
-            pool.shutdown();
-            pool.awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException ex) {
-            errorService.capture(ex, "Interrupted during shutdown of cache's thread pool");
-        } finally {
-            pool.shutdownNow();
-        }
+        autoSaveTask.stop();
+        running = false;
+        return success;
     }
 
     /**
@@ -206,8 +153,33 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
      */
     protected abstract boolean terminate();
 
+    @Override
+    public boolean pushUpdate(@Nonnull X payload) {
+        return pushUpdate(payload, false);
+    }
+
+    @Override
+    public boolean pushUpdate(@Nonnull X payload, boolean forceLoad) {
+        Preconditions.checkNotNull(payload, "Payload cannot be null for pushUpdate");
+        if (!getSettings().isEnableUpdater()) {
+            errorService.debug("Not pushing update for Payload " + keyToString(payload.getIdentifier()) + ": Updater is not enabled!");
+            return true;
+        }
+        if (!mode.equals(PayloadMode.NETWORK_NODE)) {
+            errorService.debug("Not pushing update for Payload " + keyToString(payload.getIdentifier()) + ": Cache mode is not Network Node!");
+            return true;
+        }
+        if (updater != null) {
+            return updater.pushUpdate(payload, forceLoad);
+        } else {
+            errorService.capture("Couldn't pushUpdate for Payload " + keyToString(payload.getIdentifier()) + ": PayloadUpdater is null!");
+            return false;
+        }
+    }
+
     /**
      * Get a number of objects currently stored locally in this cache
+     *
      * @return int number of objects cached
      */
     @Override
@@ -231,12 +203,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     @Override
     public void setDebug(boolean debug) {
         this.debug = debug;
-    }
-
-    @Override
-    public void setSyncMode(@Nonnull SyncMode mode) {
-        Preconditions.checkNotNull(mode);
-        this.syncMode = mode;
     }
 
     /**
@@ -309,27 +275,9 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     }
 
     @Override
-    public Optional<N> getNetworked(@Nonnull K key) {
-        Preconditions.checkNotNull(key);
-        return networkService.get(key);
-    }
-
-    @Override
-    public Optional<N> getNetworked(@Nonnull X payload) {
-        Preconditions.checkNotNull(payload);
-        return networkService.get(payload);
-    }
-
-    @Override
     public Optional<X> get(@Nonnull K key) {
         Preconditions.checkNotNull(key);
         return controller(key).cache();
-    }
-
-    @Override
-    public Future<Optional<X>> getAsync(@Nonnull K key) {
-        Preconditions.checkNotNull(key);
-        return runAsync(() -> get(key));
     }
 
     @Override
@@ -347,19 +295,18 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     @Override
     public boolean save(@Nonnull X payload) {
         Preconditions.checkNotNull(payload);
-        if (saveNoSync(payload)) {
-            if (getSettings().isEnableSync()) {
-                sync.update(payload.getIdentifier());
-            }
-            return true;
+        cache(payload);
+        boolean mongo = getDatabaseStore().save(payload);
+        if (!mongo) {
+            errorService.capture("Failed to save payload " + keyToString(payload.getIdentifier()));
         }
-        return false;
+        return mongo;
     }
 
     @Override
-    public Future<Boolean> saveAsync(@Nonnull X payload) {
+    public void saveAsync(@Nonnull X payload) {
         Preconditions.checkNotNull(payload);
-        return runAsync(() -> save(payload));
+        runAsync(() -> save(payload));
     }
 
     @Override
@@ -406,22 +353,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     }
 
     @Override
-    public void prepareUpdate(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback) {
-        Preconditions.checkState(getSettings().isEnableSync(), "Cannot prepare update when sync is disabled!");
-        Preconditions.checkNotNull(payload);
-        Preconditions.checkNotNull(callback);
-        sync.prepareUpdate(payload, callback);
-    }
-
-    @Override
-    public void prepareUpdateAsync(@Nonnull X payload, @Nonnull PayloadCallback<Optional<X>> callback) {
-        Preconditions.checkState(getSettings().isEnableSync(), "Cannot prepare update when sync is disabled!");
-        Preconditions.checkNotNull(payload);
-        Preconditions.checkNotNull(callback);
-        runAsync(() -> sync.prepareUpdate(payload, callback));
-    }
-
-    @Override
     public void setErrorService(@Nonnull ErrorService errorService) {
         Preconditions.checkNotNull(errorService);
         this.errorService = errorService;
@@ -430,32 +361,6 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     @Override
     public void cacheAll() {
         getDatabaseStore().getAll().forEach(this::cache);
-    }
-
-    @Nonnull
-    @Override
-    public SyncService<K, X, N> getSyncService() {
-        return sync;
-    }
-
-
-    /**
-     * Utility method to send a message to online players with a certain permission
-     * @param required The required permission
-     * @param module The language module
-     * @param key The language definition
-     * @param args The arguments for the language definition
-     */
-    public void alert(@Nonnull PayloadPermission required, @Nonnull String module, @Nonnull String key, @Nullable Object... args) {
-        Preconditions.checkNotNull(required);
-        Preconditions.checkNotNull(module);
-        Preconditions.checkNotNull(key);
-        plugin.getLogger().info(lang.module(module).format(key, args));
-        for (Player pl : plugin.getServer().getOnlinePlayers()) {
-            if (required.has(pl)) {
-                pl.sendMessage(lang.module(module).format(key, args));
-            }
-        }
     }
 
     /**
@@ -490,22 +395,7 @@ public abstract class PayloadCache<K, X extends Payload<K>, N extends NetworkPay
     @Override
     public void runAsync(@Nonnull Runnable runnable) {
         Preconditions.checkNotNull(runnable);
-        pool.submit(runnable);
-    }
-
-    /**
-     * Simple utility method to run a task asynchronously in a separate thread provided by the cache's local cached thread executor pool.
-     * This is recommended over using the Bukkit scheduler when performing operations relative to the cache, as it will ensure operations
-     * are completed BEFORE cache shutdown, plus the cached thread nature yields a slight performance improvement.
-     * @see Executors#newCachedThreadPool()
-     * @param callable The task to run
-     * @return {@link Future<T>} a future with the callable's parameter after execution has completed.
-     */
-    @Nonnull
-    @Override
-    public <T> Future<T> runAsync(@Nonnull Callable<T> callable) {
-        Preconditions.checkNotNull(callable);
-        return pool.submit(callable);
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, runnable);
     }
 
     /**

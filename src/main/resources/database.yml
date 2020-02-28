@@ -36,9 +36,9 @@ redis:
   # Or, provide the information below instead of the uri field:
   address: '127.0.0.1' # IP Address to your redis server
   port: 6379 # This is the default Redis port
-  retryTimeout: 5 # Seconds between re-connection attempts in the event the connection fails
 
   # If using authentication (recommended) **only if NOT using URI field**
   auth:
+    ssl: false
     enabled: false # Change to true if using authentication, which will then use this password to authenticate:
     password: 'password' # Your password: will be used with redis.auth(password)

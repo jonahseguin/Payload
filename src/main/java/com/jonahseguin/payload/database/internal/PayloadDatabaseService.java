@@ -3,7 +3,7 @@
  * www.jonahseguin.com
  */
 
-package com.jonahseguin.payload.database;
+package com.jonahseguin.payload.database.internal;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -11,14 +11,19 @@ import com.google.inject.Injector;
 import com.google.inject.Singleton;
 import com.jonahseguin.payload.annotation.Database;
 import com.jonahseguin.payload.base.error.ErrorService;
+import com.jonahseguin.payload.database.DatabaseDependent;
+import com.jonahseguin.payload.database.DatabaseService;
+import com.jonahseguin.payload.database.DatabaseState;
+import com.jonahseguin.payload.database.PayloadDatabase;
 import com.jonahseguin.payload.server.ServerService;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import dev.morphia.Datastore;
 import dev.morphia.Morphia;
 import dev.morphia.ext.guice.GuiceExtension;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 
 import javax.annotation.Nonnull;
 import java.util.Set;
@@ -31,7 +36,6 @@ public class PayloadDatabaseService implements DatabaseService {
     private final Morphia morphia;
     private final PayloadDatabase database;
     private Datastore datastore = null;
-    private ServerService serverService = null;
 
     @Inject
     public PayloadDatabaseService(Injector injector, @Database String name, @Database ErrorService error, PayloadDatabase database) {
@@ -50,6 +54,11 @@ public class PayloadDatabaseService implements DatabaseService {
     }
 
     @Override
+    public StatefulRedisPubSubConnection<String, String> getRedisPubSub() {
+        return database.getRedisPubSub();
+    }
+
+    @Override
     public MongoClient getMongoClient() {
         return database.getMongoClient();
     }
@@ -65,18 +74,18 @@ public class PayloadDatabaseService implements DatabaseService {
     }
 
     @Override
+    public RedisClient getRedisClient() {
+        return database.getRedisClient();
+    }
+
+    @Override
+    public StatefulRedisConnection<String, String> getRedis() {
+        return database.getRedis();
+    }
+
+    @Override
     public Datastore getDatastore() {
         return datastore;
-    }
-
-    @Override
-    public Jedis getJedisResource() {
-        return database.getJedisPool().getResource();
-    }
-
-    @Override
-    public JedisPool getJedisPool() {
-        return database.getJedisPool();
     }
 
     @Override
@@ -92,17 +101,12 @@ public class PayloadDatabaseService implements DatabaseService {
 
     @Override
     public ServerService getServerService() {
-        return serverService;
+        return database.getServerService();
     }
 
     @Override
     public String getName() {
         return name;
-    }
-
-    @Override
-    public Jedis getMonitorJedis() {
-        return database.getMonitorJedis();
     }
 
     @Override
